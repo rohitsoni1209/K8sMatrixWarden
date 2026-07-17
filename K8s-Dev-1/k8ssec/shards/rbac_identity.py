@@ -1,0 +1,139 @@
+"""Shard ③ — RBAC & Identity (§5.5)."""
+from __future__ import annotations
+
+from ..core.evidence import Evidence
+from ..core.models import (BlastRadius as BR, DetectionMethod as DM, Exploitability as EX,
+                           MitreTag as M, ResourceRef, Rule, Severity as S, Tactic as T)
+from .base import DomainShard, ref
+
+NAME = "rbac_identity"
+
+
+def _rule_grants(rules_list, verbs=None, resources=None):
+    for r in rules_list or []:
+        rv = set(r.get("verbs", []) or [])
+        rr = set(r.get("resources", []) or [])
+        if verbs and not (rv & set(verbs) or "*" in rv):
+            continue
+        if resources and not (rr & set(resources) or "*" in rr):
+            continue
+        yield r
+
+
+def _wildcard_verbs(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+        for r in cr.get("rules", []) or []:
+            if "*" in (r.get("verbs", []) or []):
+                yield rule.finding(ref(cr), f"role grants wildcard verbs (verbs: ['*'])",
+                                   blast_radius=BR.CLUSTER, evidence={"rule": r})
+                break
+
+
+def _wildcard_resources(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+        for r in cr.get("rules", []) or []:
+            if "*" in (r.get("resources", []) or []):
+                yield rule.finding(ref(cr), "role grants wildcard resources "
+                                   "(resources: ['*'])",
+                                   blast_radius=BR.CLUSTER, evidence={"rule": r})
+                break
+
+
+def _cluster_admin_default_sa(rule, ev, scope):
+    for crb in ev.get("ClusterRoleBinding", all_scopes=True):
+        role = Evidence.dig(crb, "roleRef.name")
+        if role != "cluster-admin":
+            continue
+        for subj in crb.get("subjects", []) or []:
+            if subj.get("kind") == "ServiceAccount" and subj.get("name") == "default":
+                yield rule.finding(
+                    ref(crb), f"cluster-admin bound to default ServiceAccount "
+                    f"({subj.get('namespace')}/default)",
+                    blast_radius=BR.CLUSTER, exploitability=EX.ADJACENT,
+                    evidence={"subject": subj})
+
+
+def _bind_escalate(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+        for r in cr.get("rules", []) or []:
+            verbs = set(r.get("verbs", []) or [])
+            if verbs & {"bind", "escalate", "impersonate"}:
+                yield rule.finding(
+                    ref(cr), f"role can {', '.join(sorted(verbs & {'bind','escalate','impersonate'}))} "
+                    f"— privilege-escalation primitive",
+                    blast_radius=BR.CLUSTER, evidence={"verbs": sorted(verbs)})
+                break
+
+
+def _secret_read_broad(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True):
+        for r in _rule_grants(cr.get("rules", []), verbs=["get", "list"],
+                               resources=["secrets"]):
+            yield rule.finding(ref(cr), "ClusterRole can read secrets cluster-wide "
+                               "(get/list on secrets)",
+                               blast_radius=BR.CLUSTER, evidence={"rule": r})
+            break
+
+
+def _can_delete_events(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+        for r in _rule_grants(cr.get("rules", []), verbs=["delete"], resources=["events"]):
+            yield rule.finding(ref(cr), "role can delete events (defense evasion / "
+                               "covering tracks)", evidence={"rule": r})
+            break
+
+
+def _coredns_write(rule, ev, scope):
+    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+        for r in _rule_grants(cr.get("rules", []), verbs=["update", "patch"],
+                              resources=["configmaps"]):
+            yield rule.finding(ref(cr), "role can modify ConfigMaps (potential CoreDNS "
+                               "poisoning if kube-system CoreDNS CM is writable)",
+                               blast_radius=BR.CLUSTER, evidence={"rule": r})
+            break
+
+
+class RbacIdentityShard(DomainShard):
+    name = NAME
+    title = "RBAC & Identity"
+    index = "③"
+
+    def rules(self):
+        need = ["ClusterRole", "Role", "ClusterRoleBinding", "RoleBinding"]
+        return [
+            Rule("rbac-wildcard-verbs", "Wildcard verbs in role", self.name,
+                 ["ClusterRole", "Role"], S.CRITICAL, DM.RBAC, _wildcard_verbs,
+                 mitre=[M(T.PRIVILEGE_ESCALATION, "T1078", "Valid Accounts")],
+                 owasp="K02", cis=["5.1.3"], evidence_needs=need,
+                 remediation_ref="playbook/least-privilege-role"),
+            Rule("rbac-wildcard-resources", "Wildcard resources in role", self.name,
+                 ["ClusterRole", "Role"], S.CRITICAL, DM.RBAC, _wildcard_resources,
+                 mitre=[M(T.PRIVILEGE_ESCALATION, "T1078", "Valid Accounts")],
+                 owasp="K02", cis=["5.1.3"], evidence_needs=need,
+                 remediation_ref="playbook/least-privilege-role"),
+            Rule("rbac-cluster-admin-default-sa", "cluster-admin on default SA", self.name,
+                 ["ClusterRoleBinding"], S.CRITICAL, DM.RBAC, _cluster_admin_default_sa,
+                 mitre=[M(T.PRIVILEGE_ESCALATION, "T1078", "Valid Accounts")],
+                 owasp="K02", cis=["5.1.1"], evidence_needs=need,
+                 remediation_ref="playbook/downgrade-binding"),
+            Rule("rbac-bind-escalate-verbs", "bind/escalate/impersonate verbs", self.name,
+                 ["ClusterRole", "Role"], S.CRITICAL, DM.RBAC, _bind_escalate,
+                 mitre=[M(T.PRIVILEGE_ESCALATION, "T1078", "Valid Accounts")],
+                 owasp="K02", cis=["5.1.8"], evidence_needs=need),
+            Rule("rbac-secret-read-broad", "Broad secret read access", self.name,
+                 ["ClusterRole"], S.HIGH, DM.RBAC, _secret_read_broad,
+                 mitre=[M(T.CREDENTIAL_ACCESS, "T1552.007",
+                          "Container API Credentials")],
+                 owasp="K03", cis=["5.1.2"], evidence_needs=need),
+            Rule("rbac-can-delete-events", "Can delete Kubernetes events", self.name,
+                 ["ClusterRole", "Role"], S.HIGH, DM.RBAC, _can_delete_events,
+                 mitre=[M(T.DEFENSE_EVASION, "T1070", "Indicator Removal")],
+                 owasp="K10", evidence_needs=need),
+            Rule("rbac-coredns-configmap-write", "Can write ConfigMaps (CoreDNS risk)",
+                 self.name, ["ClusterRole", "Role"], S.HIGH, DM.RBAC, _coredns_write,
+                 mitre=[M(T.LATERAL_MOVEMENT, "T1557", "Adversary-in-the-Middle")],
+                 owasp="K05", evidence_needs=need),
+        ]
+
+
+SHARD = RbacIdentityShard

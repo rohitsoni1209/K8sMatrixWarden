@@ -1,0 +1,15 @@
+{
+  "_comment": "OWASP Kubernetes Top 10 (2025) — used as the owasp: tag vocabulary (v3.0 §13).",
+  "categories": {
+    "K01": "Insecure Workload Configurations",
+    "K02": "Overly Permissive Authorization",
+    "K03": "Secrets Management Failures",
+    "K04": "Lack of Cluster-Level Policy Enforcement",
+    "K05": "Missing Network Segmentation",
+    "K06": "Overly Exposed Components",
+    "K07": "Misconfigured & Vulnerable Components",
+    "K08": "Cluster-to-Cloud Lateral Movement",
+    "K09": "Broken Authentication",
+    "K10": "Inadequate Logging & Monitoring"
+  }
+}

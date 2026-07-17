@@ -1,0 +1,17 @@
+{
+  "_comment": "Human-readable display aliases from the Redguard/Microsoft Kubernetes Threat Matrix (9 tactics). NON-canonical: used for UX/reporting only, never as the mapping contract (v3.0 §6.2, §12).",
+  "tactics": [
+    "Initial Access", "Execution", "Persistence", "Privilege Escalation",
+    "Defense Evasion", "Credential Access", "Discovery", "Lateral Movement", "Impact"
+  ],
+  "technique_display": {
+    "T1610": "Privileged/Deploy Container",
+    "T1611": "Container escape to host",
+    "T1552.005": "Instance Metadata API",
+    "T1552.007": "Access container service account",
+    "T1078.004": "Access cloud resources",
+    "T1053.003": "Kubernetes CronJob",
+    "T1554": "Malicious admission controller",
+    "T1613": "Access the K8s API / Kubelet"
+  }
+}

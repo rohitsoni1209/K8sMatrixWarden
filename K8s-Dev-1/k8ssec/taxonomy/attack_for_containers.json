@@ -1,0 +1,29 @@
+{
+  "_comment": "Vendored subset of MITRE ATT&CK for Containers (canonical technique ids). The mapping contract per v3.0 §6.2. Redguard names are display aliases only.",
+  "version": "attack-for-containers-v16",
+  "techniques": [
+    {"id": "T1078", "name": "Valid Accounts"},
+    {"id": "T1078.004", "name": "Valid Accounts: Cloud Accounts"},
+    {"id": "T1133", "name": "External Remote Services"},
+    {"id": "T1525", "name": "Implant Internal Image"},
+    {"id": "T1552", "name": "Unsecured Credentials"},
+    {"id": "T1552.005", "name": "Unsecured Credentials: Cloud Instance Metadata API"},
+    {"id": "T1552.007", "name": "Unsecured Credentials: Container API"},
+    {"id": "T1528", "name": "Steal Application Access Token"},
+    {"id": "T1610", "name": "Deploy Container"},
+    {"id": "T1611", "name": "Escape to Host"},
+    {"id": "T1613", "name": "Container and Resource Discovery"},
+    {"id": "T1609", "name": "Container Administration Command"},
+    {"id": "T1059", "name": "Command and Scripting Interpreter"},
+    {"id": "T1046", "name": "Network Service Discovery"},
+    {"id": "T1053.003", "name": "Scheduled Task/Job: Cron"},
+    {"id": "T1548", "name": "Abuse Elevation Control Mechanism"},
+    {"id": "T1554", "name": "Compromise Host Software Binary"},
+    {"id": "T1557", "name": "Adversary-in-the-Middle"},
+    {"id": "T1562", "name": "Impair Defenses"},
+    {"id": "T1070", "name": "Indicator Removal"},
+    {"id": "T1485", "name": "Data Destruction"},
+    {"id": "T1496", "name": "Resource Hijacking"},
+    {"id": "T1499", "name": "Endpoint Denial of Service"}
+  ]
+}

@@ -1,0 +1,14 @@
+# Core requires NOTHING — the engine runs on the Python standard library alone.
+# Install the extras you want:
+
+# Live cluster scanning (otherwise --mock is used):
+# kubernetes>=28.0
+
+# Prettier terminal tables:
+# rich>=13.0
+
+# MCP protocol server (`k8ssec mcp`):
+# mcp>=1.0
+
+# Tests (a stdlib runner is bundled at tests/run_tests.py; pytest is optional):
+# pytest>=7.0

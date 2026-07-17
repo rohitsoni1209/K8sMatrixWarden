@@ -1,0 +1,99 @@
+"""Registry, mapping-engine build & validation (§6)."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from k8ssec.bootstrap import build_platform
+
+
+def test_all_shards_and_rules_load():
+    p = build_platform()
+    assert len(p.registry.shard_names()) == 10
+    assert p.rule_count() >= 40
+
+
+def test_no_validation_problems():
+    p = build_platform()
+    # Every rule's technique id must exist in the vendored taxonomy; aliases must resolve.
+    assert p.validation_problems == [], p.validation_problems
+
+
+def test_no_duplicate_rule_ids():
+    p = build_platform()
+    ids = p.registry.rules.ids()
+    assert len(ids) == len(set(ids))
+
+
+def test_every_tactic_has_coverage():
+    p = build_platform()
+    cov = p.coverage()
+    assert len(cov) == 9
+    # At least the high-value tactics must have rules.
+    for tactic in ("Privilege Escalation", "Persistence", "Credential Access",
+                   "Lateral Movement", "Initial Access"):
+        assert cov[tactic] > 0
+
+
+def test_scoped_roles_generated_per_plugin():
+    p = build_platform()
+    roles = p.loader.scoped_roles()
+    assert len(roles) == 10
+    assert all(r["kind"] == "ClusterRole" for r in roles)
+
+
+def test_every_shard_has_nonempty_rbac_needs():
+    # A shard with an empty role can never actually run live — every shard must declare
+    # at least one real K8s permission (incl. synthetic-evidence shards like
+    # cluster_control_plane, which needs `pods` to recover control-plane flags live).
+    p = build_platform()
+    for name, verbs in p.registry.rbac_verbs().items():
+        assert verbs, f"shard {name!r} has no RBAC verbs — it cannot function live"
+
+
+def test_deployment_manifest_binds_every_shard():
+    p = build_platform()
+    manifest = p.loader.deployment_manifest(service_account="k8ssec-scanner",
+                                            namespace="k8ssec-system")
+    assert manifest["kind"] == "List"
+    kinds = [item["kind"] for item in manifest["items"]]
+    assert kinds.count("ClusterRole") == 10
+    assert kinds.count("ClusterRoleBinding") == 10
+    assert kinds.count("ServiceAccount") == 1
+    assert kinds.count("Namespace") == 1
+    # every binding must reference a role that was actually emitted, and the SA we asked for
+    role_names = {i["metadata"]["name"] for i in manifest["items"] if i["kind"] == "ClusterRole"}
+    for item in manifest["items"]:
+        if item["kind"] != "ClusterRoleBinding":
+            continue
+        assert item["roleRef"]["name"] in role_names
+        assert item["subjects"][0] == {"kind": "ServiceAccount", "name": "k8ssec-scanner",
+                                       "namespace": "k8ssec-system"}
+    # every rule verb across every emitted role must be read-only (get/list/watch)
+    write_verbs = {"create", "update", "patch", "delete", "deletecollection"}
+    for item in manifest["items"]:
+        if item["kind"] != "ClusterRole":
+            continue
+        for rule in item["rules"]:
+            assert not (write_verbs & set(rule["verbs"])), \
+                f"{item['metadata']['name']} grants a write verb: {rule}"
+
+
+def test_deployment_manifest_no_create_namespace():
+    p = build_platform()
+    manifest = p.loader.deployment_manifest(create_namespace=False)
+    kinds = [item["kind"] for item in manifest["items"]]
+    assert "Namespace" not in kinds
+
+
+def test_generated_object_names_are_dns_1123_safe():
+    # Shard names use underscores; generated K8s object names must NOT — a hardened
+    # cluster (Gatekeeper/Kyverno enforcing DNS-1123) would reject them on apply.
+    import re
+    dns1123 = re.compile(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
+    p = build_platform()
+    manifest = p.loader.deployment_manifest()
+    for item in manifest["items"]:
+        name = item["metadata"]["name"]
+        assert "_" not in name, f"{item['kind']} name {name!r} contains an underscore"
+        assert dns1123.match(name), f"{item['kind']} name {name!r} is not DNS-1123"

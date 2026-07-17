@@ -1,0 +1,55 @@
+{
+  "_comment": "Scanner configuration v3.0 (§16). Shards/rules can be toggled; aliases are composite/outcome selectors.",
+  "version": "3.0",
+  "global": {
+    "severity_threshold": "MEDIUM",
+    "parallel_rules": 16,
+    "report_format": ["terminal"]
+  },
+  "shards": {
+    "cluster_control_plane": {"enabled": true},
+    "workload_pod_security": {"enabled": true},
+    "rbac_identity": {"enabled": true},
+    "network_security": {"enabled": true},
+    "image_supply_chain": {"enabled": true},
+    "secrets": {"enabled": true},
+    "compliance": {"enabled": true},
+    "attack_surface": {"enabled": true},
+    "admission_control": {"enabled": true},
+    "cloud_iam": {"enabled": true}
+  },
+  "rule_overrides": {
+    "workload-latest-tag": {"severity": "MEDIUM"},
+    "img-pull-policy": {"severity": "LOW"}
+  },
+  "aliases": {
+    "Container Escape": [
+      "workload-privileged-container",
+      "workload-hostpath-root",
+      "workload-docker-socket",
+      "workload-dangerous-caps",
+      "workload-host-pid"
+    ],
+    "Privileged Container": ["workload-privileged-container"],
+    "Privileged Pods": ["workload-privileged-container"],
+    "Exposed Secrets": [
+      "sec-env-var-secrets",
+      "sec-configmap-credentials",
+      "sec-mounted-cloud-creds",
+      "sec-etcd-not-encrypted",
+      "img-kubeconfig-embedded"
+    ],
+    "Anonymous API Access": [
+      "apiserver-anonymous-auth",
+      "apiserver-insecure-port",
+      "kubelet-anonymous-auth"
+    ],
+    "Kubernetes API Exposure": [
+      "apiserver-anonymous-auth",
+      "apiserver-insecure-port",
+      "net-dashboard-exposed",
+      "kubelet-anonymous-auth",
+      "kubelet-read-only-port"
+    ]
+  }
+}

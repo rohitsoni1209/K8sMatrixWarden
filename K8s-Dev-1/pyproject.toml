@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "k8ssec"
+version = "3.0.0"
+description = "MITRE ATT&CK-aligned, domain-sharded Kubernetes security scanner"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "K8s-Dev-1" }]
+keywords = ["kubernetes", "security", "mitre", "attack", "scanner", "k8s"]
+
+# Core has ZERO required dependencies — it runs on the standard library alone.
+dependencies = []
+
+[project.optional-dependencies]
+# Live cluster scanning
+live = ["kubernetes>=28.0"]
+# Prettier terminal output
+pretty = ["rich>=13.0"]
+# MCP protocol server
+mcp = ["mcp>=1.0"]
+# Everything
+all = ["kubernetes>=28.0", "rich>=13.0", "mcp>=1.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+k8ssec = "k8ssec.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["k8ssec*"]
+
+[tool.setuptools.package-data]
+k8ssec = ["data/fixtures/*.json", "taxonomy/*.json", "config/*.json"]
