@@ -7,7 +7,52 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from k8smatrixwarden.core.correlation import correlate, detect_drift
 from k8smatrixwarden.core.models import (Finding, MitreTag, ResourceRef, Severity,
                                          Tactic)
-from k8smatrixwarden.agents.runtime import RuntimeAgent
+from k8smatrixwarden.agents.runtime import (RuntimeAgent, normalize_events,
+                                            normalize_falco_event)
+
+
+def test_normalize_falco_syscall_event():
+    raw = {"source": "syscall", "rule": "Terminal shell in container",
+           "output_fields": {"proc.name": "bash", "k8s.ns.name": "default",
+                             "k8s.pod.name": "web-abc", "user.uid": 0,
+                             "fd.name": "/etc/passwd", "evt.type": "open"}}
+    ev = normalize_falco_event(raw)
+    assert ev == {"source": "falco", "proc": "bash", "op": "open",
+                  "namespace": "default", "pod": "web-abc", "uid": 0,
+                  "file": "/etc/passwd"}
+
+
+def test_normalize_falco_network_event():
+    raw = {"source": "syscall",
+           "output_fields": {"proc.name": "curl", "fd.name": "169.254.169.254:80",
+                             "fd.sip": "169.254.169.254"}}
+    ev = normalize_falco_event(raw)
+    assert ev["connect"] == "169.254.169.254:80" and "file" not in ev
+
+
+def test_normalize_falco_audit_event():
+    raw = {"source": "k8s_audit",
+           "output_fields": {"ka.verb": "create",
+                             "ka.target.resource": "clusterrolebindings",
+                             "ka.target.namespace": "production"}}
+    ev = normalize_falco_event(raw)
+    assert ev == {"source": "audit", "verb": "create",
+                  "resource": "clusterrolebindings", "namespace": "production"}
+
+
+def test_normalize_events_single_and_flat_passthrough():
+    # single Falco event → list of one; already-flat event passes through untouched
+    out = normalize_events({"source": "syscall", "output_fields": {"proc.name": "sh"}})
+    assert out == [{"source": "falco", "proc": "sh"}]
+    flat = {"source": "falco", "proc": "nmap"}
+    assert normalize_events([flat]) == [flat]
+
+
+def test_normalized_falco_events_fire_the_same_alerts():
+    # a raw Falco shell event, once normalized, fires the shell-in-container rule
+    raw = [{"source": "syscall", "output_fields": {"proc.name": "bash"}}]
+    alerts = RuntimeAgent().evaluate_stream(normalize_events(raw))
+    assert any(a.rule_id == "rt-shell-in-container" for a in alerts)
 
 
 def _pod(name, ns, sc=None, container_sc=None):

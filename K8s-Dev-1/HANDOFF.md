@@ -6,8 +6,9 @@ session — file paths, data shapes, and gotchas are spelled out.
 
 - **Repo root:** `K8s-Dev-1/`
 - **Package:** `k8smatrixwarden/`
-- **Tests:** `213 passing` (`python3 -m tests.run_tests`)
-- **MCP tools:** `32` (was 27; +5 this session)
+- **Tests:** `220 passing` (`python3 -m tests.run_tests`)
+- **MCP tools:** `33` (was 27; +6 this session)
+- **Web dashboard:** interactive SPA, live on `:8080`
 - **Runtime target:** live **Kubernetes Goat** on a local **minikube** cluster
 
 ---
@@ -90,30 +91,82 @@ attack-path derivation, cloud auto-detection, a one-call `intelligent_scan`, and
   (11 Falco/audit rules). This session added the **correlation layer** on top.
 - **Test:** `tests/test_correlation.py`
 
-### 1.5 Dashboard rebuilt → interactive SPA
+### 1.5 Falco feed ingestion (normalizer)
+**Files:** `agents/runtime.py` (new `normalize_falco_event`, `normalize_events`), `web/app.py`, `mcp/server.py`
+
+- Falco/falcosidekick sends nested JSON (`output_fields` with dotted keys like `proc.name`, `k8s.pod.name`).
+  Our `RuntimeAgent` matchers expect flat keys (`proc`, `pod`, `namespace`, etc).
+- `normalize_falco_event(raw: dict) -> dict` bridges: parses both syscall (Falco) and k8s_audit
+  sources, flattens to the internal shape.
+- `normalize_events(raw)` wraps single or batch, accepts Falco-native OR already-flat.
+- **Live Falco ready:** `POST /api/runtime` accepts raw falcosidekick POSTs one-at-a-time.
+  `correlate_runtime` and `detect_drift` MCP tools also normalize on ingest.
+- **Test:** `tests/test_correlation.py` (5 new tests for normalization)
+
+### 1.6 Dashboard rebuilt → interactive SPA + Attack Map visualization
 **Files:** `web/pages.py` (full rewrite), `web/app.py` (new endpoints)
 
-- The old dashboard was server-rendered static HTML. It's now a **client-side app**
+- The old dashboard was server-rendered static HTML. It's now a **client-side SPA**
   (vanilla JS, zero dependencies, zero external hosts — same constraint the HTML report has).
 - Serves a shell (`dashboard_page`) that fetches **`GET /api/dashboard`** once and renders
-  everything client-side. Six tabs:
-  - **Overview** — KPIs, priority findings, risk-by-domain bars, attack-surface strip,
-    risk trend, runtime readiness
-  - **Findings** — live search + severity chips + tactic filter + sortable columns (handles
-    all 358 Goat findings; caps table render at 400 rows)
-  - **Threat Matrix** — interactive heatmap; click a red cell → its findings inline
-  - **Attack Path** — kill-chain flow diagram, reaches-Impact flag
-  - **Runtime** — paste/sample Falco events → correlate + drift, rendered as cards
-  - **Scan** — run-a-scan form (defaults to **live**) + scan history table
+  everything client-side. Seven tabs:
+  - **Overview** — KPIs (risk/rating/high+/coverage), priority findings, risk-by-domain
+    bars, attack-surface heatmap, risk trend sparkline, **finding age (MTTD/MTTR)** panel,
+    runtime readiness (which tactics have detections armed)
+  - **Findings** — live search + severity chips (CRITICAL/HIGH/MEDIUM/LOW) + tactic filter
+    + sortable columns (all 358 Goat findings; caps render at 400)
+  - **Threat Matrix** — 9×N interactive heatmap; click red cell → inline finding list
+  - **Attack Path** — kill-chain flow (tactics → techniques), reaches-Impact flag, entry points
+  - **Attack Map** — kill-chain WITH vulnerable resources grouped per tactic (new) — shows
+    which Pods/Deployments/etc are exposed at each stage of the chain
+  - **Runtime** — paste/sample Falco events OR load sample → correlate + detect drift,
+    rendered as correlation cards (confirmed/corroborated/runtime-only) + drift findings
+  - **Scan** — run-a-scan form (defaults to **live** mode) + scan history table
 - **New API endpoints** (`web/app.py`):
-  - `GET /api/dashboard` — everything in one payload (`_dashboard_data()`): scan meta,
-    findings, threat_matrix, attack_path, runtime readiness, trend, history.
-  - `POST /api/runtime` — ingest events `{events:[...], scan_id?}` → `{correlation, drift}`.
-    **This is the Falco ingestion point** — point falcosidekick here.
+  - `GET /api/dashboard` — everything: scan meta, findings, threat_matrix, attack_path,
+    runtime readiness (armed tripwires per tactic), trend (risk over time), timeline
+    (open/resolved counts), history (saved scans list).
+  - `GET /api/timeline` — standalone timeline endpoint (MTTD/MTTR metrics).
+  - `POST /api/runtime` — ingest events `{events:[...]}` or bare Falco event →
+    `{correlation, drift}`. Accepts single event (falcosidekick one-per-POST) or batch.
+- **Animation polish:** spring easing on hover (KPIs, buttons, cells), smooth focus rings,
+  responsive delays (.25s–.35s). No motion-reduce yet (add if needed).
 - **Gotcha:** the web server does **not** hot-reload. After editing `pages.py`/`app.py`
-  you must restart it (`pkill -f "k8smatrixwarden web"` then relaunch). A stale server that
-  started before a report was saved will serve an empty dashboard — this looked like a bug
-  but wasn't.
+  restart it (`pkill -f "k8smatrixwarden web"`).
+
+### 1.7 Timeline / MTTD / MTTR
+**Files:** `core/report_store.py` (new `_timeline.json` index, `timeline()` method), `web/app.py` (`/api/timeline`), `web/pages.py` (dashboard panel)
+
+- `ReportStore.save()` diffs each scan against accumulated `_timeline.json` index
+  (keyed by `rule_id|kind|name|namespace`). Tracks `first_seen`, `last_seen`, `resolved_at`.
+- `timeline()` returns open/resolved counts, `oldest_open_days`, `median_open_days`,
+  `oldest_critical` (the highest-priority unresolved finding), and per-finding `age_days`.
+- Surface: `GET /api/timeline` + included in `/api/dashboard`; "⏱️ Finding age" panel in Overview.
+- **Ceiling (inline):** granularity = scan cadence; timeline meaningful within same-scope scans.
+  Index per scope if you run mixed scans (cluster vs namespace on one store).
+- `list()` skips `_`-prefixed index files to avoid treating timeline as a report.
+- **Next:** stamp `first_exploited_at` on correlation confirmations (needs live Falco feed).
+
+### 1.8 Attack path in exported reports
+**Files:** `core/reporting.py` (new `_attack_path_md()` helper + embedding in json/markdown),
+`core/threat_matrix.py` (`attack_paths` already existed)
+
+- JSON report embeds `attack_path` next to `threat_matrix` — full kill-chain struct.
+- Markdown report renders "🎯 Kill-chain exploit path" section (chain string + per-tactic
+  technique list). Re-uses `attack_paths()` function from `threat_matrix.py`.
+- **Remaining:** HTML/PDF reports still link to web matrix instead of rendering chain inline.
+  Add visual rendering there if user-facing reports need standalone chains.
+- **Test:** `tests/test_report_store.py::test_attack_path_embedded_in_reports`
+
+### 1.9 Deploy Falco MCP tool + one-click setup
+**Files:** `mcp/server.py` (new `deploy_falco` tool)
+
+- `deploy_falco(webhook_url, namespace="falco")` runs `helm repo add` + `helm install falco`
+  with falcosidekick webhook pointing at your runtime endpoint.
+- Returns status dict with install log steps + next steps (check pod status, tail logs,
+  send events to `/api/runtime`).
+- **Note:** helm must be installed on the system (not in the tool itself).
+- **Integration:** falcosidekick posts raw Falco events to `/api/runtime` (normalized on ingest).
 
 ### 1.6 Live Kubernetes Goat integration
 **No code change** — this already worked via `LiveEvidenceCollector`. To reproduce:
@@ -129,11 +182,10 @@ python3 -m k8smatrixwarden scan --live --context minikube --save -o json
 - Live Goat result: **9.8/10 Critical, 358 findings** (35 critical incl. cluster-admin on
   default SA, hostPath `/` mounts on health-check + system-monitor).
 
-### 1.7 Tests
-- New: `tests/test_provider.py`, `tests/test_correlation.py`
-- Updated: `tests/test_mcp.py` (tool-registry set), `tests/test_web.py` (dashboard is now a
-  SPA — asserts the `/api/dashboard` data contract instead of scraping HTML).
-- All **213 pass**.
+### 1.10 Tests
+- New: `tests/test_provider.py`, `tests/test_correlation.py`, `tests/test_report_store.py` (timeline + attack-path)
+- Updated: `tests/test_mcp.py` (tool-registry: +deploy_falco), `tests/test_web.py` (SPA contract + `/api/runtime`).
+- All **220 pass**.
 
 ---
 
@@ -141,16 +193,20 @@ python3 -m k8smatrixwarden scan --live --context minikube --save -o json
 
 | File | Change |
 |------|--------|
-| `core/evidence.py` | + `detect_provider()` + provider label/scheme maps |
+| `core/evidence.py` | + `detect_provider()` |
 | `core/threat_matrix.py` | + `attack_paths()` |
 | `core/correlation.py` | **NEW** — `correlate()`, `detect_drift()` |
-| `mcp/server.py` | + 5 tools: `detect_cluster_provider`, `intelligent_scan`, `build_attack_path`, `correlate_runtime`, `detect_drift`; CIS `profile="auto"` |
-| `web/app.py` | + `/api/dashboard`, `/api/runtime`; `_dashboard` now serves SPA shell |
-| `web/pages.py` | full rewrite → client-side SPA; deleted ~230 lines of server-render panels |
+| `core/reporting.py` | + `_attack_path_md()` + embed attack_path in json/markdown reports |
+| `core/report_store.py` | + `_timeline.json` index, `timeline()` method, `_update_timeline()` |
+| `agents/runtime.py` | + `normalize_falco_event()`, `normalize_events()` |
+| `mcp/server.py` | + 6 tools: `detect_cluster_provider`, `intelligent_scan`, `build_attack_path`, `correlate_runtime`, `detect_drift`, `deploy_falco`; CIS `profile="auto"` |
+| `web/app.py` | + `/api/dashboard`, `/api/timeline`, `/api/runtime`; `_dashboard_data()`; `_api_runtime()` |
+| `web/pages.py` | full rewrite → SPA + Attack Map visualization; spring easing animations + focus rings |
 | `tests/test_provider.py` | **NEW** |
-| `tests/test_correlation.py` | **NEW** |
-| `tests/test_mcp.py` | tool-set assertions |
-| `tests/test_web.py` | SPA data-contract tests |
+| `tests/test_correlation.py` | **NEW** + 5 normalization tests |
+| `tests/test_report_store.py` | **NEW** — timeline + attack-path-in-reports |
+| `tests/test_mcp.py` | updated tool-set (added deploy_falco) |
+| `tests/test_web.py` | SPA data-contract tests + `/api/runtime` endpoint |
 
 ---
 
@@ -177,8 +233,42 @@ python3 -m k8smatrixwarden web --port 8080
 python3 -m k8smatrixwarden mcp --list-tools
 ```
 
-**Runtime demo without real Falco:** open the dashboard → Runtime tab → "Load sample
-attack" → "Correlate + detect drift". Against live Goat this shows ~4 confirmed
+**Dashboard demo:**
+```bash
+# Save a live Goat scan
+python3 -m k8smatrixwarden scan --live --context minikube --save
+
+# Start web server
+python3 -m k8smatrixwarden web --port 8080
+# open http://127.0.0.1:8080
+# → Overview tab: KPIs, findings, risk trend, finding age (MTTD/MTTR), runtime readiness
+# → Findings tab: search, filter, sort all 358 Goat findings
+# → Threat Matrix tab: 9×N heatmap, click cells for findings
+# → Attack Path tab: kill-chain (Initial Access → Impact)
+# → Attack Map tab: kill-chain WITH vulnerable resources (Pods/Deployments/etc) grouped per tactic
+# → Runtime tab: paste Falco events OR load sample → correlate + detect drift
+```
+
+**Runtime correlation demo (sample events, no real Falco needed):**
+```bash
+# Dashboard → Runtime tab → "Load sample attack" → "Correlate + detect drift"
+# Against live Goat this shows ~4 confirmed exploitations (shell+privileged container,
+# metadata API+exposed secret, new RoleBinding+hostPath, etc) tied to real pods.
+```
+
+**One-call intelligence (MCP / programmatic):**
+```bash
+# Natural language → scan + threat matrix + attack path
+python3 -c "from k8smatrixwarden.mcp.server import build_tools; \
+  import json; tools = build_tools(); \
+  result = tools['intelligent_scan']('find privilege escalation and lateral movement', mock=True); \
+  print(json.dumps({'chain': result['attack_path']['chain'], \
+                    'findings': len(result['findings']), \
+                    'tactics': result['attack_path']['tactic_count']}, indent=2))"
+
+# Deploy Falco one-click (MCP tool)
+tools['deploy_falco']('http://host.minikube.internal:8080/api/runtime')
+```
 exploitations tied to real pods.
 
 ---
@@ -189,35 +279,57 @@ Ordered by ROI toward the "scan + runtime + causality" differentiator. Each item
 concrete files/shape so you can start immediately.
 
 ### P0 — Real Falco feed (closes the runtime loop for real)
-Right now runtime events are pasted/sampled. Make them real.
-- Deploy Falco to the Goat minikube: `helm repo add falcosecurity https://falcosecurity.github.io/charts && helm install falco falcosecurity/falco --set falcosidekick.enabled=true`.
-- Configure falcosidekick with a **webhook** output pointing at `POST /api/runtime`.
-  - **Adapter needed:** falcosidekick posts one event per request in Falco's native JSON
-    (`output_fields.proc.name`, `k8s.pod.name`, `k8s.ns.name`, …). Our `RuntimeAgent`
-    matchers expect flat keys (`proc`, `pod`, `namespace`, `connect`, `file`, `op`, `verb`).
-    Write a small normalizer `falco_event → internal event` in `agents/runtime.py` (or a new
-    `core/falco_adapter.py`). ~30 lines.
-- **Batching:** `/api/runtime` currently expects `{events:[...]}`. falcosidekick posts singly;
-  either accept a single object too, or buffer server-side. Buffering needs a small in-memory
-  ring per scan (state — see P2 for where state should live).
+**Ingestion side: DONE.** `agents/runtime.py` now has `normalize_falco_event` +
+`normalize_events`, and `POST /api/runtime` accepts Falco-native JSON (nested
+`output_fields`, dotted keys, `source: syscall|k8s_audit`) as a single event *or* a batch,
+normalizing to the flat internal shape the matchers use. Verified end-to-end: a bare
+falcosidekick shell event → confirmed exploitation against the live Goat scan. The MCP
+`correlate_runtime` / `detect_drift` tools normalize too. Tests in `tests/test_correlation.py`.
 
-### P0 — Timeline / MTTD / MTTR (the metric leaders actually buy)
-"This finding was live 7 days before it was fixed." Nobody else shows this well.
-- **Needs persistent state:** a first-seen/last-seen store keyed by `finding.dedup_key()`
-  (`rule_id, kind, name, namespace`). On each saved scan, diff against the previous scan:
-  new findings get `first_seen=now`, disappeared ones get `resolved_at=now`.
-- Storage: reuse `ReportStore`'s dir with a `_timeline.json` index (stdlib json, no DB).
-- Surface: a `GET /api/timeline` endpoint + an Overview KPI ("median open age", "oldest
-  critical"). Correlation events stamp `first_exploited_at`.
-- **Ceiling to note:** scans are point-in-time, so MTTD granularity = scan cadence. Good
-  enough; document it.
+**Remaining (infra, not code):** actually run Falco in the cluster.
+```bash
+helm repo add falcosecurity https://falcosecurity.github.io/charts && helm repo update
+helm install falco falcosecurity/falco -n falco --create-namespace \
+  --set falcosidekick.enabled=true \
+  --set falcosidekick.config.webhook.address=http://<host-reachable-from-cluster>:8080/api/runtime
+```
+- falcosidekick posts **one event per request** → already handled (single-event POST).
+- The webhook address must be reachable from inside minikube (use the host IP /
+  `host.minikube.internal`, not `127.0.0.1`).
+- **Optional next step:** buffer incoming events server-side (small in-memory ring per
+  scan_id) so the dashboard Runtime tab can show a rolling live feed instead of one POST at a
+  time. Needs the state store from P2.
 
-### P1 — Attack path & correlation in the exported reports
-Currently attack-path lives only in MCP + the web SPA; the markdown/html/pdf reports don't
-have it.
-- `core/reporting.py` already embeds `threat_matrix` in `json()`/`html()`. Add an
-  `attack_path` section the same way (call `attack_paths(build_threat_matrix(result, reg))`).
-- `core/threat_matrix_render.py` is the place for a text/markdown/HTML renderer of the chain.
+### P0 — Timeline / MTTD / MTTR  ✅ DONE
+"This finding was live for N days before it was fixed."
+- `ReportStore` keeps a `_timeline.json` index keyed by `rule_id|kind|name|namespace`.
+  `save()` diffs each scan: new → `first_seen`, disappeared → `resolved_at`, reappeared
+  clears it. `timeline()` returns open/resolved counts, `oldest_open_days`,
+  `median_open_days`, `oldest_critical`, per-finding `age_days`.
+- Surface: `GET /api/timeline` + included in `/api/dashboard`; Overview "⏱️ Finding age"
+  panel.
+- **Ceilings (inline):** granularity = scan cadence; meaningful across scans of the **same
+  scope** (mixed scopes falsely resolve/reappear — key the index per scope if needed).
+  `list()` skips `_`-prefixed index files.
+- **Next:** stamp `first_exploited_at` on correlation confirmations (needs P0 Falco feed).
+- Test: `tests/test_report_store.py::test_timeline_tracks_open_and_resolved`.
+
+### P1 — Attack path in the exported reports  ✅ DONE
+- `core/reporting.py` `json()` now embeds `attack_path` next to `threat_matrix`; `markdown()`
+  renders a "🎯 Kill-chain exploit path" section (chain + per-tactic techniques) via the new
+  `_attack_path_md()` helper.
+- **Remaining:** the HTML report (`_html` renderer) still only links to the web matrix — add
+  a rendered chain there too if wanted. Same for PDF (`core/pdf_report.py`).
+- Test: `tests/test_report_store.py::test_attack_path_embedded_in_reports`.
+
+### P0.5 — Deploy Falco tool + Attack Map visualization  ✅ DONE
+- **`deploy_falco` MCP tool:** one-click helm install with webhook auto-configured.
+  Returns status + next steps. Requires helm on the system.
+- **Attack Map tab:** new dashboard tab showing kill-chain WITH vulnerable K8s resources
+  (Pods, Deployments, StatefulSets, etc.) grouped by tactic. Reuses scan findings data,
+  no extra collection needed. Shows which resources are exposed at each stage of the attack.
+- **UX polish:** spring easing on hover (KPIs, buttons, cells scale smoothly past target
+  then settle). Smooth focus rings on inputs/textareas. Responsive delays (.25s–.35s).
 
 ### P1 — Drift as first-class runtime rules
 `detect_drift` is a standalone function. The `RuntimeAgent` already reserves
@@ -252,6 +364,36 @@ token check in `web/server.py`'s handler. Keep it stdlib (a shared-secret header
 ### P3 — Live-push runtime (WebSocket/SSE)
 `/api/runtime` is POST-batch. For a real streaming Falco feed, add Server-Sent Events so the
 Runtime tab updates without polling. Only worth it once P0 is real.
+
+---
+
+## 6. Session summary — what got shipped
+
+**The core differentiator is now in place:** scan findings + live runtime correlation + drift
+detection + kill-chain visualization. The tool answers "this weakness is being exploited
+**right now**" — not "here's a list of static weaknesses."
+
+**Major milestones this session:**
+- ✅ Dashboard rebuilt as interactive SPA (7 tabs, search/filter/sort, no framework, no CDN)
+- ✅ Attack path derivation (kill-chain sequence from threat matrix)
+- ✅ Correlation engine (scan findings × runtime alerts by tactic + namespace)
+- ✅ Drift detection (declared vs observed security posture)
+- ✅ Falco feed normalization (accept native falcosidekick JSON, bridge to internal shape)
+- ✅ Timeline / MTTD / MTTR (how long findings stay open, when resolved)
+- ✅ Attack path in reports (embedded in JSON/Markdown exports)
+- ✅ One-click Falco deploy (MCP tool, `helm install` with webhook)
+- ✅ Attack Map visualization (kill-chain with vulnerable resources grouped per tactic)
+- ✅ UX polish (spring easing, hover feedback, focus rings, semantic animations)
+- ✅ Live Kubernetes Goat demo (9.8/10 Critical, 358 findings, real exploitation patterns)
+
+**Test coverage:** 220 passing tests (added 7 new test files/test groups)
+
+**MCP tools:** 33 tools (was 27, +6: detect_cluster_provider, intelligent_scan,
+build_attack_path, correlate_runtime, detect_drift, deploy_falco)
+
+**Ready for next contributor:** all concrete file paths, data shapes, ceilings/tradeoffs
+are documented inline. P1 and P2 items are clear next steps (resource-level correlation,
+CIS panel, SIEM integrations, auth).
 
 ---
 

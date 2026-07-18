@@ -16,7 +16,7 @@ ALL_TOOLS = {
     "validate_platform",
     "preview_scan", "run_scan", "interpret_query", "intelligent_scan",
     "run_cis_benchmark", "evaluate_runtime_events", "correlate_runtime",
-    "detect_drift", "list_runtime_detections",
+    "detect_drift", "deploy_falco", "list_runtime_detections",
     "explain_remediation", "build_threat_matrix", "build_attack_path",
     "list_reports", "download_report", "generate_rbac_manifest",
 }

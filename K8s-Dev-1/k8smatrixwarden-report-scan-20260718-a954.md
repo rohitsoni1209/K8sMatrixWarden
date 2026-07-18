@@ -1,8 +1,8 @@
 ---
 title: "K8s Security Report"
 cluster: "target-cluster"
-scan_id: "scan-20260718-c629"
-generated_at: "2026-07-18T02:48:01Z"
+scan_id: "scan-20260718-a954"
+generated_at: "2026-07-18T06:56:07Z"
 tool: "k8smatrixwarden 1.0"
 mode: "mock"
 scope: "cluster-wide"
@@ -20,7 +20,7 @@ tactics_covered: 9
 
 # 🛡️ K8s Security Report
 
-**Scan** `scan-20260718-c629` · **Generated** 2026-07-18T02:48:01Z · **Mode** `mock`
+**Scan** `scan-20260718-a954` · **Generated** 2026-07-18T06:56:07Z · **Mode** `mock`
 
 🔴 **Risk 9.7/10 (Critical)** · **Security 3/100** · **81 findings** · **56 rules** · **scope** `cluster-wide`
 
@@ -186,6 +186,23 @@ Findings from this scan projected onto the [Kubernetes Threat Matrix](https://ku
 
 > **Legend** — 🔴🟠🟡🟢 hit (painted by worst finding severity) · 🟦 covered (a rule exists, nothing found this scan) · ▫️ gap (no rule yet).
 
+
+### 🎯 Kill-chain exploit path
+
+**9 tactics chained** · ⚠️ reaches **Impact** (full kill-chain)
+
+`Initial Access` → `Execution` → `Persistence` → `Privilege Escalation` → `Defense Evasion` → `Credential Access` → `Discovery` → `Lateral Movement` → `Impact`
+
+1. **Initial Access** (CRITICAL) — Using cloud credentials, Compromised images in registry, Exposed sensitive interfaces, Valid Accounts
+2. **Execution** (CRITICAL) — New container
+3. **Persistence** (CRITICAL) — Kubernetes CronJob, Malicious admission controller, Deploy Container
+4. **Privilege Escalation** (CRITICAL) — Privileged container, Cluster-admin binding, Access cloud resources, Abuse Elevation Control
+5. **Defense Evasion** (HIGH) — Clear container logs, Impair Defenses, Deploy Container
+6. **Credential Access** (CRITICAL) — List K8s secrets, Application credentials in config files, Access managed identity credential, Adversary-in-the-Middle
+7. **Discovery** (CRITICAL) — Access the K8s API server, Network mapping
+8. **Lateral Movement** (CRITICAL) — Access cloud resources, CoreDNS poisoning, Valid Accounts, Deploy Container
+9. **Impact** (MEDIUM) — Denial of service
+
 [↑ top](#top)
 
 ---
@@ -215,11 +232,11 @@ Findings from this scan projected onto the [Kubernetes Threat Matrix](https://ku
 | `rbac_identity` | 10 |
 | `network_security` | 9 |
 | `cluster_control_plane` | 8 |
-| `secrets` | 4 |
-| `cloud_iam` | 4 |
 | `admission_control` | 4 |
-| `compliance` | 2 |
+| `cloud_iam` | 4 |
+| `secrets` | 4 |
 | `image_supply_chain` | 2 |
+| `compliance` | 2 |
 | `attack_surface` | 1 |
 
 ### OWASP Kubernetes Top 10 (2025)
@@ -251,15 +268,15 @@ These single issues each enable **multiple** MITRE tactics, so an attacker can c
 | **Over-permissive workload identity** | `CloudIAM/shared-sa (production)` | Privilege Escalation → Lateral Movement |
 | **Over-permissive workload identity** | `CloudIAM/?` | Privilege Escalation → Lateral Movement |
 | **Sensitive hostPath mount** | `Pod/payment-api (production)` | Persistence → Privilege Escalation → Lateral Movement |
-| **Suspicious mutating webhook** | `MutatingWebhookConfiguration/evil-webhook` | Persistence → Credential Access |
 | **Privileged container** | `Pod/payment-api (production)` | Privilege Escalation → Execution |
 | **Privileged container** | `Pod/aws-node-64w2k (kube-system)` | Privilege Escalation → Execution |
+| **Suspicious mutating webhook** | `MutatingWebhookConfiguration/evil-webhook` | Persistence → Credential Access |
 | **Metadata API not blocked** | `Namespace/production` | Credential Access → Lateral Movement |
 | **Metadata API not blocked** | `Namespace/staging` | Credential Access → Lateral Movement |
 | **Broad node instance role** | `CloudIAM/eks-node-role` | Initial Access → Lateral Movement |
+| **Writable hostPath mount** | `Pod/payment-api (production)` | Persistence → Lateral Movement |
 | **Host network shared** | `Pod/payment-api (production)` | Privilege Escalation → Discovery |
 | **Host network shared** | `Pod/aws-node-64w2k (kube-system)` | Privilege Escalation → Discovery |
-| **Writable hostPath mount** | `Pod/payment-api (production)` | Persistence → Lateral Movement |
 | **Dangerous capabilities added** | `Pod/payment-api (production)` | Privilege Escalation → Lateral Movement |
 | **Dangerous capabilities added** | `Pod/aws-node-64w2k (kube-system)` | Privilege Escalation → Lateral Movement |
 
@@ -395,20 +412,20 @@ kubectl -n kube-system get pod -l component=etcd -o jsonpath='{.items[0].spec.co
 
 ---
 
-#### 3. 🔴 Kubelet AlwaysAllow authz
+#### 3. 🔴 Kubernetes dashboard exposed
 
-`ControlPlane/kubelet`
+`Service/kubernetes-dashboard (kubernetes-dashboard)`
 
 ##### Summary
 
-The kubelet's authorization mode is `AlwaysAllow`, so even an authenticated caller's identity is never actually checked against RBAC before the kubelet honors the request.
+The Kubernetes Dashboard is reachable from outside the cluster.
 
-> **Detected:** kubelet --authorization-mode=AlwaysAllow
+> **Detected:** Kubernetes dashboard is externally exposed
 
 | | |
 |:--|:--|
-| **Rule ID** | `kubelet-authz-always-allow` |
-| **Domain** | `cluster_control_plane` |
+| **Rule ID** | `net-dashboard-exposed` |
+| **Domain** | `network_security` |
 | **Exploitability** | Remote |
 | **Blast radius** | Cluster-wide |
 | **Risk score** | 90.0 |
@@ -418,7 +435,6 @@ The kubelet's authorization mode is `AlwaysAllow`, so even an authenticated call
 | Framework | Control | Reference |
 |:--|:--|:--|
 | OWASP Kubernetes Top 10 (2025) | K06 — Overly Exposed Components | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 4.2.2 — --authorization-mode not set to AlwaysAllow | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
 
 ##### 🎯 MITRE ATT&CK Mapping
 
@@ -428,32 +444,23 @@ The kubelet's authorization mode is `AlwaysAllow`, so even an authenticated call
 
 ##### 💥 Impact
 
-Any credential that can merely authenticate to the kubelet — not necessarily one with any RBAC grant — gets full kubelet API access: pod exec, log retrieval, and container lifecycle control on that node.
+The Dashboard is a well-documented, frequently targeted attack surface — multiple real-world breaches (including a widely reported Tesla cryptomining incident) started from an internet-reachable, under-authenticated Dashboard used to schedule an attacker-controlled pod.
 
 ##### 🛠️ Remediation
 
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+**Restrict or remove the dashboard**
 
-Manual steps:
-
-1. No remediation is registered for this rule.
+```bash
+kubectl -n kubernetes-dashboard patch svc kubernetes-dashboard -p '{"spec":{"type":"ClusterIP"}}'
+```
 
 ##### ✅ Validation — How to Reproduce / Verify
 
 Run before remediating to confirm the finding, and again afterward to confirm it cleared:
 
 ```bash
-kubectl get --raw /api/v1/nodes/<node>/proxy/configz 2>/dev/null | jq '.kubeletconfig.authorization.mode'
+kubectl -n kubernetes-dashboard get svc kubernetes-dashboard -o jsonpath='{.spec.type} {.status.loadBalancer.ingress}'
 ```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "spec.kubelet.authorizationMode": "AlwaysAllow"
-}
-```
-</details>
 
 ---
 
@@ -521,20 +528,20 @@ kubectl get --raw /api -v=6 2>&1 | head -20  # an unauthenticated 200 instead of
 
 ---
 
-#### 5. 🔴 Kubernetes dashboard exposed
+#### 5. 🔴 Kubelet AlwaysAllow authz
 
-`Service/kubernetes-dashboard (kubernetes-dashboard)`
+`ControlPlane/kubelet`
 
 ##### Summary
 
-The Kubernetes Dashboard is reachable from outside the cluster.
+The kubelet's authorization mode is `AlwaysAllow`, so even an authenticated caller's identity is never actually checked against RBAC before the kubelet honors the request.
 
-> **Detected:** Kubernetes dashboard is externally exposed
+> **Detected:** kubelet --authorization-mode=AlwaysAllow
 
 | | |
 |:--|:--|
-| **Rule ID** | `net-dashboard-exposed` |
-| **Domain** | `network_security` |
+| **Rule ID** | `kubelet-authz-always-allow` |
+| **Domain** | `cluster_control_plane` |
 | **Exploitability** | Remote |
 | **Blast radius** | Cluster-wide |
 | **Risk score** | 90.0 |
@@ -544,6 +551,7 @@ The Kubernetes Dashboard is reachable from outside the cluster.
 | Framework | Control | Reference |
 |:--|:--|:--|
 | OWASP Kubernetes Top 10 (2025) | K06 — Overly Exposed Components | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 4.2.2 — --authorization-mode not set to AlwaysAllow | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
 
 ##### 🎯 MITRE ATT&CK Mapping
 
@@ -553,23 +561,32 @@ The Kubernetes Dashboard is reachable from outside the cluster.
 
 ##### 💥 Impact
 
-The Dashboard is a well-documented, frequently targeted attack surface — multiple real-world breaches (including a widely reported Tesla cryptomining incident) started from an internet-reachable, under-authenticated Dashboard used to schedule an attacker-controlled pod.
+Any credential that can merely authenticate to the kubelet — not necessarily one with any RBAC grant — gets full kubelet API access: pod exec, log retrieval, and container lifecycle control on that node.
 
 ##### 🛠️ Remediation
 
-**Restrict or remove the dashboard**
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
 
-```bash
-kubectl -n kubernetes-dashboard patch svc kubernetes-dashboard -p '{"spec":{"type":"ClusterIP"}}'
-```
+Manual steps:
+
+1. No remediation is registered for this rule.
 
 ##### ✅ Validation — How to Reproduce / Verify
 
 Run before remediating to confirm the finding, and again afterward to confirm it cleared:
 
 ```bash
-kubectl -n kubernetes-dashboard get svc kubernetes-dashboard -o jsonpath='{.spec.type} {.status.loadBalancer.ingress}'
+kubectl get --raw /api/v1/nodes/<node>/proxy/configz 2>/dev/null | jq '.kubeletconfig.authorization.mode'
 ```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "spec.kubelet.authorizationMode": "AlwaysAllow"
+}
+```
+</details>
 
 ---
 
@@ -706,69 +723,7 @@ kubectl get pod payment-api -n production -o jsonpath='{.spec.volumes[*].hostPat
 
 ---
 
-#### 8. 🔴 Suspicious mutating webhook ⚡ Attack-Path Amplified
-
-`MutatingWebhookConfiguration/evil-webhook`
-
-##### Summary
-
-A Mutating or Validating webhook is configured with a suspiciously broad scope and/or an external endpoint outside the cluster.
-
-> **Detected:** mutating webhook 'inject.evil.io' targets an external URL (https://attacker.example.com/mutate) with cluster-wide scope
-
-| | |
-|:--|:--|
-| **Rule ID** | `admission-malicious-webhook` |
-| **Domain** | `admission_control` |
-| **Exploitability** | Local |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 37.5 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Compromise Host Software Binary (`T1554`) | [Reference](https://attack.mitre.org/techniques/T1554/) |
-| Credential Access | Adversary-in-the-Middle (`T1557`) | [Reference](https://attack.mitre.org/techniques/T1557/) |
-
-##### 💥 Impact
-
-A mutating webhook can silently rewrite every matching object the API server processes — inject a sidecar, add a hostPath mount, alter securityContext — on every create/update, cluster-wide, invisibly to whoever submitted the original manifest. It's one of the stealthiest persistence mechanisms in Kubernetes.
-
-##### 🛠️ Remediation
-
-**Remove a malicious admission webhook**
-
-```bash
-kubectl delete mutatingwebhookconfiguration evil-webhook
-```
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get mutatingwebhookconfigurations,validatingwebhookconfigurations -o json | jq '.items[] | {name: .metadata.name, webhooks: [.webhooks[] | {name, clientConfig, failurePolicy}]}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "url": "https://attacker.example.com/mutate"
-}
-```
-</details>
-
----
-
-#### 9. 🔴 Privileged container ⚡ Attack-Path Amplified
+#### 8. 🔴 Privileged container ⚡ Attack-Path Amplified
 
 `Pod/payment-api (production)`
 
@@ -864,7 +819,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 10. 🔴 Privileged container ⚡ Attack-Path Amplified
+#### 9. 🔴 Privileged container ⚡ Attack-Path Amplified
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -966,7 +921,199 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 11. 🔴 Wildcard resources in role
+#### 10. 🔴 Suspicious mutating webhook ⚡ Attack-Path Amplified
+
+`MutatingWebhookConfiguration/evil-webhook`
+
+##### Summary
+
+A Mutating or Validating webhook is configured with a suspiciously broad scope and/or an external endpoint outside the cluster.
+
+> **Detected:** mutating webhook 'inject.evil.io' targets an external URL (https://attacker.example.com/mutate) with cluster-wide scope
+
+| | |
+|:--|:--|
+| **Rule ID** | `admission-malicious-webhook` |
+| **Domain** | `admission_control` |
+| **Exploitability** | Local |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 37.5 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Compromise Host Software Binary (`T1554`) | [Reference](https://attack.mitre.org/techniques/T1554/) |
+| Credential Access | Adversary-in-the-Middle (`T1557`) | [Reference](https://attack.mitre.org/techniques/T1557/) |
+
+##### 💥 Impact
+
+A mutating webhook can silently rewrite every matching object the API server processes — inject a sidecar, add a hostPath mount, alter securityContext — on every create/update, cluster-wide, invisibly to whoever submitted the original manifest. It's one of the stealthiest persistence mechanisms in Kubernetes.
+
+##### 🛠️ Remediation
+
+**Remove a malicious admission webhook**
+
+```bash
+kubectl delete mutatingwebhookconfiguration evil-webhook
+```
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get mutatingwebhookconfigurations,validatingwebhookconfigurations -o json | jq '.items[] | {name: .metadata.name, webhooks: [.webhooks[] | {name, clientConfig, failurePolicy}]}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "url": "https://attacker.example.com/mutate"
+}
+```
+</details>
+
+---
+
+#### 11. 🔴 bind/escalate/impersonate verbs
+
+`ClusterRole/binder`
+
+##### Summary
+
+A Role/ClusterRole grants the `bind`, `escalate`, or `impersonate` verb — RBAC's own built-in privilege-escalation primitives.
+
+> **Detected:** role can bind, escalate — privilege-escalation primitive
+
+| | |
+|:--|:--|
+| **Rule ID** | `rbac-bind-escalate-verbs` |
+| **Domain** | `rbac_identity` |
+| **Exploitability** | Local |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 30.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K02 — Overly Permissive Authorization | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.1.8 — Limit use of Bind, Impersonate and Escalate permissions | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Privilege Escalation | Valid Accounts (`T1078`) | [Reference](https://attack.mitre.org/techniques/T1078/) |
+
+##### 💥 Impact
+
+`escalate` lets the holder grant themselves permissions they don't already have; `bind` lets them attach any Role/ClusterRole (including `cluster-admin`) to a subject; `impersonate` lets them act as any other user or ServiceAccount. Any of the three is a direct, intended-by-Kubernetes escalation path, not a side effect — holding one of these verbs on a broad scope is equivalent to holding whatever it can grant.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]?.verbs[]? | IN("bind","escalate","impersonate")) | .metadata.name'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "verbs": [
+    "bind",
+    "escalate"
+  ]
+}
+```
+</details>
+
+---
+
+#### 12. 🔴 Docker socket mounted
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+The container mounts the Docker (or containerd) socket from the host, handing it direct control over the node's container runtime.
+
+> **Detected:** mounts the Docker socket (/var/run/docker.sock) — container escape
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-docker-socket` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `Deployment/payment-api (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 30.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Privilege Escalation | Escape to Host (`T1611`) | [Reference](https://attack.mitre.org/techniques/T1611/) |
+
+##### 💥 Impact
+
+Access to the runtime socket is equivalent to root on the node: an attacker can launch a new privileged container, bind-mount the host filesystem into it, and read/write anything on the node — a textbook, one-command container escape.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+
+Manual steps:
+
+1. Remove hostPath / docker.sock mount
+2. # manual review required: remove the hostPath volume + mount
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod payment-api -n production -o jsonpath='{.spec.volumes[*].hostPath.path}' | grep -o '[^ ]*docker.sock'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "volume": "dockersock",
+  "path": "/var/run/docker.sock"
+}
+```
+</details>
+
+---
+
+#### 13. 🔴 Wildcard resources in role
 
 `ClusterRole/super-role`
 
@@ -1039,72 +1186,7 @@ kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]?.resour
 
 ---
 
-#### 12. 🔴 bind/escalate/impersonate verbs
-
-`ClusterRole/binder`
-
-##### Summary
-
-A Role/ClusterRole grants the `bind`, `escalate`, or `impersonate` verb — RBAC's own built-in privilege-escalation primitives.
-
-> **Detected:** role can bind, escalate — privilege-escalation primitive
-
-| | |
-|:--|:--|
-| **Rule ID** | `rbac-bind-escalate-verbs` |
-| **Domain** | `rbac_identity` |
-| **Exploitability** | Local |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 30.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K02 — Overly Permissive Authorization | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.1.8 — Limit use of Bind, Impersonate and Escalate permissions | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Privilege Escalation | Valid Accounts (`T1078`) | [Reference](https://attack.mitre.org/techniques/T1078/) |
-
-##### 💥 Impact
-
-`escalate` lets the holder grant themselves permissions they don't already have; `bind` lets them attach any Role/ClusterRole (including `cluster-admin`) to a subject; `impersonate` lets them act as any other user or ServiceAccount. Any of the three is a direct, intended-by-Kubernetes escalation path, not a side effect — holding one of these verbs on a broad scope is equivalent to holding whatever it can grant.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]?.verbs[]? | IN("bind","escalate","impersonate")) | .metadata.name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "verbs": [
-    "bind",
-    "escalate"
-  ]
-}
-```
-</details>
-
----
-
-#### 13. 🔴 Wildcard verbs in role
+#### 14. 🔴 Wildcard verbs in role
 
 `ClusterRole/super-role`
 
@@ -1171,71 +1253,6 @@ kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]?.verbs[
       "*"
     ]
   }
-}
-```
-</details>
-
----
-
-#### 14. 🔴 Docker socket mounted
-
-`Pod/payment-api (production)`
-
-##### Summary
-
-The container mounts the Docker (or containerd) socket from the host, handing it direct control over the node's container runtime.
-
-> **Detected:** mounts the Docker socket (/var/run/docker.sock) — container escape
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-docker-socket` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `Deployment/payment-api (production)` |
-| **Exploitability** | Local |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 30.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Privilege Escalation | Escape to Host (`T1611`) | [Reference](https://attack.mitre.org/techniques/T1611/) |
-
-##### 💥 Impact
-
-Access to the runtime socket is equivalent to root on the node: an attacker can launch a new privileged container, bind-mount the host filesystem into it, and read/write anything on the node — a textbook, one-command container escape.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
-
-Manual steps:
-
-1. Remove hostPath / docker.sock mount
-2. # manual review required: remove the hostPath volume + mount
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod payment-api -n production -o jsonpath='{.spec.volumes[*].hostPath.path}' | grep -o '[^ ]*docker.sock'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "volume": "dockersock",
-  "path": "/var/run/docker.sock"
 }
 ```
 </details>
@@ -1387,7 +1404,70 @@ kubectl rollout status deployment/payment-api -n production
 <a id="sev-high"></a>
 ### 🟠 HIGH — 42 finding(s)
 
-#### 1. 🟠 API audit logging disabled
+#### 1. 🟠 etcd encryption not configured
+
+`ControlPlane/apiServer`
+
+##### Summary
+
+No `--encryption-provider-config` is set on the API server, so Secrets are stored in etcd as plaintext, not encrypted at rest.
+
+> **Detected:** no --encryption-provider-config (secrets stored plaintext)
+
+| | |
+|:--|:--|
+| **Rule ID** | `etcd-encryption-missing` |
+| **Domain** | `cluster_control_plane` |
+| **Exploitability** | Remote |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 63.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 1.2.28 — --encryption-provider-config argument set | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Credential Access | Unsecured Credentials (`T1552`) | [Reference](https://attack.mitre.org/techniques/T1552/) |
+
+##### 💥 Impact
+
+Anyone with read access to etcd's data directory or its backups — a stolen disk snapshot, an exposed backup bucket, a compromised etcd node — can read every Secret in the cluster directly, with no additional key required.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+
+Manual steps:
+
+1. Enable etcd encryption at rest
+2. # configure --encryption-provider-config on the API server
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[0].spec.containers[0].command}' | tr ',' '\n' | grep encryption-provider-config
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "spec.apiServer.encryptionProvider": ""
+}
+```
+</details>
+
+---
+
+#### 2. 🟠 API audit logging disabled
 
 `ControlPlane/apiServer`
 
@@ -1451,7 +1531,7 @@ kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[
 
 ---
 
-#### 2. 🟠 Kubelet read-only port open
+#### 3. 🟠 Kubelet read-only port open
 
 `ControlPlane/kubelet`
 
@@ -1507,69 +1587,6 @@ curl -s http://<node-ip>:10255/pods | head -5
 ```json
 {
   "spec.kubelet.readOnlyPort": 10255
-}
-```
-</details>
-
----
-
-#### 3. 🟠 etcd encryption not configured
-
-`ControlPlane/apiServer`
-
-##### Summary
-
-No `--encryption-provider-config` is set on the API server, so Secrets are stored in etcd as plaintext, not encrypted at rest.
-
-> **Detected:** no --encryption-provider-config (secrets stored plaintext)
-
-| | |
-|:--|:--|
-| **Rule ID** | `etcd-encryption-missing` |
-| **Domain** | `cluster_control_plane` |
-| **Exploitability** | Remote |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 63.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 1.2.28 — --encryption-provider-config argument set | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Credential Access | Unsecured Credentials (`T1552`) | [Reference](https://attack.mitre.org/techniques/T1552/) |
-
-##### 💥 Impact
-
-Anyone with read access to etcd's data directory or its backups — a stolen disk snapshot, an exposed backup bucket, a compromised etcd node — can read every Secret in the cluster directly, with no additional key required.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
-
-Manual steps:
-
-1. Enable etcd encryption at rest
-2. # configure --encryption-provider-config on the API server
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[0].spec.containers[0].command}' | tr ',' '\n' | grep encryption-provider-config
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "spec.apiServer.encryptionProvider": ""
 }
 ```
 </details>
@@ -2048,152 +2065,7 @@ aws ec2 describe-instances --instance-ids <id> --query 'Reservations[].Instances
 
 ---
 
-#### 11. 🟠 Broad secret read access
-
-`ClusterRole/super-role`
-
-##### Summary
-
-A ClusterRole grants `get`/`list` on `secrets` cluster-wide rather than scoped to a namespace or specific secret names.
-
-> **Detected:** ClusterRole can read secrets cluster-wide (get/list on secrets)
-
-| | |
-|:--|:--|
-| **Rule ID** | `rbac-secret-read-broad` |
-| **Domain** | `rbac_identity` |
-| **Exploitability** | Local |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 21.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.1.2 — Minimize access to secrets | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
-
-##### 💥 Impact
-
-Any subject bound to this role can read every Secret in every namespace — database credentials, TLS keys, cloud IAM tokens, other teams' application secrets — a single overly broad grant that effectively flattens Kubernetes' namespace isolation for credential material.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get clusterrole -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="secrets") | .verbs[]? | IN("get","list")) | .metadata.name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "rule": {
-    "apiGroups": [
-      "*"
-    ],
-    "resources": [
-      "*"
-    ],
-    "verbs": [
-      "*"
-    ]
-  }
-}
-```
-</details>
-
----
-
-#### 12. 🟠 Broad secret read access
-
-`ClusterRole/secret-reader`
-
-##### Summary
-
-A ClusterRole grants `get`/`list` on `secrets` cluster-wide rather than scoped to a namespace or specific secret names.
-
-> **Detected:** ClusterRole can read secrets cluster-wide (get/list on secrets)
-
-| | |
-|:--|:--|
-| **Rule ID** | `rbac-secret-read-broad` |
-| **Domain** | `rbac_identity` |
-| **Exploitability** | Local |
-| **Blast radius** | Cluster-wide |
-| **Risk score** | 21.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.1.2 — Minimize access to secrets | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
-
-##### 💥 Impact
-
-Any subject bound to this role can read every Secret in every namespace — database credentials, TLS keys, cloud IAM tokens, other teams' application secrets — a single overly broad grant that effectively flattens Kubernetes' namespace isolation for credential material.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get clusterrole -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="secrets") | .verbs[]? | IN("get","list")) | .metadata.name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "rule": {
-    "apiGroups": [
-      ""
-    ],
-    "resources": [
-      "secrets"
-    ],
-    "verbs": [
-      "get",
-      "list"
-    ]
-  }
-}
-```
-</details>
-
----
-
-#### 13. 🟠 Can write ConfigMaps (CoreDNS risk)
+#### 11. 🟠 Can write ConfigMaps (CoreDNS risk)
 
 `ClusterRole/super-role`
 
@@ -2264,7 +2136,7 @@ kubectl get role,rolebinding -n kube-system -o json | jq '.items[] | select(.rul
 
 ---
 
-#### 14. 🟠 Can write ConfigMaps (CoreDNS risk)
+#### 12. 🟠 Can write ConfigMaps (CoreDNS risk)
 
 `ClusterRole/cm-writer`
 
@@ -2338,6 +2210,151 @@ kubectl get role,rolebinding -n kube-system -o json | jq '.items[] | select(.rul
 
 ---
 
+#### 13. 🟠 Broad secret read access
+
+`ClusterRole/super-role`
+
+##### Summary
+
+A ClusterRole grants `get`/`list` on `secrets` cluster-wide rather than scoped to a namespace or specific secret names.
+
+> **Detected:** ClusterRole can read secrets cluster-wide (get/list on secrets)
+
+| | |
+|:--|:--|
+| **Rule ID** | `rbac-secret-read-broad` |
+| **Domain** | `rbac_identity` |
+| **Exploitability** | Local |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 21.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.1.2 — Minimize access to secrets | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
+
+##### 💥 Impact
+
+Any subject bound to this role can read every Secret in every namespace — database credentials, TLS keys, cloud IAM tokens, other teams' application secrets — a single overly broad grant that effectively flattens Kubernetes' namespace isolation for credential material.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get clusterrole -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="secrets") | .verbs[]? | IN("get","list")) | .metadata.name'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "rule": {
+    "apiGroups": [
+      "*"
+    ],
+    "resources": [
+      "*"
+    ],
+    "verbs": [
+      "*"
+    ]
+  }
+}
+```
+</details>
+
+---
+
+#### 14. 🟠 Broad secret read access
+
+`ClusterRole/secret-reader`
+
+##### Summary
+
+A ClusterRole grants `get`/`list` on `secrets` cluster-wide rather than scoped to a namespace or specific secret names.
+
+> **Detected:** ClusterRole can read secrets cluster-wide (get/list on secrets)
+
+| | |
+|:--|:--|
+| **Rule ID** | `rbac-secret-read-broad` |
+| **Domain** | `rbac_identity` |
+| **Exploitability** | Local |
+| **Blast radius** | Cluster-wide |
+| **Risk score** | 21.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.1.2 — Minimize access to secrets | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
+
+##### 💥 Impact
+
+Any subject bound to this role can read every Secret in every namespace — database credentials, TLS keys, cloud IAM tokens, other teams' application secrets — a single overly broad grant that effectively flattens Kubernetes' namespace isolation for credential material.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get clusterrole -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="secrets") | .verbs[]? | IN("get","list")) | .metadata.name'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "rule": {
+    "apiGroups": [
+      ""
+    ],
+    "resources": [
+      "secrets"
+    ],
+    "verbs": [
+      "get",
+      "list"
+    ]
+  }
+}
+```
+</details>
+
+---
+
 #### 15. 🟠 Ingress without TLS
 
 `Ingress/web-ingress (production)`
@@ -2390,7 +2407,73 @@ kubectl get ingress web-ingress -n production -o jsonpath='{.spec.tls}'
 
 ---
 
-#### 16. 🟠 Host network shared ⚡ Attack-Path Amplified
+#### 16. 🟠 Writable hostPath mount ⚡ Attack-Path Amplified
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+The pod mounts a writable hostPath volume outside the small set of already-flagged critical system paths.
+
+> **Detected:** mounts a writable hostPath '/var/run/docker.sock' (persistence / lateral movement vector)
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-hostpath-writable` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `Deployment/payment-api (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Namespace |
+| **Risk score** | 17.5 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.12 — Minimize the admission of HostPath volumes | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+| Lateral Movement | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+A writable path on the node's filesystem that survives the pod's own lifecycle is a persistence mechanism — an attacker who compromises this pod can drop a payload on the node that a different, later workload (or the node itself) may execute, and it can be used to move data between pods that shouldn't otherwise be able to communicate.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+
+Manual steps:
+
+1. Remove hostPath / docker.sock mount
+2. # manual review required: remove the hostPath volume + mount
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod payment-api -n production -o jsonpath='{.spec.volumes[*].hostPath.path}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "volume": "dockersock",
+  "path": "/var/run/docker.sock"
+}
+```
+</details>
+
+---
+
+#### 17. 🟠 Host network shared ⚡ Attack-Path Amplified
 
 `Pod/payment-api (production)`
 
@@ -2479,7 +2562,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 17. 🟠 Host network shared ⚡ Attack-Path Amplified
+#### 18. 🟠 Host network shared ⚡ Attack-Path Amplified
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -2574,72 +2657,6 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 18. 🟠 Writable hostPath mount ⚡ Attack-Path Amplified
-
-`Pod/payment-api (production)`
-
-##### Summary
-
-The pod mounts a writable hostPath volume outside the small set of already-flagged critical system paths.
-
-> **Detected:** mounts a writable hostPath '/var/run/docker.sock' (persistence / lateral movement vector)
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-hostpath-writable` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `Deployment/payment-api (production)` |
-| **Exploitability** | Local |
-| **Blast radius** | Namespace |
-| **Risk score** | 17.5 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.12 — Minimize the admission of HostPath volumes | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-| Lateral Movement | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-A writable path on the node's filesystem that survives the pod's own lifecycle is a persistence mechanism — an attacker who compromises this pod can drop a payload on the node that a different, later workload (or the node itself) may execute, and it can be used to move data between pods that shouldn't otherwise be able to communicate.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
-
-Manual steps:
-
-1. Remove hostPath / docker.sock mount
-2. # manual review required: remove the hostPath volume + mount
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod payment-api -n production -o jsonpath='{.spec.volumes[*].hostPath.path}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "volume": "dockersock",
-  "path": "/var/run/docker.sock"
-}
-```
-</details>
-
----
-
 #### 19. 🟠 Host IPC namespace shared
 
 `Pod/payment-api (production)`
@@ -2728,201 +2745,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 20. 🟠 Suspicious CronJob
-
-`CronJob/backup-cron (production)`
-
-##### Summary
-
-A CronJob has a suspicious schedule, image, or command — the pattern used by backdoors that need to survive pod restarts and even node reboots.
-
-> **Detected:** CronJob 'backup-cron' looks suspicious (schedule='* * * * *', images=['curlimages/curl:latest'])
-
-| | |
-|:--|:--|
-| **Rule ID** | `cronjob-suspicious` |
-| **Domain** | `admission_control` |
-| **Exploitability** | Local |
-| **Blast radius** | Namespace |
-| **Risk score** | 14.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Scheduled Task/Job: Cron (`T1053.003`) | [Reference](https://attack.mitre.org/techniques/T1053/003/) |
-
-##### 💥 Impact
-
-A CronJob is a durable, self-reinstating persistence mechanism: even if the malicious pod it spawns is found and killed, the CronJob simply creates another one on its next scheduled tick, with no further attacker action required.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get cronjob backup-cron -n production -o jsonpath='{.spec.schedule} {.spec.jobTemplate.spec.template.spec.containers[*].image} {.spec.jobTemplate.spec.template.spec.containers[*].command}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "schedule": "* * * * *",
-  "images": [
-    "curlimages/curl:latest"
-  ]
-}
-```
-</details>
-
----
-
-#### 21. 🟠 PSA not enforcing 'restricted'
-
-`Namespace/production`
-
-##### Summary
-
-The namespace does not enforce the `restricted` Pod Security Standard — Kubernetes' own built-in, opt-in baseline for hardened pod specs.
-
-> **Detected:** namespace 'production' does not enforce Pod Security Standard 'restricted' (current: none)
-
-| | |
-|:--|:--|
-| **Rule ID** | `compliance-psa-not-restricted` |
-| **Domain** | `compliance` |
-| **Exploitability** | Local |
-| **Blast radius** | Namespace |
-| **Risk score** | 14.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.1 — Cluster has at least one active policy control mechanism | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
-| NSA/CISA Kubernetes Hardening Guide | Policy Enforcement — Policy Enforcement | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-Without PSA enforcement, nothing prevents any future pod deployed into this namespace from being privileged, root, or host-namespace-sharing, regardless of how well-intentioned today's workloads are — it's a namespace-wide guardrail, not a one-time check.
-
-##### 🛠️ Remediation
-
-**Enforce Pod Security Standard 'restricted'**
-
-```bash
-kubectl label ns production pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted --overwrite
-```
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get ns production -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "namespace": "production",
-  "enforce": null
-}
-```
-</details>
-
----
-
-#### 22. 🟠 PSA not enforcing 'restricted'
-
-`Namespace/staging`
-
-##### Summary
-
-The namespace does not enforce the `restricted` Pod Security Standard — Kubernetes' own built-in, opt-in baseline for hardened pod specs.
-
-> **Detected:** namespace 'staging' does not enforce Pod Security Standard 'restricted' (current: privileged)
-
-| | |
-|:--|:--|
-| **Rule ID** | `compliance-psa-not-restricted` |
-| **Domain** | `compliance` |
-| **Exploitability** | Local |
-| **Blast radius** | Namespace |
-| **Risk score** | 14.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.1 — Cluster has at least one active policy control mechanism | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
-| NSA/CISA Kubernetes Hardening Guide | Policy Enforcement — Policy Enforcement | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-Without PSA enforcement, nothing prevents any future pod deployed into this namespace from being privileged, root, or host-namespace-sharing, regardless of how well-intentioned today's workloads are — it's a namespace-wide guardrail, not a one-time check.
-
-##### 🛠️ Remediation
-
-**Enforce Pod Security Standard 'restricted'**
-
-```bash
-kubectl label ns staging pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted --overwrite
-```
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get ns staging -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "namespace": "staging",
-  "enforce": "privileged"
-}
-```
-</details>
-
----
-
-#### 23. 🟠 Namespace without NetworkPolicy
+#### 20. 🟠 Namespace without NetworkPolicy
 
 `Namespace/production`
 
@@ -2990,7 +2813,7 @@ kubectl get networkpolicy -n default
 
 ---
 
-#### 24. 🟠 Namespace without NetworkPolicy
+#### 21. 🟠 Namespace without NetworkPolicy
 
 `Namespace/staging`
 
@@ -3052,6 +2875,200 @@ kubectl get networkpolicy -n default
 ```json
 {
   "namespace": "staging"
+}
+```
+</details>
+
+---
+
+#### 22. 🟠 PSA not enforcing 'restricted'
+
+`Namespace/production`
+
+##### Summary
+
+The namespace does not enforce the `restricted` Pod Security Standard — Kubernetes' own built-in, opt-in baseline for hardened pod specs.
+
+> **Detected:** namespace 'production' does not enforce Pod Security Standard 'restricted' (current: none)
+
+| | |
+|:--|:--|
+| **Rule ID** | `compliance-psa-not-restricted` |
+| **Domain** | `compliance` |
+| **Exploitability** | Local |
+| **Blast radius** | Namespace |
+| **Risk score** | 14.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.1 — Cluster has at least one active policy control mechanism | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
+| NSA/CISA Kubernetes Hardening Guide | Policy Enforcement — Policy Enforcement | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Without PSA enforcement, nothing prevents any future pod deployed into this namespace from being privileged, root, or host-namespace-sharing, regardless of how well-intentioned today's workloads are — it's a namespace-wide guardrail, not a one-time check.
+
+##### 🛠️ Remediation
+
+**Enforce Pod Security Standard 'restricted'**
+
+```bash
+kubectl label ns production pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted --overwrite
+```
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get ns production -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "namespace": "production",
+  "enforce": null
+}
+```
+</details>
+
+---
+
+#### 23. 🟠 PSA not enforcing 'restricted'
+
+`Namespace/staging`
+
+##### Summary
+
+The namespace does not enforce the `restricted` Pod Security Standard — Kubernetes' own built-in, opt-in baseline for hardened pod specs.
+
+> **Detected:** namespace 'staging' does not enforce Pod Security Standard 'restricted' (current: privileged)
+
+| | |
+|:--|:--|
+| **Rule ID** | `compliance-psa-not-restricted` |
+| **Domain** | `compliance` |
+| **Exploitability** | Local |
+| **Blast radius** | Namespace |
+| **Risk score** | 14.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.1 — Cluster has at least one active policy control mechanism | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+| NSA/CISA Kubernetes Hardening Guide | Pod Security — Pod Security | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
+| NSA/CISA Kubernetes Hardening Guide | Policy Enforcement — Policy Enforcement | [Reference](https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDANCE_1.2_20220829.PDF) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Without PSA enforcement, nothing prevents any future pod deployed into this namespace from being privileged, root, or host-namespace-sharing, regardless of how well-intentioned today's workloads are — it's a namespace-wide guardrail, not a one-time check.
+
+##### 🛠️ Remediation
+
+**Enforce Pod Security Standard 'restricted'**
+
+```bash
+kubectl label ns staging pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted --overwrite
+```
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get ns staging -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "namespace": "staging",
+  "enforce": "privileged"
+}
+```
+</details>
+
+---
+
+#### 24. 🟠 Suspicious CronJob
+
+`CronJob/backup-cron (production)`
+
+##### Summary
+
+A CronJob has a suspicious schedule, image, or command — the pattern used by backdoors that need to survive pod restarts and even node reboots.
+
+> **Detected:** CronJob 'backup-cron' looks suspicious (schedule='* * * * *', images=['curlimages/curl:latest'])
+
+| | |
+|:--|:--|
+| **Rule ID** | `cronjob-suspicious` |
+| **Domain** | `admission_control` |
+| **Exploitability** | Local |
+| **Blast radius** | Namespace |
+| **Risk score** | 14.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Scheduled Task/Job: Cron (`T1053.003`) | [Reference](https://attack.mitre.org/techniques/T1053/003/) |
+
+##### 💥 Impact
+
+A CronJob is a durable, self-reinstating persistence mechanism: even if the malicious pod it spawns is found and killed, the CronJob simply creates another one on its next scheduled tick, with no further attacker action required.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get cronjob backup-cron -n production -o jsonpath='{.spec.schedule} {.spec.jobTemplate.spec.template.spec.containers[*].image} {.spec.jobTemplate.spec.template.spec.containers[*].command}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "schedule": "* * * * *",
+  "images": [
+    "curlimages/curl:latest"
+  ]
 }
 ```
 </details>
@@ -3265,541 +3282,7 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 27. 🟠 Credentials in ConfigMap
-
-`ConfigMap/app-config (production)`
-
-##### Summary
-
-A ConfigMap key or value looks like a hardcoded credential (password, token, API key, private key).
-
-> **Detected:** ConfigMap key 'admin_password' looks like a hardcoded credential
-
-| | |
-|:--|:--|
-| **Rule ID** | `sec-configmap-credentials` |
-| **Domain** | `secrets` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Credential Access | Unsecured Credentials (`T1552`) | [Reference](https://attack.mitre.org/techniques/T1552/) |
-
-##### 💥 Impact
-
-Unlike Secrets, ConfigMaps are not treated as sensitive by Kubernetes — they're readable by any identity with generic `get`/`list` on ConfigMaps (a far more common grant than secret access), and their contents are shown in plaintext by `kubectl get configmap -o yaml` with no redaction.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get configmap app-config -n production -o yaml
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "key": "admin_password"
-}
-```
-</details>
-
----
-
-#### 28. 🟠 Webhook failurePolicy=Ignore
-
-`MutatingWebhookConfiguration/evil-webhook`
-
-##### Summary
-
-A security-relevant admission webhook has `failurePolicy: Ignore`.
-
-> **Detected:** webhook 'inject.evil.io' has failurePolicy=Ignore (security control can be bypassed by breaking it)
-
-| | |
-|:--|:--|
-| **Rule ID** | `admission-webhook-failurepolicy` |
-| **Domain** | `admission_control` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Defense Evasion | Impair Defenses (`T1562`) | [Reference](https://attack.mitre.org/techniques/T1562/) |
-
-##### 💥 Impact
-
-If the webhook is ever unreachable — network issue, the webhook pod itself crashing, or an attacker deliberately taking it offline — every object it was supposed to validate or mutate is admitted anyway, silently. An attacker who can make a policy webhook unavailable can bypass it entirely rather than needing to defeat its logic.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get mutatingwebhookconfigurations,validatingwebhookconfigurations -o json | jq '.items[].webhooks[] | select(.failurePolicy=="Ignore") | .name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "webhook": "inject.evil.io"
-}
-```
-</details>
-
----
-
-#### 29. 🟠 Can delete Kubernetes events
-
-`ClusterRole/super-role`
-
-##### Summary
-
-A Role/ClusterRole grants `delete` on `events`.
-
-> **Detected:** role can delete events (defense evasion / covering tracks)
-
-| | |
-|:--|:--|
-| **Rule ID** | `rbac-can-delete-events` |
-| **Domain** | `rbac_identity` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K10 — Inadequate Logging & Monitoring | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Defense Evasion | Indicator Removal (`T1070`) | [Reference](https://attack.mitre.org/techniques/T1070/) |
-
-##### 💥 Impact
-
-Kubernetes events are one of the first places an operator looks during incident response. A subject that can delete them can erase evidence of its own suspicious activity (pod creation, exec, image pulls) as it happens — a defense-evasion primitive specifically flagged in the Kubernetes threat matrix.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="events") | .verbs[]?=="delete") | .metadata.name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "rule": {
-    "apiGroups": [
-      "*"
-    ],
-    "resources": [
-      "*"
-    ],
-    "verbs": [
-      "*"
-    ]
-  }
-}
-```
-</details>
-
----
-
-#### 30. 🟠 Can delete Kubernetes events
-
-`ClusterRole/cm-writer`
-
-##### Summary
-
-A Role/ClusterRole grants `delete` on `events`.
-
-> **Detected:** role can delete events (defense evasion / covering tracks)
-
-| | |
-|:--|:--|
-| **Rule ID** | `rbac-can-delete-events` |
-| **Domain** | `rbac_identity` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K10 — Inadequate Logging & Monitoring | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Defense Evasion | Indicator Removal (`T1070`) | [Reference](https://attack.mitre.org/techniques/T1070/) |
-
-##### 💥 Impact
-
-Kubernetes events are one of the first places an operator looks during incident response. A subject that can delete them can erase evidence of its own suspicious activity (pod creation, exec, image pulls) as it happens — a defense-evasion primitive specifically flagged in the Kubernetes threat matrix.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
-
-Manual steps:
-
-1. No remediation is registered for this rule.
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="events") | .verbs[]?=="delete") | .metadata.name'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "rule": {
-    "apiGroups": [
-      ""
-    ],
-    "resources": [
-      "configmaps",
-      "events"
-    ],
-    "verbs": [
-      "update",
-      "patch",
-      "delete"
-    ]
-  }
-}
-```
-</details>
-
----
-
-#### 31. 🟠 Capabilities not dropped (ALL)
-
-`Pod/payment-api (production)`
-
-##### Summary
-
-The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
-
-> **Detected:** container 'app' does not drop ALL capabilities
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-caps-not-dropped` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `Deployment/payment-api (production)` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
-
-##### 🛠️ Remediation
-
-**Drop ALL capabilities**
-
-```bash
-kubectl patch deployment payment-api -n production -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"capabilities": {"drop": ["ALL"]}}, "name": "app"}]}}}}'
-```
-
-<details><summary>Alternative — apply via YAML</summary>
-
-```yaml
-spec:
-  template:
-    spec:
-      containers:
-        - securityContext:
-            capabilities:
-              drop:
-                - ALL
-          name: app
-```
-
-</details>
-
-<details><summary>Rollback (if the fix causes issues)</summary>
-
-```bash
-kubectl rollout undo deployment/payment-api -n production
-```
-</details>
-
-_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
-```
-
-_Post-remediation check:_
-
-```bash
-kubectl get deployment payment-api -n production -o yaml
-kubectl rollout status deployment/payment-api -n production
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "app",
-  "dropped": []
-}
-```
-</details>
-
----
-
-#### 32. 🟠 Capabilities not dropped (ALL)
-
-`Pod/cache-redis (staging)`
-
-##### Summary
-
-The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
-
-> **Detected:** container 'redis' does not drop ALL capabilities
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-caps-not-dropped` |
-| **Domain** | `workload_pod_security` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** 'securityContext.capabilities.drop' is part of the Pod spec, which is immutable once the Pod is created — Kubernetes rejects patches to this field on a live Pod. This Pod has no owning controller, so it must be recreated directly (there is no Deployment/DaemonSet/etc. to roll out instead).
-
-Manual steps:
-
-1. 'securityContext.capabilities.drop' cannot be patched on a live, standalone Pod.
-2. kubectl get pod cache-redis -n staging -o yaml > pod.yaml
-3. Edit pod.yaml to set the corrected value, then:
-4. kubectl delete pod cache-redis -n staging
-5. kubectl apply -f pod.yaml
-
-_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "redis",
-  "dropped": []
-}
-```
-</details>
-
----
-
-#### 33. 🟠 Capabilities not dropped (ALL)
-
-`Pod/aws-node-64w2k (kube-system)`
-
-##### Summary
-
-The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
-
-> **Detected:** container 'aws-node' does not drop ALL capabilities
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-caps-not-dropped` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `DaemonSet/aws-node (kube-system)` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 7.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
-
-##### 🛠️ Remediation
-
-**Drop ALL capabilities**
-
-```bash
-kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"capabilities": {"drop": ["ALL"]}}, "name": "aws-node"}]}}}}'
-```
-
-<details><summary>Alternative — apply via YAML</summary>
-
-```yaml
-spec:
-  template:
-    spec:
-      containers:
-        - securityContext:
-            capabilities:
-              drop:
-                - ALL
-          name: aws-node
-```
-
-</details>
-
-<details><summary>Rollback (if the fix causes issues)</summary>
-
-```bash
-kubectl rollout undo daemonset/aws-node -n kube-system
-```
-</details>
-
-_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod aws-node-64w2k -n kube-system -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
-```
-
-_Post-remediation check:_
-
-```bash
-kubectl get daemonset aws-node -n kube-system -o yaml
-kubectl rollout status daemonset/aws-node -n kube-system
-```
-
-<details><summary>⚠️ Warnings</summary>
-
-- This appears to be a Kubernetes/EKS managed component. Verify vendor documentation before changing its security context because the recommended hardening may break cluster functionality.
-
-</details>
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "aws-node",
-  "dropped": []
-}
-```
-</details>
-
----
-
-#### 34. 🟠 Container runs as root
+#### 27. 🟠 Container runs as root
 
 `Pod/payment-api (production)`
 
@@ -3891,7 +3374,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 35. 🟠 Container runs as root
+#### 28. 🟠 Container runs as root
 
 `Pod/cache-redis (staging)`
 
@@ -3960,7 +3443,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securit
 
 ---
 
-#### 36. 🟠 Container runs as root
+#### 29. 🟠 Container runs as root
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -4058,21 +3541,20 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 37. 🟠 Secret exposed as env var
+#### 30. 🟠 Can delete Kubernetes events
 
-`Pod/payment-api (production)`
+`ClusterRole/super-role`
 
 ##### Summary
 
-A container injects a Secret's value via an environment variable (`env[].valueFrom.secretKeyRef`) rather than a mounted file.
+A Role/ClusterRole grants `delete` on `events`.
 
-> **Detected:** container 'app' injects a Secret via env var 'DB_PASSWORD' (exposed in logs/crash dumps)
+> **Detected:** role can delete events (defense evasion / covering tracks)
 
 | | |
 |:--|:--|
-| **Rule ID** | `sec-env-var-secrets` |
-| **Domain** | `secrets` |
-| **Owner resource** | `ReplicaSet/payment-api-7d9f8c9d76 (production)` |
+| **Rule ID** | `rbac-can-delete-events` |
+| **Domain** | `rbac_identity` |
 | **Exploitability** | Local |
 | **Blast radius** | Pod |
 | **Risk score** | 7.0 |
@@ -4081,60 +3563,142 @@ A container injects a Secret's value via an environment variable (`env[].valueFr
 
 | Framework | Control | Reference |
 |:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-| CIS Kubernetes Benchmark v1.8 | 5.4.1 — Prefer Secrets as files over Secrets as environment variables | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+| OWASP Kubernetes Top 10 (2025) | K10 — Inadequate Logging & Monitoring | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
 
 ##### 🎯 MITRE ATT&CK Mapping
 
 | Tactic | Technique | Reference |
 |:--|:--|:--|
-| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
+| Defense Evasion | Indicator Removal (`T1070`) | [Reference](https://attack.mitre.org/techniques/T1070/) |
 
 ##### 💥 Impact
 
-Environment variables are captured whole in `kubectl describe pod`, crash dumps, core dumps, child-process environments, and many APM/logging agents that snapshot process environment by default — each an independent way the secret value can leak outside the one process that actually needs it.
+Kubernetes events are one of the first places an operator looks during incident response. A subject that can delete them can erase evidence of its own suspicious activity (pod creation, exec, image pulls) as it happens — a defense-evasion primitive specifically flagged in the Kubernetes threat matrix.
 
 ##### 🛠️ Remediation
 
-⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
 
 Manual steps:
 
-1. Mount the Secret as a volume instead of an env var
-2. # manual review required: env vars sourced from a Secret are visible in `kubectl describe pod`, crash dumps, and child-process environments. Replace the env.valueFrom.secretKeyRef with a projected volume mount (add a `volumes[].secret` + matching `volumeMounts[]` on the container, then update the app to read the value from the mounted file instead).
+1. No remediation is registered for this rule.
 
 ##### ✅ Validation — How to Reproduce / Verify
 
 Run before remediating to confirm the finding, and again afterward to confirm it cleared:
 
 ```bash
-kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].env[?(@.valueFrom.secretKeyRef)].name}'
+kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="events") | .verbs[]?=="delete") | .metadata.name'
 ```
 
 <details><summary>🔎 Evidence</summary>
 
 ```json
 {
-  "env": "DB_PASSWORD"
+  "rule": {
+    "apiGroups": [
+      "*"
+    ],
+    "resources": [
+      "*"
+    ],
+    "verbs": [
+      "*"
+    ]
+  }
 }
 ```
 </details>
 
 ---
 
-#### 38. 🟠 Unrecognized sidecar injection
+#### 31. 🟠 Can delete Kubernetes events
+
+`ClusterRole/cm-writer`
+
+##### Summary
+
+A Role/ClusterRole grants `delete` on `events`.
+
+> **Detected:** role can delete events (defense evasion / covering tracks)
+
+| | |
+|:--|:--|
+| **Rule ID** | `rbac-can-delete-events` |
+| **Domain** | `rbac_identity` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K10 — Inadequate Logging & Monitoring | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Defense Evasion | Indicator Removal (`T1070`) | [Reference](https://attack.mitre.org/techniques/T1070/) |
+
+##### 💥 Impact
+
+Kubernetes events are one of the first places an operator looks during incident response. A subject that can delete them can erase evidence of its own suspicious activity (pod creation, exec, image pulls) as it happens — a defense-evasion primitive specifically flagged in the Kubernetes threat matrix.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get clusterrole,role -A -o json | jq '.items[] | select(.rules[]? | select(.resources[]?=="events") | .verbs[]?=="delete") | .metadata.name'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "rule": {
+    "apiGroups": [
+      ""
+    ],
+    "resources": [
+      "configmaps",
+      "events"
+    ],
+    "verbs": [
+      "update",
+      "patch",
+      "delete"
+    ]
+  }
+}
+```
+</details>
+
+---
+
+#### 32. 🟠 Webhook failurePolicy=Ignore
 
 `MutatingWebhookConfiguration/evil-webhook`
 
 ##### Summary
 
-A mutating webhook injects a sidecar container into pods it processes.
+A security-relevant admission webhook has `failurePolicy: Ignore`.
 
-> **Detected:** mutating webhook 'inject.evil.io' injects sidecars (verify it is a trusted mesh/agent)
+> **Detected:** webhook 'inject.evil.io' has failurePolicy=Ignore (security control can be bypassed by breaking it)
 
 | | |
 |:--|:--|
-| **Rule ID** | `admission-sidecar-injection` |
+| **Rule ID** | `admission-webhook-failurepolicy` |
 | **Domain** | `admission_control` |
 | **Exploitability** | Local |
 | **Blast radius** | Pod |
@@ -4150,11 +3714,11 @@ A mutating webhook injects a sidecar container into pods it processes.
 
 | Tactic | Technique | Reference |
 |:--|:--|:--|
-| Execution | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+| Defense Evasion | Impair Defenses (`T1562`) | [Reference](https://attack.mitre.org/techniques/T1562/) |
 
 ##### 💥 Impact
 
-Sidecar injection is legitimate for service meshes and observability agents, but it is also a documented technique for smuggling an attacker-controlled container into every pod cluster-wide via a single webhook compromise — reviewing exactly what gets injected and by whom is necessary to distinguish the two.
+If the webhook is ever unreachable — network issue, the webhook pod itself crashing, or an attacker deliberately taking it offline — every object it was supposed to validate or mutate is admitted anyway, silently. An attacker who can make a policy webhook unavailable can bypass it entirely rather than needing to defeat its logic.
 
 ##### 🛠️ Remediation
 
@@ -4169,7 +3733,7 @@ Manual steps:
 Run before remediating to confirm the finding, and again afterward to confirm it cleared:
 
 ```bash
-kubectl get mutatingwebhookconfigurations -o json | jq '.items[].webhooks[] | {name, rules}'
+kubectl get mutatingwebhookconfigurations,validatingwebhookconfigurations -o json | jq '.items[].webhooks[] | select(.failurePolicy=="Ignore") | .name'
 ```
 
 <details><summary>🔎 Evidence</summary>
@@ -4183,19 +3747,19 @@ kubectl get mutatingwebhookconfigurations -o json | jq '.items[].webhooks[] | {n
 
 ---
 
-#### 39. 🟠 Mounted cloud credentials
+#### 33. 🟠 Credentials in ConfigMap
 
-`Pod/cache-redis (staging)`
+`ConfigMap/app-config (production)`
 
 ##### Summary
 
-A volume mount path matches a well-known cloud credential file location (`.aws/credentials`, `azure.json`, a GCP service-account JSON, or a `.kube/config`).
+A ConfigMap key or value looks like a hardcoded credential (password, token, API key, private key).
 
-> **Detected:** mounts a cloud credential path (/root/.aws/credentials) — service principal / managed identity exposure
+> **Detected:** ConfigMap key 'admin_password' looks like a hardcoded credential
 
 | | |
 |:--|:--|
-| **Rule ID** | `sec-mounted-cloud-creds` |
+| **Rule ID** | `sec-configmap-credentials` |
 | **Domain** | `secrets` |
 | **Exploitability** | Local |
 | **Blast radius** | Pod |
@@ -4215,7 +3779,7 @@ A volume mount path matches a well-known cloud credential file location (`.aws/c
 
 ##### 💥 Impact
 
-These files typically grant standing, long-lived cloud or cluster credentials with whatever scope was provisioned for them — often far broader than the single pod needs — turning a container compromise directly into a cloud-account or cross-cluster compromise.
+Unlike Secrets, ConfigMaps are not treated as sensitive by Kubernetes — they're readable by any identity with generic `get`/`list` on ConfigMaps (a far more common grant than secret access), and their contents are shown in plaintext by `kubectl get configmap -o yaml` with no redaction.
 
 ##### 🛠️ Remediation
 
@@ -4230,21 +3794,21 @@ Manual steps:
 Run before remediating to confirm the finding, and again afterward to confirm it cleared:
 
 ```bash
-kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].volumeMounts[*].mountPath}'
+kubectl get configmap app-config -n production -o yaml
 ```
 
 <details><summary>🔎 Evidence</summary>
 
 ```json
 {
-  "mountPath": "/root/.aws/credentials"
+  "key": "admin_password"
 }
 ```
 </details>
 
 ---
 
-#### 40. 🟠 Privilege escalation allowed
+#### 34. 🟠 Privilege escalation allowed
 
 `Pod/payment-api (production)`
 
@@ -4337,7 +3901,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 41. 🟠 Privilege escalation allowed
+#### 35. 🟠 Privilege escalation allowed
 
 `Pod/cache-redis (staging)`
 
@@ -4405,7 +3969,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securit
 
 ---
 
-#### 42. 🟠 Privilege escalation allowed
+#### 36. 🟠 Privilege escalation allowed
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -4498,6 +4062,459 @@ kubectl rollout status daemonset/aws-node -n kube-system
 ```json
 {
   "container": "aws-node"
+}
+```
+</details>
+
+---
+
+#### 37. 🟠 Unrecognized sidecar injection
+
+`MutatingWebhookConfiguration/evil-webhook`
+
+##### Summary
+
+A mutating webhook injects a sidecar container into pods it processes.
+
+> **Detected:** mutating webhook 'inject.evil.io' injects sidecars (verify it is a trusted mesh/agent)
+
+| | |
+|:--|:--|
+| **Rule ID** | `admission-sidecar-injection` |
+| **Domain** | `admission_control` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K04 — Lack of Cluster-Level Policy Enforcement | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Execution | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Sidecar injection is legitimate for service meshes and observability agents, but it is also a documented technique for smuggling an attacker-controlled container into every pod cluster-wide via a single webhook compromise — reviewing exactly what gets injected and by whom is necessary to distinguish the two.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get mutatingwebhookconfigurations -o json | jq '.items[].webhooks[] | {name, rules}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "webhook": "inject.evil.io"
+}
+```
+</details>
+
+---
+
+#### 38. 🟠 Mounted cloud credentials
+
+`Pod/cache-redis (staging)`
+
+##### Summary
+
+A volume mount path matches a well-known cloud credential file location (`.aws/credentials`, `azure.json`, a GCP service-account JSON, or a `.kube/config`).
+
+> **Detected:** mounts a cloud credential path (/root/.aws/credentials) — service principal / managed identity exposure
+
+| | |
+|:--|:--|
+| **Rule ID** | `sec-mounted-cloud-creds` |
+| **Domain** | `secrets` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Credential Access | Unsecured Credentials (`T1552`) | [Reference](https://attack.mitre.org/techniques/T1552/) |
+
+##### 💥 Impact
+
+These files typically grant standing, long-lived cloud or cluster credentials with whatever scope was provisioned for them — often far broader than the single pod needs — turning a container compromise directly into a cloud-account or cross-cluster compromise.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** No remediation playbook is registered for this rule.
+
+Manual steps:
+
+1. No remediation is registered for this rule.
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].volumeMounts[*].mountPath}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "mountPath": "/root/.aws/credentials"
+}
+```
+</details>
+
+---
+
+#### 39. 🟠 Secret exposed as env var
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+A container injects a Secret's value via an environment variable (`env[].valueFrom.secretKeyRef`) rather than a mounted file.
+
+> **Detected:** container 'app' injects a Secret via env var 'DB_PASSWORD' (exposed in logs/crash dumps)
+
+| | |
+|:--|:--|
+| **Rule ID** | `sec-env-var-secrets` |
+| **Domain** | `secrets` |
+| **Owner resource** | `ReplicaSet/payment-api-7d9f8c9d76 (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K03 — Secrets Management Failures | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.4.1 — Prefer Secrets as files over Secrets as environment variables | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Credential Access | Container API Credentials (`T1552.007`) | [Reference](https://attack.mitre.org/techniques/T1552/007/) |
+
+##### 💥 Impact
+
+Environment variables are captured whole in `kubectl describe pod`, crash dumps, core dumps, child-process environments, and many APM/logging agents that snapshot process environment by default — each an independent way the secret value can leak outside the one process that actually needs it.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+
+Manual steps:
+
+1. Mount the Secret as a volume instead of an env var
+2. # manual review required: env vars sourced from a Secret are visible in `kubectl describe pod`, crash dumps, and child-process environments. Replace the env.valueFrom.secretKeyRef with a projected volume mount (add a `volumes[].secret` + matching `volumeMounts[]` on the container, then update the app to read the value from the mounted file instead).
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].env[?(@.valueFrom.secretKeyRef)].name}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "env": "DB_PASSWORD"
+}
+```
+</details>
+
+---
+
+#### 40. 🟠 Capabilities not dropped (ALL)
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
+
+> **Detected:** container 'app' does not drop ALL capabilities
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-caps-not-dropped` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `Deployment/payment-api (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
+
+##### 🛠️ Remediation
+
+**Drop ALL capabilities**
+
+```bash
+kubectl patch deployment payment-api -n production -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"capabilities": {"drop": ["ALL"]}}, "name": "app"}]}}}}'
+```
+
+<details><summary>Alternative — apply via YAML</summary>
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - securityContext:
+            capabilities:
+              drop:
+                - ALL
+          name: app
+```
+
+</details>
+
+<details><summary>Rollback (if the fix causes issues)</summary>
+
+```bash
+kubectl rollout undo deployment/payment-api -n production
+```
+</details>
+
+_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
+```
+
+_Post-remediation check:_
+
+```bash
+kubectl get deployment payment-api -n production -o yaml
+kubectl rollout status deployment/payment-api -n production
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "app",
+  "dropped": []
+}
+```
+</details>
+
+---
+
+#### 41. 🟠 Capabilities not dropped (ALL)
+
+`Pod/cache-redis (staging)`
+
+##### Summary
+
+The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
+
+> **Detected:** container 'redis' does not drop ALL capabilities
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-caps-not-dropped` |
+| **Domain** | `workload_pod_security` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** 'securityContext.capabilities.drop' is part of the Pod spec, which is immutable once the Pod is created — Kubernetes rejects patches to this field on a live Pod. This Pod has no owning controller, so it must be recreated directly (there is no Deployment/DaemonSet/etc. to roll out instead).
+
+Manual steps:
+
+1. 'securityContext.capabilities.drop' cannot be patched on a live, standalone Pod.
+2. kubectl get pod cache-redis -n staging -o yaml > pod.yaml
+3. Edit pod.yaml to set the corrected value, then:
+4. kubectl delete pod cache-redis -n staging
+5. kubectl apply -f pod.yaml
+
+_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "redis",
+  "dropped": []
+}
+```
+</details>
+
+---
+
+#### 42. 🟠 Capabilities not dropped (ALL)
+
+`Pod/aws-node-64w2k (kube-system)`
+
+##### Summary
+
+The container does not drop the full Linux capability set (`capabilities.drop: [ALL]`) before adding back only what it needs.
+
+> **Detected:** container 'aws-node' does not drop ALL capabilities
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-caps-not-dropped` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `DaemonSet/aws-node (kube-system)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 7.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+| CIS Kubernetes Benchmark v1.8 | 5.2.9 — Minimize the admission of containers with added capabilities | [Reference](https://www.cisecurity.org/benchmark/kubernetes) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Privilege Escalation | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+Leaving the container-runtime default capability set intact (which already includes things like `NET_RAW` and `CHOWN`) means the container carries more ambient privilege than most application workloads ever legitimately need — unnecessary attack surface with no functional benefit.
+
+##### 🛠️ Remediation
+
+**Drop ALL capabilities**
+
+```bash
+kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"capabilities": {"drop": ["ALL"]}}, "name": "aws-node"}]}}}}'
+```
+
+<details><summary>Alternative — apply via YAML</summary>
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - securityContext:
+            capabilities:
+              drop:
+                - ALL
+          name: aws-node
+```
+
+</details>
+
+<details><summary>Rollback (if the fix causes issues)</summary>
+
+```bash
+kubectl rollout undo daemonset/aws-node -n kube-system
+```
+</details>
+
+_References:_ [Kubernetes docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod aws-node-64w2k -n kube-system -o jsonpath='{.spec.containers[*].securityContext.capabilities.drop}'
+```
+
+_Post-remediation check:_
+
+```bash
+kubectl get daemonset aws-node -n kube-system -o yaml
+kubectl rollout status daemonset/aws-node -n kube-system
+```
+
+<details><summary>⚠️ Warnings</summary>
+
+- This appears to be a Kubernetes/EKS managed component. Verify vendor documentation before changing its security context because the recommended hardening may break cluster functionality.
+
+</details>
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "aws-node",
+  "dropped": []
 }
 ```
 </details>
@@ -4698,7 +4715,321 @@ kubectl get svc kubernetes-dashboard -n kubernetes-dashboard -o jsonpath='{.spec
 
 ---
 
-#### 4. 🟡 Managed identity reachable
+#### 4. 🟡 Image not signed
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+The container image has no cosign/notary signature verifying its provenance.
+
+> **Detected:** image 'nginx:latest' has no cosign/notary signature annotation
+
+| | |
+|:--|:--|
+| **Rule ID** | `img-not-signed` |
+| **Domain** | `image_supply_chain` |
+| **Owner resource** | `ReplicaSet/payment-api-7d9f8c9d76 (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 4.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K07 — Misconfigured & Vulnerable Components | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Initial Access | Implant Internal Image (`T1525`) | [Reference](https://attack.mitre.org/techniques/T1525/) |
+
+##### 💥 Impact
+
+Without signature verification, the cluster cannot distinguish between the image the team actually built and one substituted at the registry (via a compromised CI pipeline, a registry-level compromise, or a man-in-the-middle) — image signing is the control that closes that gap.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
+
+Manual steps:
+
+1. Require signed images (policy)
+2. # deploy a Kyverno/cosign verifyImages policy
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+cosign verify payment-api 2>&1 | head -5
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "image": "nginx:latest"
+}
+```
+</details>
+
+---
+
+#### 5. 🟡 Writable root filesystem
+
+`Pod/payment-api (production)`
+
+##### Summary
+
+The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
+
+> **Detected:** container 'app' has a writable root filesystem (readOnlyRootFilesystem not true)
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-writable-root-fs` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `Deployment/payment-api (production)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 4.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
+
+##### 🛠️ Remediation
+
+**Set readOnlyRootFilesystem**
+
+```bash
+kubectl patch deployment payment-api -n production -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"readOnlyRootFilesystem": true}, "name": "app"}]}}}}'
+```
+
+<details><summary>Alternative — apply via YAML</summary>
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - securityContext:
+            readOnlyRootFilesystem: true
+          name: app
+```
+
+</details>
+
+<details><summary>Rollback (if the fix causes issues)</summary>
+
+```bash
+kubectl rollout undo deployment/payment-api -n production
+```
+</details>
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
+```
+
+_Post-remediation check:_
+
+```bash
+kubectl get deployment payment-api -n production -o yaml
+kubectl rollout status deployment/payment-api -n production
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "app"
+}
+```
+</details>
+
+---
+
+#### 6. 🟡 Writable root filesystem
+
+`Pod/cache-redis (staging)`
+
+##### Summary
+
+The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
+
+> **Detected:** container 'redis' has a writable root filesystem (readOnlyRootFilesystem not true)
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-writable-root-fs` |
+| **Domain** | `workload_pod_security` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 4.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
+
+##### 🛠️ Remediation
+
+⚠️ **This remediation cannot be safely automated.** 'securityContext.readOnlyRootFilesystem' is part of the Pod spec, which is immutable once the Pod is created — Kubernetes rejects patches to this field on a live Pod. This Pod has no owning controller, so it must be recreated directly (there is no Deployment/DaemonSet/etc. to roll out instead).
+
+Manual steps:
+
+1. 'securityContext.readOnlyRootFilesystem' cannot be patched on a live, standalone Pod.
+2. kubectl get pod cache-redis -n staging -o yaml > pod.yaml
+3. Edit pod.yaml to set the corrected value, then:
+4. kubectl delete pod cache-redis -n staging
+5. kubectl apply -f pod.yaml
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
+```
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "redis"
+}
+```
+</details>
+
+---
+
+#### 7. 🟡 Writable root filesystem
+
+`Pod/aws-node-64w2k (kube-system)`
+
+##### Summary
+
+The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
+
+> **Detected:** container 'aws-node' has a writable root filesystem (readOnlyRootFilesystem not true)
+
+| | |
+|:--|:--|
+| **Rule ID** | `workload-writable-root-fs` |
+| **Domain** | `workload_pod_security` |
+| **Owner resource** | `DaemonSet/aws-node (kube-system)` |
+| **Exploitability** | Local |
+| **Blast radius** | Pod |
+| **Risk score** | 4.0 |
+
+##### 📚 Standards & Benchmark Mapping
+
+| Framework | Control | Reference |
+|:--|:--|:--|
+| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
+
+##### 🎯 MITRE ATT&CK Mapping
+
+| Tactic | Technique | Reference |
+|:--|:--|:--|
+| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
+
+##### 💥 Impact
+
+A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
+
+##### 🛠️ Remediation
+
+**Set readOnlyRootFilesystem**
+
+```bash
+kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"readOnlyRootFilesystem": true}, "name": "aws-node"}]}}}}'
+```
+
+<details><summary>Alternative — apply via YAML</summary>
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - securityContext:
+            readOnlyRootFilesystem: true
+          name: aws-node
+```
+
+</details>
+
+<details><summary>Rollback (if the fix causes issues)</summary>
+
+```bash
+kubectl rollout undo daemonset/aws-node -n kube-system
+```
+</details>
+
+##### ✅ Validation — How to Reproduce / Verify
+
+Run before remediating to confirm the finding, and again afterward to confirm it cleared:
+
+```bash
+kubectl get pod aws-node-64w2k -n kube-system -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
+```
+
+_Post-remediation check:_
+
+```bash
+kubectl get daemonset aws-node -n kube-system -o yaml
+kubectl rollout status daemonset/aws-node -n kube-system
+```
+
+<details><summary>⚠️ Warnings</summary>
+
+- This appears to be a Kubernetes/EKS managed component. Verify vendor documentation before changing its security context because the recommended hardening may break cluster functionality.
+
+</details>
+
+<details><summary>🔎 Evidence</summary>
+
+```json
+{
+  "container": "aws-node"
+}
+```
+</details>
+
+---
+
+#### 8. 🟡 Managed identity reachable
 
 `ServiceAccount/shared-sa (production)`
 
@@ -4761,7 +5092,7 @@ kubectl exec -n production shared-sa -- curl -s -m 2 -H 'Metadata: true' 'http:/
 
 ---
 
-#### 5. 🟡 Mutable :latest image tag
+#### 9. 🟡 Mutable :latest image tag
 
 `Pod/payment-api (production)`
 
@@ -4825,7 +5156,7 @@ kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].imag
 
 ---
 
-#### 6. 🟡 Mutable :latest image tag
+#### 10. 🟡 Mutable :latest image tag
 
 `Pod/cache-redis (staging)`
 
@@ -4888,7 +5219,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].image}'
 
 ---
 
-#### 7. 🟡 Mutable :latest image tag
+#### 11. 🟡 Mutable :latest image tag
 
 `Pod/nignx-web (production)`
 
@@ -4951,7 +5282,7 @@ kubectl get pod nignx-web -n production -o jsonpath='{.spec.containers[*].image}
 
 ---
 
-#### 8. 🟡 SA token auto-mounted
+#### 12. 🟡 SA token auto-mounted
 
 `Pod/payment-api (production)`
 
@@ -5041,7 +5372,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 9. 🟡 SA token auto-mounted
+#### 13. 🟡 SA token auto-mounted
 
 `Pod/cache-redis (staging)`
 
@@ -5109,7 +5440,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.automountServiceAccou
 
 ---
 
-#### 10. 🟡 SA token auto-mounted
+#### 14. 🟡 SA token auto-mounted
 
 `Pod/nignx-web (production)`
 
@@ -5177,7 +5508,7 @@ kubectl get pod nignx-web -n production -o jsonpath='{.spec.automountServiceAcco
 
 ---
 
-#### 11. 🟡 SA token auto-mounted
+#### 15. 🟡 SA token auto-mounted
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -5273,7 +5604,7 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 12. 🟡 SA token auto-mounted
+#### 16. 🟡 SA token auto-mounted
 
 `ReplicaSet/payment-api-7d9f8c9d76 (production)`
 
@@ -5363,7 +5694,7 @@ kubectl get replicaset payment-api-7d9f8c9d76 -n production -o yaml
 
 ---
 
-#### 13. 🟡 No seccomp profile
+#### 17. 🟡 No seccomp profile
 
 `Pod/payment-api (production)`
 
@@ -5456,7 +5787,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 14. 🟡 No seccomp profile
+#### 18. 🟡 No seccomp profile
 
 `Pod/cache-redis (staging)`
 
@@ -5524,7 +5855,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.securityContext.secco
 
 ---
 
-#### 15. 🟡 No seccomp profile
+#### 19. 🟡 No seccomp profile
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -5623,7 +5954,7 @@ kubectl rollout status daemonset/aws-node -n kube-system
 
 ---
 
-#### 16. 🟡 Missing resource limits
+#### 20. 🟡 Missing resource limits
 
 `Pod/payment-api (production)`
 
@@ -5717,7 +6048,7 @@ kubectl rollout status deployment/payment-api -n production
 
 ---
 
-#### 17. 🟡 Missing resource limits
+#### 21. 🟡 Missing resource limits
 
 `Pod/cache-redis (staging)`
 
@@ -5784,7 +6115,7 @@ kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].resourc
 
 ---
 
-#### 18. 🟡 Missing resource limits
+#### 22. 🟡 Missing resource limits
 
 `Pod/aws-node-64w2k (kube-system)`
 
@@ -5858,320 +6189,6 @@ Run before remediating to confirm the finding, and again afterward to confirm it
 
 ```bash
 kubectl get pod aws-node-64w2k -n kube-system -o jsonpath='{.spec.containers[*].resources.limits}'
-```
-
-_Post-remediation check:_
-
-```bash
-kubectl get daemonset aws-node -n kube-system -o yaml
-kubectl rollout status daemonset/aws-node -n kube-system
-```
-
-<details><summary>⚠️ Warnings</summary>
-
-- This appears to be a Kubernetes/EKS managed component. Verify vendor documentation before changing its security context because the recommended hardening may break cluster functionality.
-
-</details>
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "aws-node"
-}
-```
-</details>
-
----
-
-#### 19. 🟡 Image not signed
-
-`Pod/payment-api (production)`
-
-##### Summary
-
-The container image has no cosign/notary signature verifying its provenance.
-
-> **Detected:** image 'nginx:latest' has no cosign/notary signature annotation
-
-| | |
-|:--|:--|
-| **Rule ID** | `img-not-signed` |
-| **Domain** | `image_supply_chain` |
-| **Owner resource** | `ReplicaSet/payment-api-7d9f8c9d76 (production)` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 4.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K07 — Misconfigured & Vulnerable Components | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Initial Access | Implant Internal Image (`T1525`) | [Reference](https://attack.mitre.org/techniques/T1525/) |
-
-##### 💥 Impact
-
-Without signature verification, the cluster cannot distinguish between the image the team actually built and one substituted at the registry (via a compromised CI pipeline, a registry-level compromise, or a man-in-the-middle) — image signing is the control that closes that gap.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** This finding's fix is a manual/policy action, not a single safe kubectl command.
-
-Manual steps:
-
-1. Require signed images (policy)
-2. # deploy a Kyverno/cosign verifyImages policy
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-cosign verify payment-api 2>&1 | head -5
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "image": "nginx:latest"
-}
-```
-</details>
-
----
-
-#### 20. 🟡 Writable root filesystem
-
-`Pod/payment-api (production)`
-
-##### Summary
-
-The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
-
-> **Detected:** container 'app' has a writable root filesystem (readOnlyRootFilesystem not true)
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-writable-root-fs` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `Deployment/payment-api (production)` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 4.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
-
-##### 🛠️ Remediation
-
-**Set readOnlyRootFilesystem**
-
-```bash
-kubectl patch deployment payment-api -n production -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"readOnlyRootFilesystem": true}, "name": "app"}]}}}}'
-```
-
-<details><summary>Alternative — apply via YAML</summary>
-
-```yaml
-spec:
-  template:
-    spec:
-      containers:
-        - securityContext:
-            readOnlyRootFilesystem: true
-          name: app
-```
-
-</details>
-
-<details><summary>Rollback (if the fix causes issues)</summary>
-
-```bash
-kubectl rollout undo deployment/payment-api -n production
-```
-</details>
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod payment-api -n production -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
-```
-
-_Post-remediation check:_
-
-```bash
-kubectl get deployment payment-api -n production -o yaml
-kubectl rollout status deployment/payment-api -n production
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "app"
-}
-```
-</details>
-
----
-
-#### 21. 🟡 Writable root filesystem
-
-`Pod/cache-redis (staging)`
-
-##### Summary
-
-The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
-
-> **Detected:** container 'redis' has a writable root filesystem (readOnlyRootFilesystem not true)
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-writable-root-fs` |
-| **Domain** | `workload_pod_security` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 4.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
-
-##### 🛠️ Remediation
-
-⚠️ **This remediation cannot be safely automated.** 'securityContext.readOnlyRootFilesystem' is part of the Pod spec, which is immutable once the Pod is created — Kubernetes rejects patches to this field on a live Pod. This Pod has no owning controller, so it must be recreated directly (there is no Deployment/DaemonSet/etc. to roll out instead).
-
-Manual steps:
-
-1. 'securityContext.readOnlyRootFilesystem' cannot be patched on a live, standalone Pod.
-2. kubectl get pod cache-redis -n staging -o yaml > pod.yaml
-3. Edit pod.yaml to set the corrected value, then:
-4. kubectl delete pod cache-redis -n staging
-5. kubectl apply -f pod.yaml
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod cache-redis -n staging -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
-```
-
-<details><summary>🔎 Evidence</summary>
-
-```json
-{
-  "container": "redis"
-}
-```
-</details>
-
----
-
-#### 22. 🟡 Writable root filesystem
-
-`Pod/aws-node-64w2k (kube-system)`
-
-##### Summary
-
-The container's root filesystem is writable (`readOnlyRootFilesystem` is not `true`).
-
-> **Detected:** container 'aws-node' has a writable root filesystem (readOnlyRootFilesystem not true)
-
-| | |
-|:--|:--|
-| **Rule ID** | `workload-writable-root-fs` |
-| **Domain** | `workload_pod_security` |
-| **Owner resource** | `DaemonSet/aws-node (kube-system)` |
-| **Exploitability** | Local |
-| **Blast radius** | Pod |
-| **Risk score** | 4.0 |
-
-##### 📚 Standards & Benchmark Mapping
-
-| Framework | Control | Reference |
-|:--|:--|:--|
-| OWASP Kubernetes Top 10 (2025) | K01 — Insecure Workload Configurations | [Reference](https://owasp.org/www-project-kubernetes-top-ten/) |
-
-##### 🎯 MITRE ATT&CK Mapping
-
-| Tactic | Technique | Reference |
-|:--|:--|:--|
-| Persistence | Deploy Container (`T1610`) | [Reference](https://attack.mitre.org/techniques/T1610/) |
-
-##### 💥 Impact
-
-A writable root filesystem lets an attacker who achieves code execution in the container persist a backdoor binary or modify application code in place, surviving until the pod is next restarted — an unnecessary window for most stateless application workloads.
-
-##### 🛠️ Remediation
-
-**Set readOnlyRootFilesystem**
-
-```bash
-kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"template": {"spec": {"containers": [{"securityContext": {"readOnlyRootFilesystem": true}, "name": "aws-node"}]}}}}'
-```
-
-<details><summary>Alternative — apply via YAML</summary>
-
-```yaml
-spec:
-  template:
-    spec:
-      containers:
-        - securityContext:
-            readOnlyRootFilesystem: true
-          name: aws-node
-```
-
-</details>
-
-<details><summary>Rollback (if the fix causes issues)</summary>
-
-```bash
-kubectl rollout undo daemonset/aws-node -n kube-system
-```
-</details>
-
-##### ✅ Validation — How to Reproduce / Verify
-
-Run before remediating to confirm the finding, and again afterward to confirm it cleared:
-
-```bash
-kubectl get pod aws-node-64w2k -n kube-system -o jsonpath='{.spec.containers[*].securityContext.readOnlyRootFilesystem}'
 ```
 
 _Post-remediation check:_
@@ -6276,19 +6293,19 @@ Fixes ordered by risk (highest first). Every command is shown exactly as it woul
 |--:|:--|:--|:--|:--|
 | 1 | 🔴 CRITICAL | Kubernetes dashboard exposed | `Service/kubernetes-dashboard (kubernetes-dashboard)` | `kubectl -n kubernetes-dashboard patch svc kubernetes-dashboard -p '…` |
 | 2 | 🔴 CRITICAL | cluster-admin on default SA | `ClusterRoleBinding/default-admin` | `kubectl delete clusterrolebinding default-admin` |
-| 3 | 🔴 CRITICAL | Suspicious mutating webhook | `MutatingWebhookConfiguration/evil-webhook` | `kubectl delete mutatingwebhookconfiguration evil-webhook` |
-| 4 | 🔴 CRITICAL | Privileged container | `Pod/payment-api (production)` | `kubectl patch deployment payment-api -n production -p '{"spec": {"t…` |
-| 5 | 🔴 CRITICAL | Privileged container | `Pod/aws-node-64w2k (kube-system)` | `kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"temp…` |
+| 3 | 🔴 CRITICAL | Privileged container | `Pod/payment-api (production)` | `kubectl patch deployment payment-api -n production -p '{"spec": {"t…` |
+| 4 | 🔴 CRITICAL | Privileged container | `Pod/aws-node-64w2k (kube-system)` | `kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"temp…` |
+| 5 | 🔴 CRITICAL | Suspicious mutating webhook | `MutatingWebhookConfiguration/evil-webhook` | `kubectl delete mutatingwebhookconfiguration evil-webhook` |
 | 6 | 🔴 CRITICAL | Host PID namespace shared | `Pod/payment-api (production)` | `kubectl patch deployment payment-api -n production -p '{"spec": {"t…` |
 | 7 | 🟠 HIGH | Metadata API not blocked | `Namespace/production` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
 | 8 | 🟠 HIGH | Metadata API not blocked | `Namespace/staging` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
 | 9 | 🟠 HIGH | Host network shared | `Pod/payment-api (production)` | `kubectl patch deployment payment-api -n production -p '{"spec": {"t…` |
 | 10 | 🟠 HIGH | Host network shared | `Pod/aws-node-64w2k (kube-system)` | `kubectl patch daemonset aws-node -n kube-system -p '{"spec": {"temp…` |
 | 11 | 🟠 HIGH | Host IPC namespace shared | `Pod/payment-api (production)` | `kubectl patch deployment payment-api -n production -p '{"spec": {"t…` |
-| 12 | 🟠 HIGH | PSA not enforcing 'restricted' | `Namespace/production` | `kubectl label ns production pod-security.kubernetes.io/enforce=rest…` |
-| 13 | 🟠 HIGH | PSA not enforcing 'restricted' | `Namespace/staging` | `kubectl label ns staging pod-security.kubernetes.io/enforce=restric…` |
-| 14 | 🟠 HIGH | Namespace without NetworkPolicy | `Namespace/production` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
-| 15 | 🟠 HIGH | Namespace without NetworkPolicy | `Namespace/staging` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
+| 12 | 🟠 HIGH | Namespace without NetworkPolicy | `Namespace/production` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
+| 13 | 🟠 HIGH | Namespace without NetworkPolicy | `Namespace/staging` | `kubectl apply -n default -f - <<'EOF' apiVersion: networking.k8s.io…` |
+| 14 | 🟠 HIGH | PSA not enforcing 'restricted' | `Namespace/production` | `kubectl label ns production pod-security.kubernetes.io/enforce=rest…` |
+| 15 | 🟠 HIGH | PSA not enforcing 'restricted' | `Namespace/staging` | `kubectl label ns staging pod-security.kubernetes.io/enforce=restric…` |
 
 [↑ top](#top)
 
@@ -6301,8 +6318,8 @@ Fixes ordered by risk (highest first). Every command is shown exactly as it woul
 
 | Key | Value |
 |:--|:--|
-| Scan ID | `scan-20260718-c629` |
-| Generated | 2026-07-18T02:48:01Z |
+| Scan ID | `scan-20260718-a954` |
+| Generated | 2026-07-18T06:56:07Z |
 | Tool version | k8smatrixwarden 1.0 |
 | Mode | mock |
 | Scope | cluster-wide |

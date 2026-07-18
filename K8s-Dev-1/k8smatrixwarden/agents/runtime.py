@@ -66,6 +66,49 @@ def _audit(verb=None, resource=None, ns=None):
     return _m
 
 
+def normalize_falco_event(raw: dict) -> dict:
+    """Map ONE Falco/falcosidekick native event to the flat internal shape the rule
+    matchers expect. Falco nests everything under `output_fields` with dotted keys
+    (proc.name, k8s.pod.name, ka.verb, …) and tags its stream in `source`
+    ('syscall' | 'k8s_audit'). We flatten to {source: falco|audit, proc, connect, file,
+    op, uid, pod, namespace, verb, resource}."""
+    of = raw.get("output_fields") or {}
+    if raw.get("source") == "k8s_audit" or "ka.verb" in of:
+        ev = {"source": "audit", "verb": of.get("ka.verb"),
+              "resource": of.get("ka.target.resource"),
+              "namespace": of.get("ka.target.namespace"),
+              "pod": of.get("ka.target.name")}
+        return {k: v for k, v in ev.items() if v not in (None, "")}
+    fd = of.get("fd.name") or ""
+    # network fd if Falco gave a sip/rip, or the fd looks like host:port (not a path)
+    is_net = bool(of.get("fd.sip") or of.get("fd.rip")) or (":" in fd and "/" not in fd)
+    ev = {"source": "falco", "proc": of.get("proc.name"),
+          "op": of.get("evt.type"), "namespace": of.get("k8s.ns.name"),
+          "pod": of.get("k8s.pod.name"), "uid": of.get("user.uid")}
+    if is_net:
+        ev["connect"] = fd or f"{of.get('fd.sip', '')}:{of.get('fd.sport', '')}"
+    elif fd:
+        ev["file"] = fd
+    return {k: v for k, v in ev.items() if v not in (None, "")}
+
+
+def normalize_events(raw) -> list[dict]:
+    """Accept a single event or a batch, in either Falco-native or already-flat shape,
+    and return a list of flat internal events. Lets `/api/runtime` take falcosidekick's
+    one-event-per-POST as well as a hand-built batch."""
+    if isinstance(raw, dict):
+        raw = [raw]
+    out = []
+    for e in raw or []:
+        if not isinstance(e, dict):
+            continue
+        if "output_fields" in e or e.get("source") in ("syscall", "k8s_audit"):
+            out.append(normalize_falco_event(e))
+        else:
+            out.append(e)  # already flat internal shape
+    return out
+
+
 class RuntimeAgent:
     def __init__(self):
         self.rules = self._build_rules()

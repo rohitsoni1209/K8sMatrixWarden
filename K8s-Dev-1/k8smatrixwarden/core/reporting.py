@@ -293,7 +293,8 @@ class ReportingEngine:
         from .threat_matrix_render import render_markdown as _tm_md
         tm = build_threat_matrix(result, self.registry)
         md += ["<a id=\"matrix\"></a>", "## 2. 🗺️ Kubernetes Threat Matrix", "",
-               _tm_md(tm, heading_level=3, include_heading=False),
+               _tm_md(tm, heading_level=3, include_heading=False), "",
+               _attack_path_md(tm),
                "[↑ top](#top)", "", "---", ""]
 
         # ---- coverage --------------------------------------------------- #
@@ -431,8 +432,12 @@ class ReportingEngine:
         # Full Kubernetes Threat Matrix projection (§12) — same structure the HTML/web
         # heatmap and the MCP build_threat_matrix tool return, so a JSON/API consumer gets
         # the adversary-behaviour map, not just a flat finding list.
-        from .threat_matrix import build_threat_matrix
-        doc["threat_matrix"] = build_threat_matrix(result, self.registry).as_dict()
+        from .threat_matrix import attack_paths, build_threat_matrix
+        _tm = build_threat_matrix(result, self.registry)
+        doc["threat_matrix"] = _tm.as_dict()
+        # Kill-chain exploit path derived from the matrix's hit cells (§12) — which
+        # tactics an attacker can actually string together in this cluster.
+        doc["attack_path"] = attack_paths(_tm)
         # attach the full report-grade context to each finding: summary, standards &
         # benchmark mapping (with links), MITRE mapping (with links), impact, validation
         # steps, and the schema-aware remediation breakdown (§8) — the same data every
@@ -857,6 +862,23 @@ def _bar(frac: float, width: int) -> str:
     frac = max(0.0, min(1.0, frac))
     filled = round(frac * width)
     return "█" * filled + "░" * (width - filled)
+
+
+def _attack_path_md(tm) -> str:
+    """Markdown for the kill-chain exploit path derived from the matrix's hit cells."""
+    from .threat_matrix import attack_paths
+    a = attack_paths(tm)
+    if not a["steps"]:
+        return ""
+    reach = ("⚠️ reaches **Impact** (full kill-chain)" if a["reaches_impact"]
+             else "stops before Impact")
+    lines = ["### 🎯 Kill-chain exploit path", "",
+             f"**{a['tactic_count']} tactics chained** · {reach}", "",
+             "`" + a["chain"].replace(" -> ", "` → `") + "`", ""]
+    for i, s in enumerate(a["steps"], 1):
+        techs = ", ".join(t["technique_name"] for t in s["techniques"][:4])
+        lines.append(f"{i}. **{s['tactic']}** ({s['worst_severity']}) — {techs}")
+    return "\n".join(lines + [""])
 
 
 def _risk_gauge(risk: float) -> str:

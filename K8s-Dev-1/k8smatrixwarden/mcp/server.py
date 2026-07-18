@@ -615,7 +615,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         predicted) — plus headline counts (confirmed_exploitation, correlated,
         runtime_only). scan_id: correlate against a saved report; otherwise runs a fresh
         read-only scan (same scope/selector args as run_scan)."""
-        from ..agents.runtime import RuntimeAgent
+        from ..agents.runtime import RuntimeAgent, normalize_events
         from ..core.correlation import correlate
 
         if scan_id:
@@ -642,7 +642,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                     request, collector, mode_label="mock" if mock else "live")
             except Exception as exc:
                 return {"error": f"scan failed: {exc}"}
-        alerts = RuntimeAgent().evaluate_stream(events or [])
+        alerts = RuntimeAgent().evaluate_stream(normalize_events(events or []))
         return correlate(result.findings, alerts)
 
     def detect_drift(events: list[dict], namespace: Optional[str] = None,
@@ -658,6 +658,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         runAsNonRoot; write outside tmp despite readOnlyRootFilesystem; a privileged-only
         op (nsenter/mount/release_agent) from a non-privileged pod. Returns drift findings
         (each CRITICAL: declared vs observed vs pod) + counts. Read-only."""
+        from ..agents.runtime import normalize_events
         from ..core.correlation import detect_drift as _drift
 
         level = ScopeLevel.NAMESPACE if namespace else ScopeLevel.CLUSTER
@@ -668,7 +669,43 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             ev = collector.collect({"Pod"}, scope)
         except RuntimeError as exc:
             return {"error": str(exc)}
-        return _drift(ev.get("Pod"), events or [])
+        return _drift(ev.get("Pod"), normalize_events(events or []))
+
+    def deploy_falco(webhook_url: str, namespace: str = "falco",
+                     mock: bool = True) -> dict:
+        """One-click Falco + falcosidekick deploy. Runs helm install to set up Falco with
+        a webhook pointing at your K8sMatrixWarden runtime endpoint
+        (e.g. http://host.minikube.internal:8080/api/runtime). On success, returns install
+        log and next steps. Requires helm to be installed on the system."""
+        import subprocess
+        out = {"status": "ok", "steps": []}
+        try:
+            subprocess.run(["helm", "repo", "add", "falcosecurity",
+                           "https://falcosecurity.github.io/charts"],
+                          check=True, capture_output=True, timeout=30)
+            out["steps"].append("✓ Added falcosecurity Helm repo")
+            subprocess.run(["helm", "repo", "update"], check=True,
+                          capture_output=True, timeout=30)
+            out["steps"].append("✓ Updated Helm repos")
+            vals = (f"falcosidekick.enabled=true,"
+                   f"falcosidekick.config.webhook.address={webhook_url}")
+            subprocess.run(
+                ["helm", "install", "falco", "falcosecurity/falco",
+                 "-n", namespace, "--create-namespace", "--set", vals],
+                check=True, capture_output=True, timeout=60)
+            out["steps"].append(f"✓ Installed Falco in ns/{namespace}")
+            out["webhook"] = webhook_url
+            out["next_steps"] = [
+                f"Check pod status: kubectl get pods -n {namespace}",
+                f"Tail logs: kubectl logs -n {namespace} -l app=falco -f",
+                "Send runtime events to /api/runtime to see correlations"]
+        except FileNotFoundError:
+            return {"error": "helm not found — install helm first (https://helm.sh)"}
+        except subprocess.CalledProcessError as e:
+            return {"error": f"helm install failed: {e.stderr.decode()[:200] if e.stderr else str(e)}"}
+        except Exception as e:
+            return {"error": str(e)}
+        return out
 
     def list_runtime_detections() -> list[dict]:
         """List the Runtime Agent's detection catalog (§8) — every rule tagged
@@ -922,6 +959,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         "evaluate_runtime_events": evaluate_runtime_events,
         "correlate_runtime": correlate_runtime,
         "detect_drift": detect_drift,
+        "deploy_falco": deploy_falco,
         "list_runtime_detections": list_runtime_detections,
         "explain_remediation": explain_remediation,
         "build_threat_matrix": build_threat_matrix,

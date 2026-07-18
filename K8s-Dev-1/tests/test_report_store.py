@@ -67,3 +67,36 @@ def test_list_empty_dir():
     with tempfile.TemporaryDirectory() as d:
         assert ReportStore(d).list() == []
         assert ReportStore(d).load_latest() is None
+
+
+def test_attack_path_embedded_in_reports():
+    import json as _json
+    p, res = _scan()
+    doc = _json.loads(p.reporting.json(res))
+    assert "attack_path" in doc and doc["attack_path"]["steps"], "json report lacks path"
+    md = p.reporting.render(res, "markdown")
+    assert "Kill-chain exploit path" in md
+
+
+def test_timeline_tracks_open_and_resolved():
+    p, res = _scan()
+    with tempfile.TemporaryDirectory() as d:
+        store = ReportStore(d)
+        res.scan_id = "scan-a"
+        res.generated_at = "2026-01-01T00:00:00Z"
+        store.save(res)
+        tl1 = store.timeline()
+        assert tl1["open"] > 0 and tl1["resolved"] == 0
+        # the timeline index must NOT show up as a report
+        assert len(store.list()) == 1
+
+        # scan 2, ten days later, with half the findings gone
+        res2 = ScanResult.from_dict(res.as_dict())
+        res2.scan_id = "scan-b"
+        res2.generated_at = "2026-01-11T00:00:00Z"
+        res2.findings = [f for f in res2.findings if f.severity.weight > 0][::2]
+        store.save(res2)
+        tl2 = store.timeline()
+        assert tl2["resolved"] > 0, "dropped findings should be marked resolved"
+        assert tl2["open"] < tl1["open"]
+        assert tl2["oldest_open_days"] >= 10   # survivors are 10 days old

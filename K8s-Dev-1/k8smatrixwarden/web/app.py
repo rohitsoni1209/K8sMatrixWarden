@@ -83,6 +83,8 @@ class WebApp:
                 return self._api_reports(q)
             if method == "GET" and path == "/api/dashboard":
                 return _json(self._dashboard_data())
+            if method == "GET" and path == "/api/timeline":
+                return _json(self.store.timeline())
             if method == "POST" and path == "/api/scan":
                 return self._api_scan(body)
             if method == "POST" and path == "/api/runtime":
@@ -148,6 +150,7 @@ class WebApp:
             "runtime": {"armed": len(catalog), "by_tactic": runtime_by_tactic,
                         "exposed_tactics": exposed},
             "trend": [[r.generated_at, r.risk_score] for r in reversed(reports)],
+            "timeline": self.store.timeline(),
             "history": [{"scan_id": r.scan_id, "generated_at": r.generated_at,
                          "rating": r.rating, "risk_score": r.risk_score,
                          "total": r.total, "scope": r.scope} for r in reports],
@@ -162,13 +165,16 @@ class WebApp:
             data = json.loads(body or b"{}")
         except Exception as exc:
             return _json({"error": f"invalid JSON body: {exc}"}, 400)
-        events = data.get("events") or []
-        if not isinstance(events, list):
-            return _json({"error": "'events' must be a list"}, 400)
-        from ..agents.runtime import RuntimeAgent
+        from ..agents.runtime import RuntimeAgent, normalize_events
         from ..core.correlation import correlate, detect_drift
 
-        result = self.store.resolve(data.get("scan_id"))
+        # Body can be {"events":[...], "scan_id"?} (our batch), OR a bare Falco event
+        # posted by falcosidekick (one event per request). Normalize either into the
+        # flat internal shape the matchers use.
+        scan_id = data.get("scan_id") if isinstance(data, dict) else None
+        raw = data.get("events") if (isinstance(data, dict) and "events" in data) else data
+        events = normalize_events(raw)
+        result = self.store.resolve(scan_id)
         if result is None:
             return _json({"error": "no saved scan to correlate against — scan first"}, 400)
         alerts = RuntimeAgent().evaluate_stream(events)
