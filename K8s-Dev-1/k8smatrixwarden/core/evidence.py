@@ -288,6 +288,49 @@ def _parse_flags(tokens: list[str]) -> dict:
     return flags
 
 
+# --------------------------------------------------------------------------- #
+# Provider detection — which cloud/distro, so callers pick the right CIS profile
+# (and, later, the right cloud-IAM API). Core K8s API paths are identical across
+# providers, so scanning itself needs no per-cloud branch; only the managed-control-
+# plane question (CIS sections 1-3) and cloud-IAM evidence do.
+# --------------------------------------------------------------------------- #
+#: A managed-service node label is authoritative for "this is GKE/EKS/AKS" — its
+#: presence means the control plane is provider-owned (CIS profile => NA sections 1-3).
+_MANAGED_NODE_LABELS = {
+    "cloud.google.com/gke-nodepool": "gke",
+    "eks.amazonaws.com/nodegroup": "eks",
+    "kubernetes.azure.com/cluster": "aks",
+}
+#: providerID scheme names the IaaS. A cloud VM WITHOUT a managed label is
+#: self-managed K8s on that cloud — control plane is still inspectable, so its CIS
+#: profile stays 'self-managed'; only `cloud` reflects the IaaS (for cloud-IAM APIs).
+_PROVIDERID_CLOUD = {"gce": "gcp", "aws": "aws", "azure": "azure"}
+
+
+def detect_provider(nodes: list[dict]) -> dict:
+    """Best-effort cluster provider from Node objects. Returns:
+        cloud   — 'gcp' | 'aws' | 'azure' | 'local'   (which IaaS; picks cloud-IAM API)
+        managed — True if a managed offering owns the control plane (GKE/EKS/AKS)
+        profile — 'gke' | 'eks' | 'aks' | 'self-managed'   (feed straight to CIS)
+    Managed-service node labels are authoritative for `managed`/`profile`; providerID
+    only names the cloud. Empty/kind/k3s nodes => local, self-managed."""
+    cloud = "local"
+    for node in nodes:
+        pid = (node.get("spec", {}) or {}).get("providerID", "") or ""
+        scheme = pid.split(":", 1)[0].lower()
+        if scheme in _PROVIDERID_CLOUD:
+            cloud = _PROVIDERID_CLOUD[scheme]
+            break
+    profile = None
+    for node in nodes:
+        labels = (node.get("metadata", {}) or {}).get("labels", {}) or {}
+        profile = next((p for lbl, p in _MANAGED_NODE_LABELS.items() if lbl in labels), None)
+        if profile:
+            break
+    return {"cloud": cloud, "managed": profile is not None,
+            "profile": profile or "self-managed"}
+
+
 def default_fixture_path() -> str:
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(here, "data", "fixtures", "mock_cluster.json")

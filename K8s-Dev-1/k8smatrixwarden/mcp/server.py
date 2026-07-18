@@ -33,6 +33,7 @@ import json
 from typing import Any, Optional
 
 from ..bootstrap import build_platform
+from ..core.evidence import detect_provider
 from ..core.models import ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity
 from . import datasets
 
@@ -216,6 +217,114 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         except RuntimeError as exc:
             return {"error": str(exc)}
 
+    def detect_cluster_provider(mock: bool = True, fixture: Optional[str] = None,
+                                kubeconfig: Optional[str] = None,
+                                context: Optional[str] = None) -> dict:
+        """Detect which kind of cluster this is from its Node objects, so the right
+        provider-specific choices are made without asking the user. Returns:
+          cloud   — 'gcp' | 'aws' | 'azure' | 'local'  (which IaaS the nodes run on)
+          managed — True if the control plane is a managed offering (GKE/EKS/AKS)
+          profile — 'gke' | 'eks' | 'aks' | 'self-managed'  (pass straight to
+                    run_cis_benchmark's `profile`, or leave it 'auto' to do this
+                    automatically)
+        Reads Node providerID + managed-service labels only — no writes, no control
+        plane access. On the bundled mock cluster this returns local/self-managed."""
+        try:
+            collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                kubeconfig=kubeconfig, context=context)
+            ev = collector.collect({"Node"}, Scope(ScopeLevel.CLUSTER))
+        except RuntimeError as exc:
+            return {"error": str(exc)}
+        return detect_provider(ev.get("Node", all_scopes=True))
+
+    def intelligent_scan(query: str, scope_level: str = "cluster",
+                         namespace: Optional[str] = None, mock: bool = True,
+                         fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
+                         context: Optional[str] = None,
+                         output_format: str = "json") -> dict:
+        """One-call intelligent scan: parse natural language, detect cluster type,
+        resolve rules, run scan, return findings + risk + threat matrix.
+
+        query: plain English security question, e.g. 'find exposed secrets',
+          'scan for persistence techniques', 'check RBAC for privilege escalation'
+        scope_level: cluster | namespace | workload | pod | node | image | helm_release
+        namespace: filter scope to one namespace (only if scope_level=cluster/namespace)
+        mock: True (default) scans bundled insecure cluster; False scans live cluster
+        output_format: json | markdown | html | sarif | text | terminal | pdf
+
+        Returns {intent, scope, selector, rule_count, resolved_rule_ids, cluster_info,
+                 findings, risk, total_findings, threat_matrix}. Skips the
+        confirm-then-run step — Claude already understood the intent. (If you need
+        confirmation UX, use interpret_query + preview_scan instead.)"""
+        from ..agents.orchestrator import Orchestrator
+        from ..agents.scanner import ScannerAgent
+
+        try:
+            collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                kubeconfig=kubeconfig, context=context)
+        except RuntimeError as exc:
+            return {"error": f"collector: {exc}"}
+
+        # Detect cluster type.
+        try:
+            ev_nodes = collector.collect({"Node"}, Scope(ScopeLevel.CLUSTER))
+            cluster_info = detect_provider(ev_nodes.get("Node", all_scopes=True))
+        except Exception:
+            cluster_info = {"cloud": "unknown", "managed": False, "profile": "self-managed"}
+
+        # Parse intent.
+        try:
+            orch = Orchestrator(platform)
+            interp = orch.interpret(query)
+            intent = interp.intent
+            resolved_rule_ids = interp.resolved_rule_ids
+            scope = interp.request.scope
+        except ValueError as exc:
+            return {"error": f"intent parse: {exc}"}
+        except Exception as exc:
+            return {"error": f"orchestrator: {exc}"}
+
+        # Scan.
+        fmt = (output_format or "json").lower()
+        if fmt not in _VALID_REPORT_FORMATS:
+            return {"error": f"unknown output_format {output_format!r}"}
+        try:
+            result = ScannerAgent(platform).scan(
+                interp.request, collector, mode_label="mock" if mock else "live"
+            )
+        except Exception as exc:
+            return {"error": f"scan: {exc}"}
+
+        # Return findings + metadata in the requested format.
+        if fmt == "json":
+            doc = json.loads(platform.reporting.json(result))
+            doc.update({
+                "intent": intent,
+                "scope": scope.describe(),
+                "rule_count": len(resolved_rule_ids),
+                "cluster": cluster_info,
+            })
+            return doc
+        else:
+            try:
+                content = platform.reporting.render(result, fmt)
+            except RuntimeError as exc:
+                return {"error": str(exc)}
+            return {
+                "format": fmt,
+                **_encode_report(content),
+                "intent": intent,
+                "scope": scope.describe(),
+                "rule_count": len(resolved_rule_ids),
+                "risk": {
+                    "cluster_risk": result.risk.cluster_risk,
+                    "security_score": result.risk.security_score,
+                    "rating": result.risk.rating,
+                },
+                "total_findings": result.total(),
+                "cluster": cluster_info,
+            }
+
     def validate_platform() -> dict:
         """Validate the k8smatrixwarden install itself — equivalent to the `k8smatrixwarden doctor` CLI
         command. Checks: every shard/rule loaded correctly, every rule's MITRE technique
@@ -383,16 +492,73 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             "plan_summary": orch.confirmation_summary(interp),
         }
 
+    def intelligent_scan(query: str, scope_level: Optional[str] = None,
+                         namespace: Optional[str] = None, name: Optional[str] = None,
+                         kind: Optional[str] = None, image: Optional[str] = None,
+                         mock: bool = True, fixture: Optional[str] = None,
+                         kubeconfig: Optional[str] = None, context: Optional[str] = None,
+                         max_findings: Optional[int] = None,
+                         include_attack_path: bool = True) -> dict:
+        """One call, everything: parse a plain-English request into scope+selector, detect
+        which kind of cluster it is, run the read-only scan, and return the findings, risk,
+        threat matrix, and a kill-chain attack path — the composed shortcut for
+        detect_cluster_provider + interpret_query + run_scan + build_threat_matrix +
+        build_attack_path done by hand. The query drives scope/selector; pass any explicit
+        scope arg (namespace/name/kind/image, or a non-cluster scope_level) to override
+        what the query inferred. Returns: intent, scope, selector, rule_count, notes;
+        `cluster` (detected cloud + CIS profile); `findings` + `risk` + embedded
+        `threat_matrix`; and `attack_path` (the exploit chain; omit with
+        include_attack_path=False). Use this to just ask and get the analysis — use
+        preview_scan then run_scan when you need to confirm the plan before scanning."""
+        from ..agents.orchestrator import Orchestrator
+        from ..core.threat_matrix import build_threat_matrix as _build, attack_paths
+
+        try:
+            collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                kubeconfig=kubeconfig, context=context)
+        except RuntimeError as exc:
+            return {"error": str(exc)}
+        orch = Orchestrator(platform)
+        interp = orch.interpret(query)
+        request = interp.request
+        # Explicit scope args win over what the query inferred.
+        if any((namespace, name, kind, image)) or (scope_level and scope_level != "cluster"):
+            request.scope = _make_scope(scope_level or "cluster", namespace, name, kind, image)
+        try:
+            result = orch.run(request, collector,
+                              mode_label="mock" if mock else "live")
+        except Exception as exc:
+            return {"error": f"scan failed: {exc}"}
+
+        doc = json.loads(platform.reporting.json(result))
+        if max_findings is not None and len(doc["findings"]) > max_findings:
+            doc["findings"] = doc["findings"][:max_findings]
+            doc["findings_truncated"] = True
+        nodes = collector.collect({"Node"}, Scope(ScopeLevel.CLUSTER)).get(
+            "Node", all_scopes=True)
+        doc.update({
+            "intent": interp.intent,
+            "scope": request.scope.describe(),
+            "selector": request.selector.describe(),
+            "rule_count": len(interp.resolved_rule_ids),
+            "notes": interp.notes,
+            "cluster": detect_provider(nodes),
+        })
+        if include_attack_path:
+            doc["attack_path"] = attack_paths(_build(result, platform.registry.rules))
+        return doc
+
     def run_cis_benchmark(mock: bool = True, fixture: Optional[str] = None,
                           kubeconfig: Optional[str] = None, context: Optional[str] = None,
-                          profile: str = "self-managed",
+                          profile: str = "auto",
                           kube_bench_json: Optional[str] = None) -> dict:
         """Run the full CIS Kubernetes Benchmark v1.8 (130 controls, read-only) and
         return the report (PASS/FAIL/MANUAL/NA/NEEDS_NODE per control). Mirrors
-        `k8smatrixwarden cis`. profile: self-managed | eks | gke | aks — managed profiles mark
-        the provider-owned control plane NA instead of ungradeable. kube_bench_json:
-        optional path to `kube-bench --json` output to resolve node file-permission
-        controls that the K8s API alone cannot see."""
+        `k8smatrixwarden cis`. profile: auto (default) | self-managed | eks | gke | aks —
+        'auto' detects the provider from Node objects (see detect_cluster_provider);
+        managed profiles mark the provider-owned control plane NA instead of ungradeable.
+        kube_bench_json: optional path to `kube-bench --json` output to resolve node
+        file-permission controls that the K8s API alone cannot see."""
         from ..frameworks.cis import CISBenchmarkEngine
         from ..frameworks.kube_bench_adapter import maybe_load
 
@@ -401,6 +567,9 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                                                 kubeconfig=kubeconfig, context=context)
         except RuntimeError as exc:
             return {"error": str(exc)}
+        if profile == "auto":
+            ev = collector.collect({"Node"}, Scope(ScopeLevel.CLUSTER))
+            profile = detect_provider(ev.get("Node", all_scopes=True))["profile"]
         kb = maybe_load(kube_bench_json)
         report = CISBenchmarkEngine(platform).evaluate(collector, kube_bench_results=kb,
                                                         profile=profile)
@@ -422,6 +591,84 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         return [{"rule_id": a.rule_id, "title": a.title, "severity": a.severity.label,
                 "tactic": a.tactic, "surface": a.surface, "source": a.source,
                 "event": a.event} for a in alerts]
+
+    def correlate_runtime(events: list[dict], scan_id: Optional[str] = None,
+                          scope_level: str = "cluster", namespace: Optional[str] = None,
+                          name: Optional[str] = None, kind: Optional[str] = None,
+                          image: Optional[str] = None, tactics: Optional[list[str]] = None,
+                          techniques: Optional[list[str]] = None,
+                          modules: Optional[list[str]] = None,
+                          rule_ids: Optional[list[str]] = None,
+                          aliases: Optional[list[str]] = None,
+                          frameworks: Optional[list[str]] = None,
+                          severity_min: Optional[str] = None, mock: bool = True,
+                          fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
+                          context: Optional[str] = None,
+                          reports_dir: str = "k8smatrixwarden-reports") -> dict:
+        """Correlate a batch of runtime events against a scan's static findings — the
+        "which weakness is being exploited RIGHT NOW" view. Evaluates `events` (same
+        Falco/audit shape as evaluate_runtime_events) into runtime alerts, then joins them
+        to scan findings by MITRE tactic (and namespace, when the event names one).
+        Returns per-correlation `confidence` — 'confirmed' (same tactic + same namespace:
+        the static weakness is being acted on), 'corroborated' (same tactic: behaviour
+        aligns with a known gap), or 'runtime-only' (live behaviour the scan never
+        predicted) — plus headline counts (confirmed_exploitation, correlated,
+        runtime_only). scan_id: correlate against a saved report; otherwise runs a fresh
+        read-only scan (same scope/selector args as run_scan)."""
+        from ..agents.runtime import RuntimeAgent
+        from ..core.correlation import correlate
+
+        if scan_id:
+            from ..core.report_store import ReportStore
+            try:
+                result = ReportStore(reports_dir).resolve(scan_id)
+            except FileNotFoundError:
+                return {"error": f"no stored report with scan-id {scan_id!r}"}
+            if result is None:
+                return {"error": f"no stored reports in {reports_dir!r}"}
+        else:
+            from ..agents.scanner import ScannerAgent
+            scope = _make_scope(scope_level, namespace, name, kind, image)
+            try:
+                selector = _make_selector(tactics, techniques, modules, rule_ids, aliases,
+                                          frameworks, severity_min)
+                collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                    kubeconfig=kubeconfig, context=context)
+            except (ValueError, RuntimeError) as exc:
+                return {"error": str(exc)}
+            request = ScanRequest(scope=scope, selector=selector, mode=ScanMode.SYNC)
+            try:
+                result = ScannerAgent(platform).scan(
+                    request, collector, mode_label="mock" if mock else "live")
+            except Exception as exc:
+                return {"error": f"scan failed: {exc}"}
+        alerts = RuntimeAgent().evaluate_stream(events or [])
+        return correlate(result.findings, alerts)
+
+    def detect_drift(events: list[dict], namespace: Optional[str] = None,
+                     mock: bool = True, fixture: Optional[str] = None,
+                     kubeconfig: Optional[str] = None,
+                     context: Optional[str] = None) -> dict:
+        """Detect runtime behaviour that CONTRADICTS a Pod's declared security posture —
+        the strongest exploitation signal, because it means a control the operator thinks
+        is enforced is not. Fetches Pod specs (optionally scoped to `namespace`), reads
+        each pod's promise (runAsNonRoot / readOnlyRootFilesystem / not-privileged), then
+        checks `events` against the pod they name (Falco k8s.pod.name enrichment; events
+        that don't name a scanned pod are skipped). Flags: process as uid 0 despite
+        runAsNonRoot; write outside tmp despite readOnlyRootFilesystem; a privileged-only
+        op (nsenter/mount/release_agent) from a non-privileged pod. Returns drift findings
+        (each CRITICAL: declared vs observed vs pod) + counts. Read-only."""
+        from ..core.correlation import detect_drift as _drift
+
+        level = ScopeLevel.NAMESPACE if namespace else ScopeLevel.CLUSTER
+        scope = Scope(level=level, namespace=namespace)
+        try:
+            collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                kubeconfig=kubeconfig, context=context)
+            ev = collector.collect({"Pod"}, scope)
+        except RuntimeError as exc:
+            return {"error": str(exc)}
+        return _drift(ev.get("Pod"), events or [])
 
     def list_runtime_detections() -> list[dict]:
         """List the Runtime Agent's detection catalog (§8) — every rule tagged
@@ -531,6 +778,55 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             return {"error": f"scan failed: {exc}"}
         return _build(result, platform.registry.rules).as_dict()
 
+    def build_attack_path(scope_level: str = "cluster", namespace: Optional[str] = None,
+                          name: Optional[str] = None, kind: Optional[str] = None,
+                          image: Optional[str] = None, tactics: Optional[list[str]] = None,
+                          techniques: Optional[list[str]] = None,
+                          modules: Optional[list[str]] = None,
+                          rule_ids: Optional[list[str]] = None,
+                          aliases: Optional[list[str]] = None,
+                          frameworks: Optional[list[str]] = None,
+                          severity_min: Optional[str] = None,
+                          scan_id: Optional[str] = None, mock: bool = True,
+                          fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
+                          context: Optional[str] = None,
+                          reports_dir: str = "k8smatrixwarden-reports") -> dict:
+        """Chain a scan's threat-matrix HIT cells into a kill-chain exploit path — the
+        tactics an attacker can actually string together in THIS cluster, Initial Access
+        -> ... -> Impact. Returns `chain` (the tactic sequence), `steps` (per tactic: the
+        available techniques, their worst severity, the exposing resources, and finding
+        rule ids), `entry_points` (the first step's techniques — where the chain starts),
+        and `reaches_impact` (does the chain terminate in the Impact tactic). scan_id:
+        build from a previously saved report; otherwise runs a fresh read-only scan (same
+        scope/selector args as run_scan). A coverage-only matrix has no hits, so no path."""
+        from ..core.threat_matrix import build_threat_matrix as _build, attack_paths
+
+        if scan_id:
+            from ..core.report_store import ReportStore
+            try:
+                result = ReportStore(reports_dir).resolve(scan_id)
+            except FileNotFoundError:
+                return {"error": f"no stored report with scan-id {scan_id!r}"}
+            if result is None:
+                return {"error": f"no stored reports in {reports_dir!r}"}
+        else:
+            from ..agents.scanner import ScannerAgent
+            scope = _make_scope(scope_level, namespace, name, kind, image)
+            try:
+                selector = _make_selector(tactics, techniques, modules, rule_ids, aliases,
+                                          frameworks, severity_min)
+                collector = platform.make_collector(mock=mock, fixture=fixture,
+                                                    kubeconfig=kubeconfig, context=context)
+            except (ValueError, RuntimeError) as exc:
+                return {"error": str(exc)}
+            request = ScanRequest(scope=scope, selector=selector, mode=ScanMode.SYNC)
+            try:
+                result = ScannerAgent(platform).scan(
+                    request, collector, mode_label="mock" if mock else "live")
+            except Exception as exc:
+                return {"error": f"scan failed: {exc}"}
+        return attack_paths(_build(result, platform.registry.rules))
+
     # ================================================================== #
     # LAYER 3 — Reports: persist + list + export in any format (§16.4)
     # ================================================================== #
@@ -615,16 +911,21 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         "mitre_coverage": mitre_coverage,
         "list_shards": list_shards,
         "list_namespaces": list_namespaces,
+        "detect_cluster_provider": detect_cluster_provider,
         "validate_platform": validate_platform,
         # 2. scan / audit / runtime
         "preview_scan": preview_scan,
         "run_scan": run_scan,
         "interpret_query": interpret_query,
+        "intelligent_scan": intelligent_scan,
         "run_cis_benchmark": run_cis_benchmark,
         "evaluate_runtime_events": evaluate_runtime_events,
+        "correlate_runtime": correlate_runtime,
+        "detect_drift": detect_drift,
         "list_runtime_detections": list_runtime_detections,
         "explain_remediation": explain_remediation,
         "build_threat_matrix": build_threat_matrix,
+        "build_attack_path": build_attack_path,
         # 3. reports
         "list_reports": list_reports,
         "download_report": download_report,

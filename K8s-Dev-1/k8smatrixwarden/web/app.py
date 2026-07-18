@@ -81,8 +81,12 @@ class WebApp:
                 return self._coverage_matrix()
             if method == "GET" and path == "/api/reports":
                 return self._api_reports(q)
+            if method == "GET" and path == "/api/dashboard":
+                return _json(self._dashboard_data())
             if method == "POST" and path == "/api/scan":
                 return self._api_scan(body)
+            if method == "POST" and path == "/api/runtime":
+                return self._api_runtime(body)
             # /report/<id>  and  /report/<id>/matrix
             if method == "GET" and len(parts) >= 2 and parts[0] == "report":
                 if len(parts) == 2:
@@ -108,9 +112,75 @@ class WebApp:
     # HTML pages
     # ------------------------------------------------------------------ #
     def _dashboard(self) -> Response:
+        # The dashboard is now a client-side app that fetches /api/dashboard — this
+        # just serves the shell. All rendering (KPIs, findings table, matrix heatmap,
+        # attack path, runtime) happens in the browser from that one JSON payload.
+        return _html(pages.dashboard_page(has_scan=bool(self.store.list())))
+
+    def _dashboard_data(self) -> dict:
+        """Everything the dashboard needs, in one payload: latest scan + findings +
+        threat matrix + attack path + runtime readiness + risk trend + history."""
         reports = self.store.list()
-        agg = _aggregate(reports)
-        return _html(pages.dashboard_page(reports, agg))
+        if not reports:
+            return {"has_scan": False, "history": []}
+        latest = self._load(reports[0].scan_id)
+        matrix = build_threat_matrix(latest, self.p.registry.rules)
+        from ..core.threat_matrix import attack_paths
+        from ..agents.runtime import RuntimeAgent
+
+        catalog = RuntimeAgent().catalog()
+        runtime_by_tactic: dict[str, list] = {}
+        for r in catalog:
+            runtime_by_tactic.setdefault(r["tactic"], []).append(r["title"])
+        exposed = [c.tactic for c in matrix.columns if c.hit_count]
+
+        return {
+            "has_scan": True,
+            "scan": {"scan_id": latest.scan_id, "generated_at": latest.generated_at,
+                     "mode": latest.mode, "scope": latest.request.scope.describe(),
+                     "rating": latest.risk.rating,
+                     "cluster_risk": latest.risk.cluster_risk,
+                     "security_score": latest.risk.security_score,
+                     "counts": latest.counts, "total": latest.total()},
+            "findings": [f.as_dict() for f in latest.findings],
+            "threat_matrix": matrix.as_dict(),
+            "attack_path": attack_paths(matrix),
+            "runtime": {"armed": len(catalog), "by_tactic": runtime_by_tactic,
+                        "exposed_tactics": exposed},
+            "trend": [[r.generated_at, r.risk_score] for r in reversed(reports)],
+            "history": [{"scan_id": r.scan_id, "generated_at": r.generated_at,
+                         "rating": r.rating, "risk_score": r.risk_score,
+                         "total": r.total, "scope": r.scope} for r in reports],
+        }
+
+    def _api_runtime(self, body: bytes) -> Response:
+        """Ingest a batch of runtime events (Falco/audit JSON) and return both the
+        scan-correlation and the config-drift analysis against the latest saved scan.
+        Point falcosidekick (or `falco -o json_output`) at this endpoint, or POST a
+        batch by hand. Body: {"events": [...], "scan_id"?: "...", "namespace"?: "..."}."""
+        try:
+            data = json.loads(body or b"{}")
+        except Exception as exc:
+            return _json({"error": f"invalid JSON body: {exc}"}, 400)
+        events = data.get("events") or []
+        if not isinstance(events, list):
+            return _json({"error": "'events' must be a list"}, 400)
+        from ..agents.runtime import RuntimeAgent
+        from ..core.correlation import correlate, detect_drift
+
+        result = self.store.resolve(data.get("scan_id"))
+        if result is None:
+            return _json({"error": "no saved scan to correlate against — scan first"}, 400)
+        alerts = RuntimeAgent().evaluate_stream(events)
+        # drift needs live pod specs; reuse the scan's mode (mock/live) via a fresh fetch
+        mock = result.mode != "live"
+        try:
+            collector = self.p.make_collector(mock=mock)
+            pods = collector.collect({"Pod"}, Scope(ScopeLevel.CLUSTER)).get("Pod")
+        except RuntimeError:
+            pods = []
+        return _json({"correlation": correlate(result.findings, alerts),
+                      "drift": detect_drift(pods, events)})
 
     def _report_html(self, scan_id: str) -> Response:
         result = self._load(scan_id)

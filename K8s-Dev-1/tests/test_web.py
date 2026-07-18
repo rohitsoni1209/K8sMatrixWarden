@@ -26,13 +26,32 @@ def test_health_reports_platform_stats():
     assert d["status"] == "ok" and d["rules"] > 0 and d["shards"] == 10
 
 
-def test_dashboard_renders_empty_then_lists_after_scan():
+def test_dashboard_is_spa_shell_and_api_reflects_scans():
+    # The dashboard is now a client-side app; the shell always serves 200 and the data
+    # comes from /api/dashboard. Assert the data contract, not scraped HTML.
     app = _app()
-    r = app.route("GET", "/")
-    assert r.status == 200 and "No saved scans yet" in r.text
+    assert app.route("GET", "/").status == 200
+    empty = json.loads(app.route("GET", "/api/dashboard").text)
+    assert empty["has_scan"] is False
     _, d = _scan(app)
-    r = app.route("GET", "/")
-    assert d["scan_id"] in r.text and "No saved scans yet" not in r.text
+    data = json.loads(app.route("GET", "/api/dashboard").text)
+    assert data["has_scan"] is True
+    assert data["scan"]["scan_id"] == d["scan_id"]
+    assert "threat_matrix" in data and "attack_path" in data and "runtime" in data
+    assert len(data["findings"]) > 0
+
+
+def test_runtime_endpoint_correlates_and_detects_drift():
+    app = _app()
+    _scan(app)
+    events = [{"source": "audit", "verb": "create",
+               "resource": "clusterrolebindings", "namespace": "production"}]
+    r = app.route("POST", "/api/runtime",
+                  body=json.dumps({"events": events}).encode())
+    assert r.status == 200
+    out = json.loads(r.text)
+    assert "correlation" in out and "drift" in out
+    assert out["correlation"]["total_alerts"] >= 1
 
 
 def test_scan_runs_saves_and_is_downloadable():

@@ -270,6 +270,49 @@ def _pct(n: int, total: int) -> float:
     return round(100 * n / total, 1) if total else 0.0
 
 
+def attack_paths(matrix: ThreatMatrix) -> dict:
+    """Chain the matrix's HIT cells into a kill-chain exploit path.
+
+    The columns are already in kill-chain order (TACTIC_ORDER: Initial Access -> Impact).
+    An attacker's realistic path through THIS cluster is, per tactic they have a foothold
+    in (a hit cell), the technique(s) actually available and the resources exposing them.
+
+    ponytail: kill-chain-order chaining — the ATT&CK-navigator convention, not a per-finding
+    causal graph. It answers "which tactics can an attacker actually string together here,
+    and does the chain reach Impact". Upgrade to true edge inference (this pod's
+    ServiceAccount can reach that binding) when a single-target path matters more than the
+    tactic-level overview.
+    """
+    steps = []
+    for col in matrix.columns:                       # already kill-chain ordered
+        hits = [c for c in col.cells if c.hit]
+        if not hits:
+            continue
+        sev = col.max_severity
+        steps.append({
+            "tactic": col.tactic,
+            "worst_severity": sev.label if sev else None,
+            "techniques": [{
+                "technique_name": c.technique_name,
+                "technique_id": c.technique_id,
+                "max_severity": c.max_severity.label if c.max_severity else None,
+                "resources": sorted({str(f.resource) for f in c.findings})[:20],
+                "finding_rule_ids": sorted({f.rule_id for f in c.findings}),
+                "url": c.url(),
+            } for c in hits],
+        })
+    return {
+        "scan_id": matrix.scan_id,
+        "scope": matrix.scope,
+        "chain": " -> ".join(s["tactic"] for s in steps),
+        "steps": steps,
+        "entry_points": steps[0]["techniques"] if steps else [],
+        "reaches_impact": any(s["tactic"] == "Impact" for s in steps),
+        "tactic_count": len(steps),
+        "reference": REDGUARD_MATRIX_URL,
+    }
+
+
 # ----------------------------------------------------------------------- #
 # Builder
 # ----------------------------------------------------------------------- #

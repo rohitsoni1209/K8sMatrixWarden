@@ -1,7 +1,40 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:kubernetes-threat-matrix.redguard.ch)"
+      "WebFetch(domain:kubernetes-threat-matrix.redguard.ch)",
+      "mcp__codebase-memory-mcp__index_status",
+      "mcp__codebase-memory-mcp__get_architecture",
+      "mcp__codebase-memory-mcp__index_repository",
+      "mcp__codebase-memory-mcp__search_graph",
+      "Skill(code-review)",
+      "Skill(code-review:*)",
+      "Bash(python tests/test_provider.py)",
+      "Bash(python -c ' *)",
+      "Bash(python3 tests/test_provider.py)",
+      "Bash(python3 -c ' *)",
+      "Bash(PYTHONPATH=. python3 tests/test_provider.py)",
+      "Bash(PYTHONPATH=. python3 -c ' *)",
+      "Bash(PYTHONPATH=. python3 -m tests.run_tests)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(PYTHONPATH=. python3)",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "Bash(PYTHONPATH=. python3 tests/test_correlation.py)",
+      "Bash(PYTHONPATH=. python3 -c \"import k8smatrixwarden.web.pages\")",
+      "Bash(kubectl get *)",
+      "Bash(pip3 install *)",
+      "Bash(python3 -c \"import kubernetes; print\\('kubernetes', kubernetes.__version__\\)\")",
+      "Bash(PYTHONPATH=. python3 -m k8smatrixwarden scan --live --context minikube -o terminal)",
+      "Bash(rm -f k8smatrixwarden-reports/*.json)",
+      "Bash(PYTHONPATH=. python3 -m k8smatrixwarden scan --live --context minikube --save -o json)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('saved', d['scan_id'], d['risk']['rating'], d['risk']['cluster_risk'], '·', d['counts']\\)\")",
+      "Bash(curl -sS -m 5 http://127.0.0.1:8080/api/reports)",
+      "Bash(curl -sS -m 5 http://127.0.0.1:8080/health)",
+      "Bash(pkill -f \"k8smatrixwarden web\")",
+      "Bash(PYTHONPATH=. python3 -c \"import k8smatrixwarden.web.pages, k8smatrixwarden.web.app; print\\('imports OK'\\)\")",
+      "Bash(curl -sS -m5 http://127.0.0.1:8080/api/dashboard)",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('has_scan',d['has_scan'],'| findings',len\\(d.get\\('findings',[]\\)\\),'| tactics_hit',d.get\\('threat_matrix',{}\\).get\\('summary',{}\\).get\\('tactics_hit'\\),'| chain',d.get\\('attack_path',{}\\).get\\('chain'\\)\\)\")"
     ]
   }
 }

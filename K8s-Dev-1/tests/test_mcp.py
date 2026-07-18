@@ -12,11 +12,36 @@ ALL_TOOLS = {
     "list_rules", "resolve_selector", "get_kubectl_command", "list_kubectl_commands",
     "get_tool_commands", "list_tool_commands", "get_playbook", "list_playbooks",
     "lookup_cve", "list_cves", "get_compliance_ruleset", "get_taxonomy",
-    "mitre_coverage", "list_shards", "list_namespaces", "validate_platform",
-    "preview_scan", "run_scan", "interpret_query", "run_cis_benchmark",
-    "evaluate_runtime_events", "list_runtime_detections", "explain_remediation",
-    "build_threat_matrix", "list_reports", "download_report", "generate_rbac_manifest",
+    "mitre_coverage", "list_shards", "list_namespaces", "detect_cluster_provider",
+    "validate_platform",
+    "preview_scan", "run_scan", "interpret_query", "intelligent_scan",
+    "run_cis_benchmark", "evaluate_runtime_events", "correlate_runtime",
+    "detect_drift", "list_runtime_detections",
+    "explain_remediation", "build_threat_matrix", "build_attack_path",
+    "list_reports", "download_report", "generate_rbac_manifest",
 }
+
+
+def test_build_attack_path_chains_hits_in_killchain_order():
+    tools = build_tools()
+    path = tools["build_attack_path"](mock=True)
+    tactics = [s["tactic"] for s in path["steps"]]
+    assert tactics, "mock cluster is insecure — expected a non-empty attack path"
+    order = ["Initial Access", "Execution", "Persistence", "Privilege Escalation",
+             "Defense Evasion", "Credential Access", "Discovery", "Lateral Movement",
+             "Impact"]
+    assert tactics == sorted(tactics, key=order.index), "steps not in kill-chain order"
+    assert path["entry_points"] == path["steps"][0]["techniques"]
+    assert path["chain"] == " -> ".join(tactics)
+
+
+def test_intelligent_scan_returns_matrix_and_path():
+    tools = build_tools()
+    doc = tools["intelligent_scan"]("scan cluster for privilege escalation", mock=True)
+    assert "error" not in doc
+    assert doc["rule_count"] > 0
+    assert "threat_matrix" in doc and "attack_path" in doc
+    assert doc["cluster"]["profile"] == "self-managed"
 
 
 def test_all_expected_tools_are_registered():
@@ -92,6 +117,22 @@ def test_interpret_query_resolves_natural_language():
     assert interp["intent"] == "scan"
     assert "production" in interp["scope"]
     assert interp["rule_count"] > 0
+
+
+def test_intelligent_scan_one_call_end_to_end():
+    # One call: parses NL, detects cluster, runs scan, returns findings + risk + cluster info
+    tools = build_tools()
+    result = tools["intelligent_scan"](
+        query="find exposed secrets in production",
+        scope_level="cluster",
+        mock=True
+    )
+    assert result["intent"] == "scan"
+    assert result["rule_count"] > 0
+    assert "findings" in result
+    assert "risk" in result
+    assert "cluster" in result
+    assert result["cluster"]["profile"] == "self-managed"
 
 
 def test_run_cis_benchmark_mock_covers_all_130_controls():
