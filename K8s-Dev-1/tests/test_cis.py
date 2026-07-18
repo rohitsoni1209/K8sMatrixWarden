@@ -6,11 +6,11 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.bootstrap import build_platform
-from k8ssec.core.evidence import build_component_config
-from k8ssec.frameworks.cis import FAIL, NA, NEEDS_NODE, PASS, CISBenchmarkEngine
-from k8ssec.frameworks.cis_catalog import CIS_1_8, catalog_summary
-from k8ssec.frameworks.kube_bench_adapter import parse_kube_bench_json
+from k8smatrixwarden.bootstrap import build_platform
+from k8smatrixwarden.core.evidence import build_component_config
+from k8smatrixwarden.frameworks.cis import FAIL, NA, NEEDS_NODE, PASS, CISBenchmarkEngine
+from k8smatrixwarden.frameworks.cis_catalog import CIS_1_8, catalog_summary
+from k8smatrixwarden.frameworks.kube_bench_adapter import parse_kube_bench_json
 
 
 def _report(kb=None, profile="self-managed"):

@@ -5,11 +5,11 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.agents.orchestrator import Orchestrator
-from k8ssec.bootstrap import build_platform
-from k8ssec.core.models import ScanRequest, Scope, ScopeLevel, Selector
-from k8ssec.core.report_store import ReportStore
-from k8ssec.core.results import ScanResult
+from k8smatrixwarden.agents.orchestrator import Orchestrator
+from k8smatrixwarden.bootstrap import build_platform
+from k8smatrixwarden.core.models import ScanRequest, Scope, ScopeLevel, Selector
+from k8smatrixwarden.core.report_store import ReportStore
+from k8smatrixwarden.core.results import ScanResult
 
 
 def _scan():

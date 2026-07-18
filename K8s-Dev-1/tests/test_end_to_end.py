@@ -4,11 +4,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.agents.orchestrator import Orchestrator
-from k8ssec.agents.runtime import RuntimeAgent
-from k8ssec.agents.remediation import RemediationAgent
-from k8ssec.bootstrap import build_platform
-from k8ssec.core.models import ScanRequest, Scope, ScopeLevel, Selector
+from k8smatrixwarden.agents.orchestrator import Orchestrator
+from k8smatrixwarden.agents.runtime import RuntimeAgent
+from k8smatrixwarden.agents.remediation import RemediationAgent
+from k8smatrixwarden.bootstrap import build_platform
+from k8smatrixwarden.core.models import ScanRequest, Scope, ScopeLevel, Selector
 
 
 def _run(selector=None, scope=None):

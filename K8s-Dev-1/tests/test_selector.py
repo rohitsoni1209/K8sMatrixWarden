@@ -6,9 +6,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.bootstrap import build_platform
-from k8ssec.core.mapping_engine import SelectorResolutionError
-from k8ssec.core.models import Selector
+from k8smatrixwarden.bootstrap import build_platform
+from k8smatrixwarden.core.mapping_engine import SelectorResolutionError
+from k8smatrixwarden.core.models import Selector
 
 
 def _p():
@@ -72,6 +72,6 @@ def test_unknown_selector_raises_not_silent_empty():
 
 def test_severity_min_filters():
     p = _p()
-    from k8ssec.core.models import Severity
+    from k8smatrixwarden.core.models import Severity
     ids = p.mapping.resolve(Selector(severity_min=Severity.CRITICAL))
     assert all(p.registry.rules.get(i).severity == Severity.CRITICAL for i in ids)

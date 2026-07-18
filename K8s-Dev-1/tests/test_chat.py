@@ -4,8 +4,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.bootstrap import build_platform
-from k8ssec.cli.chat import ChatSession, run_chat
+from k8smatrixwarden.bootstrap import build_platform
+from k8smatrixwarden.cli.chat import ChatSession, run_chat
 
 
 def _session():
@@ -166,6 +166,6 @@ def test_run_chat_loop_with_scripted_io():
                     print_fn=outputs.append)
     assert code == 0
     joined = "\n".join(outputs)
-    assert "k8ssec chat" in joined        # banner
+    assert "k8smatrixwarden chat" in joined        # banner
     assert "Commands" in joined           # help
     assert "coverage" in joined.lower()

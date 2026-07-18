@@ -1,0 +1,367 @@
+"""
+Threat Matrix (§3.3, §12) — projects a scan's findings onto the Kubernetes Threat Matrix.
+
+This is the "one matrix per scan" view: the 9 tactics of the Microsoft/Redguard Kubernetes
+Threat Matrix (https://kubernetes-threat-matrix.redguard.ch/) laid out as columns, each with
+its techniques as cells, and every cell painted by three orthogonal states that already live
+in the platform:
+
+    reference — the technique exists in the Redguard matrix (the full attacker playbook)
+    covered   — k8smatrixwarden has at least one Rule that can detect it (from the registry)
+    hit       — this scan actually produced a finding on it (from the ScanResult)
+
+Keying is by canonical ATT&CK-for-Containers technique id when a rule/finding carries one
+(that's the mapping contract, §6.2); Redguard reference techniques that have no stable id —
+or whose id already appears in the same tactic — are kept as name-keyed cells so the matrix
+still shows the honest coverage gaps (a technique with no rule renders as an un-covered cell,
+never silently dropped). Nothing here re-derives severity or scoring; it reads the Findings
+the Scanner already produced.
+
+The output is a plain, JSON-serialisable structure (`ThreatMatrix.as_dict()`), so it is
+equally consumable by the markdown/HTML reporters, the web dashboard heatmap, and the MCP
+`build_threat_matrix` tool — one matrix, many surfaces.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Optional
+
+from .finding_context import mitre_technique_url
+from .models import Finding, Severity, Tactic
+from .registry import RuleRegistry
+from .results import ScanResult
+
+REDGUARD_MATRIX_URL = "https://kubernetes-threat-matrix.redguard.ch/"
+
+# The 9 tactics, in kill-chain order (§12.1). This is the column order of every rendered
+# matrix; `Tactic` (core.models) is the enum, this list just pins presentation order.
+TACTIC_ORDER: list[Tactic] = [
+    Tactic.INITIAL_ACCESS, Tactic.EXECUTION, Tactic.PERSISTENCE,
+    Tactic.PRIVILEGE_ESCALATION, Tactic.DEFENSE_EVASION, Tactic.CREDENTIAL_ACCESS,
+    Tactic.DISCOVERY, Tactic.LATERAL_MOVEMENT, Tactic.IMPACT,
+]
+
+# The Redguard/Microsoft Kubernetes Threat Matrix techniques per tactic (§12.1), as
+# (display_name, attack_for_containers_id_or_None). The id is filled only where the
+# canonical ATT&CK-for-Containers technique is unambiguous AND not already used earlier in
+# the same tactic (a duplicate id in one column is dropped to None so the two distinct
+# Redguard techniques stay as separate cells). Techniques with no stable ATT&CK id keep
+# None — they are real attacker behaviours the matrix must still show, just not id-keyed.
+REDGUARD_TECHNIQUES: dict[str, list[tuple[str, Optional[str]]]] = {
+    "Initial Access": [
+        ("Using cloud credentials", "T1078.004"),
+        ("Compromised images in registry", "T1525"),
+        ("Kubeconfig file", "T1552"),
+        ("Application vulnerability", None),
+        ("Exposed sensitive interfaces", "T1133"),
+    ],
+    "Execution": [
+        ("Exec into container", "T1609"),
+        ("bash/cmd inside container", "T1059"),
+        ("New container", "T1610"),
+        ("Application exploit (RCE)", None),
+        ("SSH server running inside container", None),
+        ("Sidecar injection", None),
+    ],
+    "Persistence": [
+        ("Backdoor container", "T1525"),
+        ("Writable hostPath mount", None),
+        ("Kubernetes CronJob", "T1053.003"),
+        ("Malicious admission controller", "T1554"),
+    ],
+    "Privilege Escalation": [
+        ("Privileged container", "T1610"),
+        ("Cluster-admin binding", "T1078"),
+        ("hostPath mount", None),
+        ("Access cloud resources", "T1078.004"),
+        ("Disable namespacing (host PID/IPC/net)", None),
+    ],
+    "Defense Evasion": [
+        ("Clear container logs", "T1070"),
+        ("Delete K8s events", None),
+        ("Pod / container name similarity", None),
+        ("Connect from proxy server", None),
+    ],
+    "Credential Access": [
+        ("List K8s secrets", "T1552.007"),
+        ("Mount service principal", None),
+        ("Access container service account", None),
+        ("Application credentials in config files", "T1552"),
+        ("Access managed identity credential", "T1552.005"),
+        ("Malicious admission controller", "T1554"),
+    ],
+    "Discovery": [
+        ("Access the K8s API server", "T1613"),
+        ("Access Kubelet API", None),
+        ("Network mapping", "T1046"),
+        ("Access Kubernetes dashboard", None),
+        ("Instance Metadata API", "T1552.005"),
+    ],
+    "Lateral Movement": [
+        ("Access cloud resources", "T1078.004"),
+        ("Container service account", "T1552.007"),
+        ("Cluster internal networking", None),
+        ("Applications credentials in config files", "T1552"),
+        ("Writable volume mounts on host", None),
+        ("CoreDNS poisoning", "T1557"),
+        ("ARP poisoning / IP spoofing", None),
+    ],
+    "Impact": [
+        ("Data destruction", "T1485"),
+        ("Resource hijacking", "T1496"),
+        ("Denial of service", "T1499"),
+    ],
+}
+
+
+def _norm(s: str) -> str:
+    return str(s).strip().lower()
+
+
+@dataclass
+class MatrixCell:
+    """One technique in one tactic column."""
+    tactic: str
+    technique_name: str
+    technique_id: Optional[str] = None
+    #: Redguard display alias, when the covered/canonical name differs from the matrix's own
+    reference_name: Optional[str] = None
+    covered: bool = False                      # a Rule exists that can detect this
+    rule_ids: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+    #: cell identity within its tactic column (id, or "name:<...>")
+    key: str = ""
+
+    @property
+    def hit(self) -> bool:
+        return bool(self.findings)
+
+    @property
+    def count(self) -> int:
+        return len(self.findings)
+
+    @property
+    def max_severity(self) -> Optional[Severity]:
+        real = [f.severity for f in self.findings if f.severity.weight > 0]
+        return max(real, key=lambda s: s.order) if real else None
+
+    @property
+    def state(self) -> str:
+        """The single word a heatmap paints the cell with."""
+        if self.hit:
+            return "hit"
+        if self.covered:
+            return "covered"
+        return "gap"
+
+    def url(self) -> str:
+        return mitre_technique_url(self.technique_id) if self.technique_id else REDGUARD_MATRIX_URL
+
+    def as_dict(self) -> dict:
+        sev = self.max_severity
+        return {
+            "technique_name": self.technique_name,
+            "technique_id": self.technique_id,
+            "reference_name": self.reference_name,
+            "covered": self.covered,
+            "hit": self.hit,
+            "state": self.state,
+            "count": self.count,
+            "max_severity": sev.label if sev else None,
+            "max_severity_emoji": sev.emoji if sev else "",
+            "rule_ids": sorted(set(self.rule_ids)),
+            "finding_rule_ids": sorted({f.rule_id for f in self.findings}),
+            "resources": sorted({str(f.resource) for f in self.findings})[:20],
+            "url": self.url(),
+        }
+
+
+@dataclass
+class TacticColumn:
+    tactic: str
+    cells: list[MatrixCell] = field(default_factory=list)
+
+    @property
+    def hit_count(self) -> int:
+        return sum(1 for c in self.cells if c.hit)
+
+    @property
+    def finding_count(self) -> int:
+        return sum(c.count for c in self.cells)
+
+    @property
+    def max_severity(self) -> Optional[Severity]:
+        sevs = [c.max_severity for c in self.cells if c.max_severity]
+        return max(sevs, key=lambda s: s.order) if sevs else None
+
+    def as_dict(self) -> dict:
+        sev = self.max_severity
+        return {
+            "tactic": self.tactic,
+            "techniques_total": len(self.cells),
+            "techniques_covered": sum(1 for c in self.cells if c.covered),
+            "techniques_hit": self.hit_count,
+            "finding_count": self.finding_count,
+            "max_severity": sev.label if sev else None,
+            "max_severity_emoji": sev.emoji if sev else "",
+            "cells": [c.as_dict() for c in self.cells],
+        }
+
+
+@dataclass
+class ThreatMatrix:
+    scan_id: str
+    generated_at: str
+    scope: str
+    columns: list[TacticColumn] = field(default_factory=list)
+
+    # -- aggregate stats -------------------------------------------------- #
+    @property
+    def techniques_total(self) -> int:
+        return sum(len(col.cells) for col in self.columns)
+
+    @property
+    def techniques_covered(self) -> int:
+        return sum(1 for col in self.columns for c in col.cells if c.covered)
+
+    @property
+    def techniques_hit(self) -> int:
+        return sum(col.hit_count for col in self.columns)
+
+    @property
+    def tactics_hit(self) -> int:
+        return sum(1 for col in self.columns if col.hit_count)
+
+    @property
+    def finding_count(self) -> int:
+        """DISTINCT findings mapped onto the matrix. A multi-tactic finding appears in one
+        cell per tactic it enables, so summing column counts would over-count it — dedupe
+        by finding identity here so the headline number matches reality (it is ≤ the
+        scan's total, since findings with no MITRE tag don't appear on the matrix)."""
+        seen = set()
+        for col in self.columns:
+            for cell in col.cells:
+                for f in cell.findings:
+                    seen.add(f.dedup_key())
+        return len(seen)
+
+    def summary(self) -> dict:
+        return {
+            "scan_id": self.scan_id,
+            "generated_at": self.generated_at,
+            "scope": self.scope,
+            "reference": REDGUARD_MATRIX_URL,
+            "tactics_total": len(self.columns),
+            "tactics_hit": self.tactics_hit,
+            "techniques_total": self.techniques_total,
+            "techniques_covered": self.techniques_covered,
+            "techniques_hit": self.techniques_hit,
+            "coverage_pct": _pct(self.techniques_covered, self.techniques_total),
+            "exposure_pct": _pct(self.techniques_hit, self.techniques_total),
+            "finding_count": self.finding_count,
+        }
+
+    def as_dict(self) -> dict:
+        return {"summary": self.summary(),
+                "columns": [col.as_dict() for col in self.columns]}
+
+
+def _pct(n: int, total: int) -> float:
+    return round(100 * n / total, 1) if total else 0.0
+
+
+# ----------------------------------------------------------------------- #
+# Builder
+# ----------------------------------------------------------------------- #
+def build_threat_matrix(result: ScanResult,
+                        registry: Optional[RuleRegistry] = None) -> ThreatMatrix:
+    """Project a ScanResult onto the Kubernetes Threat Matrix.
+
+    `registry` (optional) supplies the *coverage* layer — which techniques the platform
+    has any rule for, independent of whether this scan hit them. Pass
+    `platform.registry.rules` for the full three-state (gap/covered/hit) matrix; omit it
+    to render a findings-only matrix (every non-empty cell is simply `hit`).
+    """
+    # 1) Seed reference cells from the Redguard matrix, one column per tactic.
+    columns: list[TacticColumn] = []
+    # per-tactic lookups so rules/findings can find the cell to light up
+    by_id: dict[str, dict[str, MatrixCell]] = {}      # tactic -> {tech_id -> cell}
+    by_name: dict[str, dict[str, MatrixCell]] = {}     # tactic -> {norm(name) -> cell}
+
+    for tactic in TACTIC_ORDER:
+        tval = tactic.value
+        col = TacticColumn(tactic=tval)
+        id_index: dict[str, MatrixCell] = {}
+        name_index: dict[str, MatrixCell] = {}
+        for name, tid in REDGUARD_TECHNIQUES.get(tval, []):
+            # a duplicate id inside one tactic keeps only the first id-keyed; the rest
+            # become name-keyed so both distinct Redguard techniques still show.
+            use_id = tid if (tid and tid not in id_index) else None
+            key = use_id or f"name:{_norm(name)}"
+            cell = MatrixCell(tactic=tval, technique_name=name, technique_id=tid,
+                              reference_name=name, key=key)
+            col.cells.append(cell)
+            if use_id:
+                id_index[use_id] = cell
+            name_index[_norm(name)] = cell
+        columns.append(col)
+        by_id[tval] = id_index
+        by_name[tval] = name_index
+
+    col_by_tactic = {col.tactic: col for col in columns}
+
+    def _locate(tactic_val: str, tech_id: str, tech_name: str,
+                create: bool) -> Optional[MatrixCell]:
+        """Find (or, for coverage, create) the cell a (tactic, technique) maps to."""
+        col = col_by_tactic.get(tactic_val)
+        if col is None:                       # tactic not in the 9 (shouldn't happen)
+            return None
+        idx = by_id[tactic_val]
+        if tech_id and tech_id in idx:
+            return idx[tech_id]
+        nidx = by_name[tactic_val]
+        if _norm(tech_name) in nidx:
+            return nidx[_norm(tech_name)]
+        if not create:
+            return None
+        # A covered/hit technique the Redguard reference list didn't enumerate — add it so
+        # the platform's real coverage is never hidden behind an incomplete reference list.
+        key = tech_id or f"name:{_norm(tech_name)}"
+        cell = MatrixCell(tactic=tactic_val, technique_name=tech_name,
+                          technique_id=tech_id or None, key=key)
+        col.cells.append(cell)
+        if tech_id:
+            idx[tech_id] = cell
+        nidx[_norm(tech_name)] = cell
+        return cell
+
+    # 2) Coverage layer — every registered rule marks its technique cells "covered".
+    if registry is not None:
+        for rule in registry.all():
+            for m in rule.mitre:
+                cell = _locate(m.tactic.value, m.technique_id, m.technique_name, create=True)
+                if cell is None:
+                    continue
+                cell.covered = True
+                cell.rule_ids.append(rule.id)
+                # Keep the Redguard display name for a reference cell (this IS the
+                # Kubernetes Threat Matrix the user asked for — "CoreDNS poisoning" reads
+                # better than the raw ATT&CK "Adversary-in-the-Middle"); the canonical
+                # ATT&CK technique is still reachable via technique_id / its URL.
+                cell.technique_id = cell.technique_id or m.technique_id
+
+    # 3) Hit layer — this scan's findings light up their cells.
+    for f in result.findings:
+        if f.severity.weight == 0:            # skip INFO / engine-error findings
+            continue
+        for m in f.mitre:
+            cell = _locate(m.tactic.value, m.technique_id, m.technique_name, create=True)
+            if cell is not None:
+                cell.findings.append(f)
+
+    return ThreatMatrix(
+        scan_id=result.scan_id,
+        generated_at=result.generated_at,
+        scope=result.request.scope.describe(),
+        columns=columns,
+    )

@@ -1,4 +1,4 @@
-<h1 align="center">📖 k8ssec — Usage Guide</h1>
+<h1 align="center">📖 k8smatrixwarden — Usage Guide</h1>
 
 <p align="center">
   <em>Everything you need to actually <strong>use</strong> the tool — install, commands, examples, workflows.</em><br/>
@@ -11,13 +11,16 @@
 
 1. [Requirements & Install](#1-requirements--install)
 2. [Your First Scan (60 seconds)](#2-your-first-scan-60-seconds)
-3. [The Three Ways to Use k8ssec](#3-the-three-ways-to-use-k8ssec)
+3. [The Four Ways to Use k8smatrixwarden](#3-the-four-ways-to-use-k8smatrixwarden)
 4. [Command Reference](#4-command-reference)
-   - [`scan`](#41-k8ssec-scan)
-   - [`chat`](#42-k8ssec-chat)
-   - [`cis`](#43-k8ssec-cis)
+   - [`scan`](#41-k8smatrixwarden-scan)
+   - [`chat`](#42-k8smatrixwarden-chat)
+   - [`cis`](#43-k8smatrixwarden-cis)
    - [`rules` / `coverage` / `roles` / `doctor`](#44-inspection-commands)
-   - [`mcp`](#45-k8ssec-mcp)
+   - [`report`](#45-k8smatrixwarden-report--download-saved-reports-later)
+   - [`mcp`](#45-k8smatrixwarden-mcp)
+   - [`matrix`](#47-k8smatrixwarden-matrix--kubernetes-threat-matrix)
+   - [`web`](#48-k8smatrixwarden-web--security-dashboard)
 5. [Scoping a Scan — what to scan](#5-scoping-a-scan--what-to-scan)
 6. [Selecting Rules — what kind of issue to look for](#6-selecting-rules--what-kind-of-issue-to-look-for)
 7. [Natural-Language Queries](#7-natural-language-queries)
@@ -40,14 +43,14 @@
 cd K8s-Dev-1
 
 # Option A — run directly, no install (recommended for trying it out)
-python -m k8ssec doctor
+python -m k8smatrixwarden doctor
 
-# Option B — install the `k8ssec` command onto your PATH
+# Option B — install the `k8smatrixwarden` command onto your PATH
 pip install -e .
-k8ssec doctor
+k8smatrixwarden doctor
 ```
 
-Everything below assumes `python -m k8ssec ...`; if you installed it, drop the `python -m` and just use `k8ssec ...`.
+Everything below assumes `python -m k8smatrixwarden ...`; if you installed it, drop the `python -m` and just use `k8smatrixwarden ...`.
 
 ### Optional extras
 
@@ -56,6 +59,7 @@ Everything below assumes `python -m k8ssec ...`; if you installed it, drop the `
 | `live` | Scanning a real cluster (`--live`) | `pip install -e ".[live]"` |
 | `pretty` | Nicer colored terminal tables | `pip install -e ".[pretty]"` |
 | `mcp` | Running the MCP protocol server for AI-agent integration | `pip install -e ".[mcp]"` |
+| `pdf` | PDF report export (`-o pdf`) | `pip install -e ".[pdf]"` |
 | `dev` | Running the test suite with real `pytest` | `pip install -e ".[dev]"` |
 
 None of these are needed to use the tool — without them you get plain-text output and `--mock` scanning, which is fully functional.
@@ -63,7 +67,7 @@ None of these are needed to use the tool — without them you get plain-text out
 ### Sanity check
 
 ```bash
-python -m k8ssec doctor
+python -m k8smatrixwarden doctor
 ```
 
 Expected output:
@@ -82,7 +86,7 @@ If you see that, everything is wired correctly and you're ready to scan.
 The tool ships with a **bundled, deliberately-insecure mock cluster** so you can try every feature without a real Kubernetes cluster.
 
 ```bash
-python -m k8ssec scan --mock
+python -m k8smatrixwarden scan --mock
 ```
 
 This runs all 56 rules against the mock cluster and prints a full terminal report: a risk score, a severity breakdown, and every finding with its MITRE ATT&CK mapping and a suggested fix.
@@ -90,45 +94,47 @@ This runs all 56 rules against the mock cluster and prints a full terminal repor
 Now try scanning for one specific kind of threat:
 
 ```bash
-python -m k8ssec scan --tactic Persistence --mock
+python -m k8smatrixwarden scan --tactic Persistence --mock
 ```
 
 Or just talk to it:
 
 ```bash
-python -m k8ssec chat
+python -m k8smatrixwarden chat
 ```
 
 That's the whole tool in three commands. The rest of this guide covers every option in depth.
 
 ---
 
-## 3. The Three Ways to Use k8ssec
+## 3. The Four Ways to Use k8smatrixwarden
 
 | Mode | Command | Best for |
 |---|---|---|
-| **One-shot CLI** | `k8ssec scan --tactic Persistence -o markdown` | Scripts, CI pipelines, precise flag-driven scans |
-| **One-shot natural language** | `k8ssec scan "scan production for Persistence"` | Quick ad-hoc questions without remembering flag names |
-| **Interactive chat** | `k8ssec chat` | Exploring a cluster conversationally, multi-turn investigation |
+| **One-shot CLI** | `k8smatrixwarden scan --tactic Persistence -o markdown` | Scripts, CI pipelines, precise flag-driven scans |
+| **One-shot natural language** | `k8smatrixwarden scan "scan production for Persistence"` | Quick ad-hoc questions without remembering flag names |
+| **Interactive chat** | `k8smatrixwarden chat` | Exploring a cluster conversationally, multi-turn investigation |
+| **Web Dashboard** | `k8smatrixwarden web` | Browsing saved scans, reports, and the threat matrix in a browser; running a scan by clicking |
+| **MCP (AI agent)** | `k8smatrixwarden mcp` | Driving everything above from Claude/Cursor/any MCP client |
 
-All three go through the exact same engine (Orchestrator → Registry → Evidence Collector → Detection Engine), so results are identical no matter which you use — pick whichever fits the moment.
+They all go through the exact same engine (Orchestrator → Registry → Evidence Collector → Detection Engine), so results are identical no matter which you use — pick whichever fits the moment.
 
 ---
 
 ## 4. Command Reference
 
 ```
-k8ssec [--config PATH] <command> [options]
+k8smatrixwarden [--config PATH] <command> [options]
 ```
 
 `--config PATH` (global, before the subcommand) overrides the default rule/shard/alias configuration — see [§12 Configuration](#12-configuration).
 
-### 4.1 `k8ssec scan`
+### 4.1 `k8smatrixwarden scan`
 
 Run a security scan. Either flag-driven or natural language.
 
 ```bash
-k8ssec scan [QUERY...] [scope flags] [selector flags] [output flags] [flow flags]
+k8smatrixwarden scan [QUERY...] [scope flags] [selector flags] [output flags] [flow flags]
 ```
 
 **Scope flags** — *what* to scan (pick at most one; default is the whole cluster):
@@ -158,7 +164,7 @@ k8ssec scan [QUERY...] [scope flags] [selector flags] [output flags] [flow flags
 
 | Flag | Values | Default |
 |---|---|---|
-| `-o, --output FORMAT` | `terminal, text, markdown, json, sarif, html` | `terminal` |
+| `-o, --output FORMAT` | `terminal, text, markdown, json, sarif, html, pdf` | `terminal` |
 | `--output-file PATH` | write the rendered report to a file | — |
 
 **Mode flags:**
@@ -179,22 +185,22 @@ k8ssec scan [QUERY...] [scope flags] [selector flags] [output flags] [flow flags
 | `-y, --yes` | skip the confirmation prompt (natural-language mode) |
 | `--fail-on LEVEL` | exit code `1` if any finding ≥ this severity (for CI) |
 
-### 4.2 `k8ssec chat`
+### 4.2 `k8smatrixwarden chat`
 
 Interactive conversational assistant.
 
 ```bash
-k8ssec chat [--live] [--fixture PATH] [--kubeconfig PATH] [--context NAME]
+k8smatrixwarden chat [--live] [--fixture PATH] [--kubeconfig PATH] [--context NAME]
 ```
 
 Type plain English; it shows you the resolved plan and waits for confirmation before scanning. See [§7](#7-natural-language-queries) for example phrases, and the transcript in [§11](#11-common-workflows-copy-paste-recipes).
 
-### 4.3 `k8ssec cis`
+### 4.3 `k8smatrixwarden cis`
 
 Run the **full CIS Kubernetes Benchmark v1.8** — all 130 controls.
 
 ```bash
-k8ssec cis [--mock|--live] [--kubeconfig PATH] [--context NAME] [--kube-bench-json PATH] [--profile PROFILE] [-o FORMAT] [--show-all] [--fail-on-fail]
+k8smatrixwarden cis [--mock|--live] [--kubeconfig PATH] [--context NAME] [--kube-bench-json PATH] [--profile PROFILE] [-o FORMAT] [--show-all] [--fail-on-fail]
 ```
 
 | Flag | Meaning |
@@ -211,25 +217,25 @@ See [§13.3](#133-cis-benchmark-statuses) for what each status (`PASS`/`FAIL`/`M
 ### 4.4 Inspection commands
 
 ```bash
-k8ssec rules [--module SHARD] [--tactic TACTIC]   # list the rule registry
-k8ssec coverage                                    # rules per MITRE tactic (bar chart)
-k8ssec roles [--bind] [--service-account NAME] [--sa-namespace NS] [--no-create-namespace] [--output-file PATH]
-k8ssec doctor                                       # validate the whole platform wiring
+k8smatrixwarden rules [--module SHARD] [--tactic TACTIC]   # list the rule registry
+k8smatrixwarden coverage                                    # rules per MITRE tactic (bar chart)
+k8smatrixwarden roles [--bind] [--service-account NAME] [--sa-namespace NS] [--no-create-namespace] [--output-file PATH]
+k8smatrixwarden doctor                                       # validate the whole platform wiring
 ```
 
-`k8ssec roles` (no flags) prints the bare, per-shard `ClusterRole` JSON — useful for review. Add `--bind` to get a complete, `kubectl apply`-able manifest (Namespace + ServiceAccount + all `ClusterRole`/`ClusterRoleBinding` pairs) — see [§9.3](#93-step-3--least-privilege-rbac-recommended-before-scanning-anything-you-care-about).
+`k8smatrixwarden roles` (no flags) prints the bare, per-shard `ClusterRole` JSON — useful for review. Add `--bind` to get a complete, `kubectl apply`-able manifest (Namespace + ServiceAccount + all `ClusterRole`/`ClusterRoleBinding` pairs) — see [§9.3](#93-step-3--least-privilege-rbac-recommended-before-scanning-anything-you-care-about).
 
 Run `doctor` any time something seems off, or after editing `config/default_config.json` — it will tell you exactly what's broken (duplicate rule ids, unknown MITRE technique ids, dangling aliases).
 
-### 4.5 `k8ssec report` — download saved reports later
+### 4.5 `k8smatrixwarden report` — download saved reports later
 
 Scan once with `--save`, then list and re-download the result in any format, to any filename:
 
 ```bash
-k8ssec scan --live --save                                   # persist to ./k8ssec-reports/
-k8ssec report list                                          # what's stored
-k8ssec report download --scan-id scan-… --format html --output audit.html
-k8ssec report download --format markdown --output report.md   # (no --scan-id ⇒ latest)
+k8smatrixwarden scan --live --save                                   # persist to ./k8smatrixwarden-reports/
+k8smatrixwarden report list                                          # what's stored
+k8smatrixwarden report download --scan-id scan-… --format html --output audit.html
+k8smatrixwarden report download --format markdown --output report.md   # (no --scan-id ⇒ latest)
 ```
 
 | Command | Meaning |
@@ -237,16 +243,149 @@ k8ssec report download --format markdown --output report.md   # (no --scan-id �
 | `report list [--limit N] [--reports-dir DIR]` | list stored scans (id, time, rating, risk, findings, scope) |
 | `report download [--scan-id ID] [--format FMT] [--output FILE] [--reports-dir DIR]` | re-render a stored scan; `--scan-id` defaults to the latest; `--output` picks the filename (omit ⇒ print to stdout) |
 
-Because the full result is stored, you can export it into a **different** format than you first viewed — scan once, download markdown for a PR *and* SARIF for CI *and* HTML for a stakeholder, all from the same saved scan. (CIS benchmark reports download via `k8ssec cis --output-file`.)
+Because the full result is stored, you can export it into a **different** format than you first viewed — scan once, download markdown for a PR *and* SARIF for CI *and* HTML for a stakeholder, all from the same saved scan. (CIS benchmark reports download via `k8smatrixwarden cis --output-file`.)
 
-### 4.5 `k8ssec mcp`
+### 4.5 `k8smatrixwarden mcp`
 
-Run the tool as an MCP (Model Context Protocol) server, so an AI agent can query rules, resolve selectors, and look up remediation playbooks programmatically.
+Run the tool as an MCP (Model Context Protocol) server, so any MCP-compatible AI agent
+(Claude, Cursor, VS Code, Windsurf, ...) can do essentially everything the CLI can do,
+short of applying a fix, over the exact same engine the CLI and chat use — including
+running real scans, the full CIS benchmark, evaluating a runtime event stream, exporting
+saved reports in any format, and getting a fully validated remediation for a specific
+resource.
 
 ```bash
-k8ssec mcp --list-tools     # see what's exposed, without starting the server
-k8ssec mcp                  # start the MCP server over stdio (requires: pip install -e ".[mcp]")
+k8smatrixwarden mcp --list-tools     # see what's exposed, without starting the server
+k8smatrixwarden mcp                  # start the MCP server over stdio (requires: pip install -e ".[mcp]")
 ```
+
+**27 tools, four layers.** Every tool's description below is verbatim its Python
+docstring — that's exactly what the calling LLM sees, since FastMCP reads docstrings
+directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
+
+#### Layer 1 — Knowledge (no cluster access; safe to call anytime)
+
+| Tool | Description |
+|---|---|
+| `list_rules(shard?, tactic?)` | List rules in the registry (id, title, shard, severity, full taxonomy), optionally filtered by domain shard and/or MITRE tactic. Discovers valid `rule_ids` for scan selectors. |
+| `resolve_selector(tactics?, techniques?, modules?, aliases?, frameworks?, rule_ids?)` | Resolve a raw selector to the rule ids it expands to, with no scope and no scan — lower-level than `preview_scan`. |
+| `get_kubectl_command(name)` | Look up one named kubectl security one-liner (e.g. `list-privileged-pods`). |
+| `list_kubectl_commands()` | List every named kubectl command in the dataset (9 total). |
+| `get_tool_commands(tool)` | Look up example invocation(s) for one external tool (trivy, kube-bench, kubescape, cosign, ...). |
+| `list_tool_commands()` | List every external tool the dataset knows, with its example invocation(s). |
+| `get_playbook(ref)` | Look up one static remediation playbook by ref (unambiguous-target-kind fixes only — see `list_playbooks`). |
+| `list_playbooks()` | List every playbook, both static (fixed command) and schema-aware (resolved per-resource — see `explain_remediation`). |
+| `lookup_cve(cve_id)` | Look up one CVE in the bundled K8s CVE knowledge base. |
+| `list_cves()` | List every CVE in the bundled knowledge base (severity, affected range, description). |
+| `get_compliance_ruleset(framework?)` | Get metadata for CIS / PSS / NSA_CISA (or all three) — summary only; use `run_cis_benchmark` for the full 130-control evaluation. |
+| `get_taxonomy()` | Get the vendored MITRE ATT&CK-for-Containers technique catalog + current tactic coverage. |
+| `mitre_coverage()` | Rule count per MITRE tactic (all 9). |
+| `list_shards()` | List the 10 domain shards with titles and rule counts — valid values for the `modules` selector. |
+| `list_namespaces(mock?, fixture?, kubeconfig?, context?)` | List namespace names in the target cluster — check before scoping a scan to one. |
+| `validate_platform()` | Validate the install itself (`doctor` equivalent) — shard/rule counts, taxonomy/alias validation problems if any. |
+
+#### Layer 2 — Scan / audit / runtime (read-only cluster access)
+
+| Tool | Description |
+|---|---|
+| `preview_scan(scope..., selector...)` | Resolve a scan's scope+selector to the exact rule set **without scanning** — the plan-before-you-run step. |
+| `run_scan(scope..., selector..., mock?, output_format?, save?, max_findings?)` | Run a real scan. `output_format="json"` (default) returns structured findings + risk + the `threat_matrix` block + full per-finding context (summary/impact/standards/MITRE/remediation/validation); `"markdown"/"html"/"sarif"/"text"/"terminal"` instead returns the fully rendered report string. `"pdf"` returns base64-encoded PDF bytes (`content_base64` + `encoding: "base64"` instead of `content`) — requires the `pdf` extra server-side. `save=True` persists it for later `list_reports`/`download_report`. |
+| `interpret_query(text)` | Parse a natural-language request ("scan production for persistence") into scope/selector/resolved rules — no execution. |
+| `run_cis_benchmark(mock?, profile?, kube_bench_json?)` | Run the full CIS Kubernetes Benchmark v1.8 (130 controls, PASS/FAIL/MANUAL/NA/NEEDS_NODE). |
+| `build_threat_matrix(scope..., selector..., scan_id?, coverage?, mock?)` | Project findings onto the 9-tactic **Kubernetes Threat Matrix** — from a fresh scan, a saved report (`scan_id`), or global detection coverage (`coverage=True`). Returns the same `{summary, columns[cells]}` structure the report/dashboard heatmap uses. |
+| `evaluate_runtime_events(events)` | Evaluate a batch of Falco-style syscall or K8s audit events against the Runtime Agent's rule catalog; returns any alerts (each tagged `surface="runtime"` + its `source`). |
+| `list_runtime_detections()` | List the Runtime Agent's detection catalog — every rule tagged `surface="runtime"` (Falco/audit/drift). The counterpart to `list_rules`, whose Scanner rules are all `surface="scan"`. |
+| `explain_remediation(rule_id, resource_kind, resource_name, namespace?, owner_kind?, owner_name?, labels?, annotations?)` | Get the full schema-aware, owner-resolved remediation for a *hypothetical* resource — no scan needed. |
+
+#### Layer 3 — Reports (persist a scan once, export in any format later)
+
+| Tool | Description |
+|---|---|
+| `list_reports(reports_dir?, limit?)` | List previously saved scans (from `run_scan(..., save=True)`). |
+| `download_report(scan_id?, format?, reports_dir?)` | Re-render a saved scan in any of the 7 formats without re-scanning; omit `scan_id` for the latest. Returns the rendered content — save it to a file yourself using your own file-write tool. `format="pdf"` returns base64-encoded bytes instead (same convention as `run_scan`). |
+
+#### Layer 4 — Platform
+
+| Tool | Description |
+|---|---|
+| `generate_rbac_manifest(service_account?, namespace?, create_namespace?, bind?)` | Generate the least-privilege RBAC (get/list/watch only) k8smatrixwarden needs against a real cluster. Only generates — never applies. |
+
+`preview_scan` / `interpret_query` resolve a scope+selector (or a natural-language
+request) to the exact rule set **without touching the cluster** — the same "show the
+plan, then run it" pattern `k8smatrixwarden chat` uses. An agent should call one of those first,
+then call `run_scan` with the same arguments to execute.
+
+**Deliberately not exposed: remediation / apply.** §9's core rule — "every remediation
+action requires explicit user confirmation, no exceptions, no bypass, no auto-mode" —
+can't be honored by an MCP tool call (there's no interactive confirmation step), so the
+write path stays CLI/chat-only. Everything above is read-only — scanning, the knowledge
+datasets, runtime-event evaluation, and report rendering never mutate the cluster or
+write to disk on their own; `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`
+enforces this stays true as the tool surface grows.
+
+### 4.7 `k8smatrixwarden matrix` — Kubernetes Threat Matrix
+
+Project a scan's findings onto the 9-tactic [Kubernetes Threat Matrix](https://kubernetes-threat-matrix.redguard.ch/) (MITRE ATT&CK for Containers). Each technique cell is one of three states — **hit** (a finding fired, coloured by worst severity), **covered** (a rule exists, nothing found this scan), **gap** (no rule yet) — so the matrix reads as an honest coverage map, not just a hit list.
+
+```bash
+k8smatrixwarden matrix --mock                     # the matrix for a fresh cluster scan
+k8smatrixwarden matrix -n production --mock        # scoped to a namespace
+k8smatrixwarden matrix --tactic Persistence --mock # only rules for one tactic
+k8smatrixwarden matrix --coverage                  # global "what can it detect" matrix (no scan)
+k8smatrixwarden matrix --scan-id scan-… -o markdown --output-file matrix.md   # from a saved report
+```
+
+| Flag | Meaning |
+|---|---|
+| scope + selector flags | same as `scan` (`-n`, `--tactic`, `--module`, …) — builds the matrix from that scan |
+| `--coverage` | show global detection coverage across **all** rules, with no scan overlaid |
+| `--scan-id ID` | build the matrix from a previously saved report instead of scanning |
+| `-o, --output FORMAT` | `text` (default), `markdown`, `json` |
+| `--output-file PATH` | also write the rendered matrix to a file |
+
+The same matrix is embedded in the markdown/JSON/HTML scan reports, shown as a heatmap on the web dashboard (§4.8), and available over MCP via `build_threat_matrix`.
+
+### 4.8 `k8smatrixwarden web` — Security Dashboard
+
+Launch the **Security Dashboard**, a zero-dependency (stdlib `http.server`) web UI. Browse every saved scan, open the full rich HTML report, view the per-scan threat-matrix heatmap, and run a scan from the browser.
+
+```bash
+k8smatrixwarden web                              # serve on http://127.0.0.1:8080
+k8smatrixwarden web --port 9000 --open           # custom port; open a browser at startup
+k8smatrixwarden web --no-scan                    # serve saved reports read-only (disable the scan button)
+k8smatrixwarden web --reports-dir ./my-reports   # where to read/write saved scans
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--host HOST` | `127.0.0.1` | interface to bind (keep it on localhost unless you know what you're doing) |
+| `--port PORT` | `8080` | port to listen on |
+| `--reports-dir DIR` | `k8smatrixwarden-reports` | directory the dashboard lists scans from and saves new ones to |
+| `--no-scan` | off | serve existing reports read-only; disable the in-browser *Run a scan* button and `POST /api/scan` |
+| `--open` | off | open your default browser at the dashboard URL on startup |
+
+**How to interact with it:**
+
+| Page | What you do |
+|---|---|
+| **Dashboard** (`/`) | See KPIs (saved scans, worst rating, latest risk) and a table of every saved scan. Click a row to open its **report** or **matrix**. |
+| **Run a scan** | The *Run a scan* panel: pick a scope (whole cluster / namespace), optionally type a selector (e.g. `Persistence`), choose the bundled mock or a live cluster, and click **Scan & save** — the new scan appears in the list. |
+| **Report** (`/report/<id>`) | The full self-contained HTML report — risk gauge, threat-matrix heatmap, per-finding cards with fix commands, and interactive severity filters. |
+| **Threat matrix** (`/report/<id>/matrix`) | The scan's 9-tactic Kubernetes Threat Matrix as a standalone heatmap page. |
+| **Coverage matrix** (`/matrix`) | The global "what can the tool detect" matrix — every rule's coverage, no scan overlaid. |
+
+**HTTP API** — the same dashboard is a small read-mostly JSON API, scriptable with `curl`:
+
+```bash
+curl http://127.0.0.1:8080/api/reports                          # list saved scans
+curl "http://127.0.0.1:8080/api/report/latest?format=markdown"  # a report, any format
+curl http://127.0.0.1:8080/api/report/latest/matrix             # a scan's threat matrix (JSON)
+curl -X POST http://127.0.0.1:8080/api/scan \
+     -H 'Content-Type: application/json' \
+     -d '{"scope_level":"cluster","selector":"Persistence","mock":true}'   # run & save a scan
+```
+
+The server binds `127.0.0.1` by default and is **read-mostly** — the only state-changing route is `POST /api/scan` (a read-only scan that saves its result). Remediation/apply is **not** exposed here, for the same reason it's withheld from MCP: every fix needs interactive confirmation. Saved-report lookups are path-traversal-guarded.
 
 ---
 
@@ -255,13 +394,13 @@ k8ssec mcp                  # start the MCP server over stdio (requires: pip ins
 Scope answers **"where do I look?"** Only one scope applies at a time; if you don't specify one, the whole cluster is in scope.
 
 ```bash
-k8ssec scan --mock                                    # entire cluster
-k8ssec scan -n production --mock                       # one namespace
-k8ssec scan --pod payment-api -n production --mock     # one pod
-k8ssec scan --workload Deployment/user-service --mock  # one workload
-k8ssec scan --image nginx:latest --mock                # anywhere this image runs
-k8ssec scan --node worker-3 --mock                      # one node
-k8ssec scan --helm-release my-app --mock                # one Helm release
+k8smatrixwarden scan --mock                                    # entire cluster
+k8smatrixwarden scan -n production --mock                       # one namespace
+k8smatrixwarden scan --pod payment-api -n production --mock     # one pod
+k8smatrixwarden scan --workload Deployment/user-service --mock  # one workload
+k8smatrixwarden scan --image nginx:latest --mock                # anywhere this image runs
+k8smatrixwarden scan --node worker-3 --mock                      # one node
+k8smatrixwarden scan --helm-release my-app --mock                # one Helm release
 ```
 
 Cluster-scoped resources (RBAC roles, admission webhooks) always stay visible even when you scope to a namespace — a namespace-scoped scan doesn't hide the ClusterRoleBinding that grants that namespace's pods `cluster-admin`.
@@ -274,55 +413,55 @@ Selector answers **"what am I looking for?"** You can combine axes freely (they 
 
 ### By MITRE ATT&CK tactic
 ```bash
-k8ssec scan --tactic Persistence --mock
-k8ssec scan --tactic "Privilege Escalation" --tactic "Lateral Movement" --mock
+k8smatrixwarden scan --tactic Persistence --mock
+k8smatrixwarden scan --tactic "Privilege Escalation" --tactic "Lateral Movement" --mock
 ```
 Valid tactics: `Initial Access, Execution, Persistence, Privilege Escalation, Defense Evasion, Credential Access, Discovery, Lateral Movement, Impact`
 
 ### By technique or composite/outcome alias
 ```bash
-k8ssec scan --technique "Container Escape" --mock
-k8ssec scan --technique "Exposed Secrets" --mock
-k8ssec scan --technique "Privileged Pods" --mock
-k8ssec scan --technique "Kubernetes API Exposure" --mock
+k8smatrixwarden scan --technique "Container Escape" --mock
+k8smatrixwarden scan --technique "Exposed Secrets" --mock
+k8smatrixwarden scan --technique "Privileged Pods" --mock
+k8smatrixwarden scan --technique "Kubernetes API Exposure" --mock
 ```
 These are curated bundles of rules mapped to a real-world attack outcome — see them all in `config/default_config.json` under `"aliases"`.
 
 ### By domain/module (a specific area of the platform)
 ```bash
-k8ssec scan --module rbac_identity --mock
-k8ssec scan --module network_security --mock
+k8smatrixwarden scan --module rbac_identity --mock
+k8smatrixwarden scan --module network_security --mock
 ```
-Module names match the shard names shown by `k8ssec doctor` — `cluster_control_plane, workload_pod_security, rbac_identity, network_security, image_supply_chain, secrets, compliance, attack_surface, admission_control, cloud_iam`.
+Module names match the shard names shown by `k8smatrixwarden doctor` — `cluster_control_plane, workload_pod_security, rbac_identity, network_security, image_supply_chain, secrets, compliance, attack_surface, admission_control, cloud_iam`.
 
 ### By exact rule
 ```bash
-k8ssec rules --module workload_pod_security     # find the rule id you want
-k8ssec scan --rule workload-privileged-container --mock
+k8smatrixwarden rules --module workload_pod_security     # find the rule id you want
+k8smatrixwarden scan --rule workload-privileged-container --mock
 ```
 
 ### By compliance framework
 ```bash
-k8ssec scan --framework CIS --mock
-k8ssec scan --framework OWASP --mock
-k8ssec scan --framework NSA --mock
+k8smatrixwarden scan --framework CIS --mock
+k8smatrixwarden scan --framework OWASP --mock
+k8smatrixwarden scan --framework NSA --mock
 ```
-(For a *complete* CIS run including the checks that aren't mapped to a native rule, use `k8ssec cis` instead — see §4.3.)
+(For a *complete* CIS run including the checks that aren't mapped to a native rule, use `k8smatrixwarden cis` instead — see §4.3.)
 
 ### By minimum severity
 ```bash
-k8ssec scan --severity-min CRITICAL --mock
+k8smatrixwarden scan --severity-min CRITICAL --mock
 ```
 
 ### Combine them
 ```bash
-k8ssec scan -n production --tactic "Credential Access" --severity-min HIGH -o markdown --mock
+k8smatrixwarden scan -n production --tactic "Credential Access" --severity-min HIGH -o markdown --mock
 ```
 
 ### Preview without scanning
 Not sure what a selector resolves to? Use `--dry-run`:
 ```bash
-k8ssec scan --tactic Persistence --dry-run
+k8smatrixwarden scan --tactic Persistence --dry-run
 ```
 ```
 Scope=cluster-wide  Selector=tactic=Persistence
@@ -333,7 +472,7 @@ Scope=cluster-wide  Selector=tactic=Persistence
 
 ## 7. Natural-Language Queries
 
-Every example below works both as a one-shot `k8ssec scan "..."` and typed directly into `k8ssec chat`:
+Every example below works both as a one-shot `k8smatrixwarden scan "..."` and typed directly into `k8smatrixwarden chat`:
 
 ```
 scan production for Persistence
@@ -352,12 +491,12 @@ The Orchestrator parses these into the same `scope` + `selector` structure the f
 
 One-shot usage requires confirmation by default (type `y`) unless you pass `--yes`:
 ```bash
-k8ssec scan "scan production for Persistence" --yes --mock
+k8smatrixwarden scan "scan production for Persistence" --yes --mock
 ```
 
 ### The chat is conversational (not just fixed phrases)
 
-`k8ssec chat` understands **varied phrasing, synonyms, and typos** — you don't have to memorize exact wording:
+`k8smatrixwarden chat` understands **varied phrasing, synonyms, and typos** — you don't have to memorize exact wording:
 
 ```
 scan for privesc                 →  Privilege Escalation
@@ -394,51 +533,67 @@ you› scan the frobnicator        → "I couldn't turn that into a scan. Did yo
 ## 8. Output Formats
 
 ```bash
-k8ssec scan --mock -o terminal      # rich terminal panels + per-severity tables (default)
-k8ssec scan --mock -o text          # clean plain-text, zero dependencies
-k8ssec scan --mock -o markdown      # the flagship report — see below
-k8ssec scan --mock -o json          # structured data + summary + per-finding fix commands
-k8ssec scan --mock -o sarif         # SARIF 2.1 for GitHub Code Scanning / IDE integration
-k8ssec scan --mock -o html          # self-contained, filterable HTML report
+k8smatrixwarden scan --mock -o terminal      # rich terminal panels + per-severity tables (default)
+k8smatrixwarden scan --mock -o text          # clean plain-text, zero dependencies
+k8smatrixwarden scan --mock -o markdown      # the flagship report — see below
+k8smatrixwarden scan --mock -o json          # structured data + summary + full per-finding context
+k8smatrixwarden scan --mock -o sarif         # SARIF 2.1 for GitHub Code Scanning / IDE integration
+k8smatrixwarden scan --mock -o html          # self-contained, filterable HTML report
+k8smatrixwarden scan --mock -o pdf --output-file report.pdf   # audit-ready PDF (needs the `pdf` extra)
 ```
 
-Every format is designed to be genuinely useful, not a flat dump:
+Every format is designed to be genuinely useful, not a flat dump. **Every finding, in
+every format, carries the same seven report-grade sections** — Summary, Standards &
+Benchmark Mapping (with a reference link per framework), MITRE ATT&CK Mapping (with a
+reference link per technique), Impact, Remediation (with a reference link), Validation
+(exact steps to reproduce/verify), and Warnings — sourced from one shared content layer
+(`core/finding_context.py`) so no format can say something different from another about
+what a finding means or how to fix it.
 
 | Format | What you get |
 |---|---|
 | **terminal** | A risk panel, findings grouped by severity in colored tables (⚡ marks attack-path-amplified findings), and a "Top Remediations" panel. Needs `rich` (`pip install -e ".[pretty]"`); falls back to `text` otherwise. |
-| **markdown** | YAML frontmatter · verdict · risk gauge · severity/tactic/OWASP dashboards · an **⚡ Attack-Path Amplified** section · per-finding cards with full MITRE→technique mapping, OWASP/CIS/NSA tags, and a **collapsible `kubectl` fix command** · a **Prioritized Remediation Plan** table · appendix. Renders beautifully on GitHub/GitLab. |
-| **json** | The full finding data **plus** a `summary` block (severity percentages, OWASP breakdown, attack-path count) **plus** concrete `remediation.commands` on every finding — ready for dashboards/automation. |
-| **sarif** | SARIF 2.1 with `security-severity` (so GitHub sorts/gates correctly), rich `tags` (`owasp/…`, `mitre/…`, `cis/…`), help text with the fix, and `partialFingerprints` for stable de-duplication. |
-| **html** | One self-contained file (no external assets), dark/light aware, with a risk gauge, severity chips, MITRE/OWASP tag chips, collapsible remediation, and **interactive severity filter buttons**. |
-| **text** | The same content as terminal, in dependency-free plain text with box-drawing headers and severity bars. |
+| **text** | The same content as terminal in dependency-free plain text, plus a compact `standards` tag line, a real-world `why` (impact) line, and a `verify` command per finding. |
+| **markdown** | YAML frontmatter · verdict · risk gauge · severity/tactic/OWASP dashboards · an **⚡ Attack-Path Amplified** section · a full report-grade card per finding (Summary, Standards & Benchmark Mapping table with links, MITRE ATT&CK Mapping table with links, Impact, Remediation with alternative YAML/rollback/references, Validation steps) · a **Prioritized Remediation Plan** table · appendix. Renders beautifully on GitHub/GitLab. |
+| **json** | The full finding data **plus** a `summary` block **plus**, per finding: `summary`, `impact`, `validation_steps`, `standards` (framework/control/title/url), `mitre_mapping` (tactic/technique/url), and the full `remediation` breakdown (title, commands, automatable, owner_resource, alternative_yaml, validation_commands, rollback_commands, warnings, references) — ready for dashboards/automation. |
+| **sarif** | SARIF 2.1 with `security-severity`, rich `tags`, a `help.markdown` block (impact + standards + remediation + validation — what GitHub Code Scanning actually renders), and `partialFingerprints` for stable de-duplication. |
+| **html** | One self-contained file (no external assets), dark/light aware: risk gauge, severity chips, a Summary + Standards & Benchmark table + MITRE ATT&CK table + Impact + Remediation + Validation per card, and **interactive severity filter buttons**. |
+| **pdf** | A print/share-ready audit document — title page with a colored risk score, executive summary, coverage tables, and the full seven-section write-up per finding. Requires the optional `pdf` extra (`pip install -e ".[pdf]"`, pulls in `fpdf2` — pure Python, no system dependencies); without it you get a clear error telling you to install it or use another format. |
 
 **Two ways to save a report to a file of your choosing:**
 
 1. **Inline, at scan time** — `--output-file PATH` writes the report as you scan:
    ```bash
-   k8ssec scan --mock -o markdown --output-file report.md
-   k8ssec scan --mock -o html --output-file report.html
-   k8ssec scan --mock -o sarif --output-file results.sarif
+   k8smatrixwarden scan --mock -o markdown --output-file report.md
+   k8smatrixwarden scan --mock -o html --output-file report.html
+   k8smatrixwarden scan --mock -o sarif --output-file results.sarif
+   k8smatrixwarden scan --mock -o pdf --output-file report.pdf
    ```
-2. **Later, from a saved scan** — scan once with `--save`, then download in any format/filename (see [§4.5](#45-k8ssec-report--download-saved-reports-later)):
+   For `-o pdf`, `--output-file` is optional — if you omit it, k8smatrixwarden writes
+   `k8smatrixwarden-report-<scan_id>.pdf` in the current directory (PDF is binary, so
+   unlike every other format it's never printed to the terminal).
+2. **Later, from a saved scan** — scan once with `--save`, then download in any format/filename (see [§4.5](#45-k8smatrixwarden-report--download-saved-reports-later)):
    ```bash
-   k8ssec scan --mock --save
-   k8ssec report download --format markdown --output my-report.md
+   k8smatrixwarden scan --mock --save
+   k8smatrixwarden report download --format markdown --output my-report.md
+   k8smatrixwarden report download --format pdf --output my-report.pdf
    ```
+   `report download --format pdf` **requires** `--output PATH` for the same binary-content
+   reason — it errors out with a clear message rather than dumping bytes to your terminal.
 
-In `k8ssec chat`, just say **“export markdown to my-report.md”** (or `save html as findings.html`).
+In `k8smatrixwarden chat`, just say **“export markdown to my-report.md”** (or `save html as findings.html`, or `export pdf`).
 
-The **markdown report embeds the actual remediation command** for each finding (formatted with the real resource name/namespace), e.g.:
+The **markdown report embeds the actual remediation command** for each finding (formatted with the real resource name/namespace), alongside the rest of that finding's report-grade sections, e.g.:
 
-> <details><summary>🛠️ Remediation — Remove cluster-admin from default SA</summary>
+> ##### 🛠️ Remediation
 >
+> **Remove cluster-admin from default SA**
 > ```bash
 > kubectl delete clusterrolebinding default-admin
 > ```
-> </details>
+> _References:_ [Kubernetes docs](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
 
-— so a report doubles as a runnable fix checklist. (Destructive commands still require confirmation through the Remediation Agent; the report only *shows* them.)
+— so a report doubles as a runnable, cited fix checklist. (Destructive commands still require confirmation through the Remediation Agent; the report only *shows* them.)
 
 ---
 
@@ -456,60 +611,60 @@ pip install kubernetes
 
 Without this, `--live` fails immediately with a clear message telling you to install it or use `--mock` — it never half-runs.
 
-### 9.2 Step 2 — point k8ssec at your cluster
+### 9.2 Step 2 — point k8smatrixwarden at your cluster
 
-k8ssec uses the same kubeconfig resolution `kubectl` does. If `kubectl get pods` already works in your shell, `k8ssec scan --live` will too, with no extra flags:
+k8smatrixwarden uses the same kubeconfig resolution `kubectl` does. If `kubectl get pods` already works in your shell, `k8smatrixwarden scan --live` will too, with no extra flags:
 
 ```bash
-k8ssec scan --live
+k8smatrixwarden scan --live
 ```
 
 If you work with **multiple clusters/contexts** (the normal case — check `kubectl config get-contexts`), be explicit rather than relying on whatever happens to be `current-context`:
 
 ```bash
 kubectl config get-contexts                 # see what's available
-k8ssec scan --live --context prod-cluster    # target a specific one
-k8ssec scan --live --kubeconfig /path/to/other-kubeconfig --context staging
+k8smatrixwarden scan --live --context prod-cluster    # target a specific one
+k8smatrixwarden scan --live --kubeconfig /path/to/other-kubeconfig --context staging
 ```
 
-`--context` (and `--kubeconfig`) are available on `scan`, `cis`, and `chat`. If a context name doesn't exist, k8ssec fails with an explicit error naming the bad context/file — it will **not** silently fall back to some other config.
+`--context` (and `--kubeconfig`) are available on `scan`, `cis`, and `chat`. If a context name doesn't exist, k8smatrixwarden fails with an explicit error naming the bad context/file — it will **not** silently fall back to some other config.
 
 ### 9.3 Step 3 — least-privilege RBAC (recommended before scanning anything you care about)
 
-By default, `k8ssec --live` scans using whatever your current kubeconfig identity can already see — for a first try on a personal/lab cluster that's usually fine. For anything real, don't hand the scanner your own admin credentials: generate the exact, minimal, **read-only** RBAC the tool actually needs and run as that instead.
+By default, `k8smatrixwarden --live` scans using whatever your current kubeconfig identity can already see — for a first try on a personal/lab cluster that's usually fine. For anything real, don't hand the scanner your own admin credentials: generate the exact, minimal, **read-only** RBAC the tool actually needs and run as that instead.
 
 ```bash
 # Generate a ready-to-apply manifest: 1 Namespace + 1 ServiceAccount +
 # one scoped ClusterRole/ClusterRoleBinding PER shard (10 pairs).
-k8ssec roles --bind --output-file k8ssec-rbac.json
+k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json
 
 # Inspect it before trusting it — every rule is get/list/watch only, nothing writes:
-cat k8ssec-rbac.json
+cat k8smatrixwarden-rbac.json
 
 # Apply it (kubectl accepts the JSON `List` kind directly, no YAML conversion needed):
-kubectl apply -f k8ssec-rbac.json
+kubectl apply -f k8smatrixwarden-rbac.json
 ```
 
 Options:
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--service-account NAME` | `k8ssec-scanner` | the ServiceAccount the roles are bound to |
-| `--sa-namespace NS` | `k8ssec-system` | namespace the ServiceAccount lives in |
+| `--service-account NAME` | `k8smatrixwarden-scanner` | the ServiceAccount the roles are bound to |
+| `--sa-namespace NS` | `k8smatrixwarden-system` | namespace the ServiceAccount lives in |
 | `--no-create-namespace` | off | assume `--sa-namespace` already exists, don't emit a `Namespace` object |
 | `--bind` | off | emit the full deployable manifest instead of bare `ClusterRole` JSON (see below) |
 
 Then get a kubeconfig for that ServiceAccount and scan with it — e.g. with a short-lived token:
 ```bash
-TOKEN=$(kubectl -n k8ssec-system create token k8ssec-scanner)
-kubectl config set-credentials k8ssec-scanner --token="$TOKEN"
-kubectl config set-context k8ssec-scan --cluster="$(kubectl config current-context)" --user=k8ssec-scanner
-k8ssec scan --live --context k8ssec-scan
+TOKEN=$(kubectl -n k8smatrixwarden-system create token k8smatrixwarden-scanner)
+kubectl config set-credentials k8smatrixwarden-scanner --token="$TOKEN"
+kubectl config set-context k8smatrixwarden-scan --cluster="$(kubectl config current-context)" --user=k8smatrixwarden-scanner
+k8smatrixwarden scan --live --context k8smatrixwarden-scan
 ```
 
-Without `--bind`, `k8ssec roles` prints just the bare `ClusterRole` objects (useful to *review* what each shard needs without deploying anything):
+Without `--bind`, `k8smatrixwarden roles` prints just the bare `ClusterRole` objects (useful to *review* what each shard needs without deploying anything):
 ```bash
-k8ssec roles                       # inspect only — nothing to apply, no bindings/SA
+k8smatrixwarden roles                       # inspect only — nothing to apply, no bindings/SA
 ```
 
 ### 9.4 Step 4 — scan
@@ -517,10 +672,10 @@ k8ssec roles                       # inspect only — nothing to apply, no bindi
 Same commands as mock mode, minus `--mock`, plus `--live`:
 
 ```bash
-k8ssec scan --live                                  # whole cluster
-k8ssec scan --live -n production                    # one namespace
-k8ssec scan --live --tactic "Privilege Escalation"   # by tactic
-k8ssec scan --live -o markdown --output-file report.md
+k8smatrixwarden scan --live                                  # whole cluster
+k8smatrixwarden scan --live -n production                    # one namespace
+k8smatrixwarden scan --live --tactic "Privilege Escalation"   # by tactic
+k8smatrixwarden scan --live -o markdown --output-file report.md
 ```
 
 `--live` reads the cluster via the same raw camelCase JSON shape as the mock fixtures, so every rule behaves identically in both modes — nothing is mock-only or live-only *except* two things:
@@ -529,12 +684,12 @@ k8ssec scan --live -o markdown --output-file report.md
 2. **Node file-permission checks** (file ownership/permissions on disk) genuinely cannot be read through the Kubernetes API. Run `kube-bench` on your nodes and feed its output in:
    ```bash
    kube-bench run --benchmark cis-1.8 --json > kb.json
-   k8ssec cis --live --kube-bench-json kb.json
+   k8smatrixwarden cis --live --kube-bench-json kb.json
    ```
 
 If you're on a managed cluster (EKS/GKE/AKS), tell the CIS engine so it doesn't grade infrastructure you don't own:
 ```bash
-k8ssec cis --live --profile eks
+k8smatrixwarden cis --live --profile eks
 ```
 
 ### 9.5 Quick reference
@@ -542,9 +697,9 @@ k8ssec cis --live --profile eks
 ```bash
 pip install -e ".[live]"                                  # 1. install
 kubectl config get-contexts                               # 2. find your cluster
-k8ssec roles --bind --output-file k8ssec-rbac.json         # 3a. generate least-priv RBAC
-kubectl apply -f k8ssec-rbac.json                          # 3b. apply it
-k8ssec scan --live --context my-cluster                    # 4. scan
+k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json         # 3a. generate least-priv RBAC
+kubectl apply -f k8smatrixwarden-rbac.json                          # 3b. apply it
+k8smatrixwarden scan --live --context my-cluster                    # 4. scan
 ```
 
 ---
@@ -555,17 +710,17 @@ Use `--fail-on` (scan) or `--fail-on-fail` (cis) to get a non-zero exit code whe
 
 ```bash
 # Fail the build if any CRITICAL finding exists
-k8ssec scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
+k8smatrixwarden scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
 
 # Fail the build if any CIS control fails
-k8ssec cis --live --fail-on-fail -o json --output-file cis-results.json
+k8smatrixwarden cis --live --fail-on-fail -o json --output-file cis-results.json
 ```
 
 **Example GitHub Actions step:**
 ```yaml
 - name: Kubernetes security scan
   run: |
-    python -m k8ssec scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
+    python -m k8smatrixwarden scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
 - name: Upload SARIF
   uses: github/codeql-action/upload-sarif@v3
   with:
@@ -578,66 +733,66 @@ k8ssec cis --live --fail-on-fail -o json --output-file cis-results.json
 
 **"Is this cluster secure at all?"**
 ```bash
-k8ssec scan --live -o markdown --output-file security-report.md
+k8smatrixwarden scan --live -o markdown --output-file security-report.md
 ```
 
 **"What can go wrong in production specifically?"**
 ```bash
-k8ssec scan -n production --live -o markdown
+k8smatrixwarden scan -n production --live -o markdown
 ```
 
 **"Show me every way someone could escalate privileges."**
 ```bash
-k8ssec scan --tactic "Privilege Escalation" --live
+k8smatrixwarden scan --tactic "Privilege Escalation" --live
 ```
 
 **"Are my secrets handled safely?"**
 ```bash
-k8ssec scan --technique "Exposed Secrets" --live
+k8smatrixwarden scan --technique "Exposed Secrets" --live
 # or, for the whole secrets domain:
-k8ssec scan --module secrets --live
+k8smatrixwarden scan --module secrets --live
 ```
 
 **"Just check RBAC."**
 ```bash
-k8ssec scan --module rbac_identity --live -o markdown
+k8smatrixwarden scan --module rbac_identity --live -o markdown
 ```
 
 **"How compliant are we with CIS?"**
 ```bash
-k8ssec cis --live --profile eks -o markdown --output-file cis-report.md
+k8smatrixwarden cis --live --profile eks -o markdown --output-file cis-report.md
 ```
 
 **"Only show me the scary stuff."**
 ```bash
-k8ssec scan --live --severity-min CRITICAL
+k8smatrixwarden scan --live --severity-min CRITICAL
 ```
 
 **"I don't remember flag names, just let me talk to it."**
 ```bash
-k8ssec chat
+k8smatrixwarden chat
 ```
 ```
-k8ssec› scan production for Persistence
+k8smatrixwarden› scan production for Persistence
 Intent=SCAN  Scope=namespace/production  Selector=tactic=Persistence
 → resolves to 6 rule(s) across 3 shard(s): admission_control, compliance, workload_pod_security
   rules: admission-malicious-webhook, cronjob-suspicious, compliance-psa-not-restricted, ...
 
 Proceed with this scan? [Y/n]
-k8ssec› y
+k8smatrixwarden› y
 [... full report ...]
 ```
 
 **"I want a specific technique, not a whole tactic."**
 ```bash
-k8ssec scan --technique "Container Escape" --live
+k8smatrixwarden scan --technique "Container Escape" --live
 ```
 
 ---
 
 ## 12. Configuration
 
-The default configuration lives at `k8ssec/config/default_config.json` and controls:
+The default configuration lives at `k8smatrixwarden/config/default_config.json` and controls:
 
 - which **shards** are enabled/disabled
 - **severity overrides** for individual rules
@@ -645,7 +800,7 @@ The default configuration lives at `k8ssec/config/default_config.json` and contr
 
 Override it without editing the shipped file:
 ```bash
-k8ssec scan --config my-config.json --mock
+k8smatrixwarden scan --config my-config.json --mock
 ```
 Your file is deep-merged over the defaults, so you only need to specify what you're changing:
 ```json
@@ -655,7 +810,7 @@ Your file is deep-merged over the defaults, so you only need to specify what you
   "aliases": { "My Custom Bundle": ["workload-privileged-container", "rbac-wildcard-verbs"] }
 }
 ```
-Always run `k8ssec doctor --config my-config.json` after editing — it validates your aliases and rule overrides before you scan with them.
+Always run `k8smatrixwarden doctor --config my-config.json` after editing — it validates your aliases and rule overrides before you scan with them.
 
 ---
 
@@ -688,7 +843,7 @@ Findings that touch *multiple* MITRE tactics (e.g. a writable hostPath mount, wh
 
 ### 13.3 CIS Benchmark statuses
 
-`k8ssec cis` gives every one of the 130 CIS controls one of five statuses — never a silent guess:
+`k8smatrixwarden cis` gives every one of the 130 CIS controls one of five statuses — never a silent guess:
 
 | Status | Meaning |
 |---|---|
@@ -702,14 +857,14 @@ Findings that touch *multiple* MITRE tactics (e.g. a writable hostPath mount, wh
 
 ## 14. Troubleshooting
 
-**"`ModuleNotFoundError` when I run `python -m k8ssec ...`"**
+**"`ModuleNotFoundError` when I run `python -m k8smatrixwarden ...`"**
 Make sure you're running it from inside the `K8s-Dev-1` folder (or that it's installed via `pip install -e .`).
 
 **"Emoji/box characters show up as `?` or garbled on Windows"**
 The CLI already forces UTF-8 output; if you still see garbling, run `chcp 65001` in your terminal first, or use `-o text` for a plain-ASCII report.
 
 **"My selector says 'matched no rules'"**
-Selector terms are validated, not silently ignored — a typo in a tactic/module/framework name raises an error rather than quietly scanning nothing. Run `k8ssec rules` or `k8ssec coverage` to see valid values, or `k8ssec scan --dry-run` to check resolution before scanning.
+Selector terms are validated, not silently ignored — a typo in a tactic/module/framework name raises an error rather than quietly scanning nothing. Run `k8smatrixwarden rules` or `k8smatrixwarden coverage` to see valid values, or `k8smatrixwarden scan --dry-run` to check resolution before scanning.
 
 **"`--live` fails with an import error"**
 Install the optional live-scanning dependency: `pip install -e ".[live]"`.
@@ -718,13 +873,13 @@ Install the optional live-scanning dependency: `pip install -e ".[live]"`.
 The error names the exact file and context it tried. Run `kubectl config get-contexts` to see valid names — a typo'd `--context` fails loudly rather than silently falling back to some other cluster.
 
 **"Live scan gets `Forbidden`/403 errors"**
-The identity you're scanning with doesn't have enough read access. Either use an identity that already has broad read access (fine for a first personal-cluster test), or generate and apply the tool's own least-privilege manifest: `k8ssec roles --bind --output-file k8ssec-rbac.json && kubectl apply -f k8ssec-rbac.json` (§9.3), then scan as that ServiceAccount.
+The identity you're scanning with doesn't have enough read access. Either use an identity that already has broad read access (fine for a first personal-cluster test), or generate and apply the tool's own least-privilege manifest: `k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json && kubectl apply -f k8smatrixwarden-rbac.json` (§9.3), then scan as that ServiceAccount.
 
 **"CIS report shows a lot of `NEEDS_NODE`"**
 That's expected and correct on a fresh run — those controls need on-node file reads that the Kubernetes API cannot provide. Run `kube-bench` on your nodes and pass `--kube-bench-json` (§9). If you're on a managed cluster, also pass `--profile eks|gke|aks` to correctly exclude the provider-owned control plane instead of marking it un-checkable.
 
 **"How do I know the tool itself isn't over-privileged?"**
-Run `k8ssec roles` — it prints the exact, minimal `ClusterRole` generated per shard (only the resource verbs each shard's rules actually declared needing; every verb is `get`/`list`/`watch`, never a write). `k8ssec roles --bind` shows exactly what would be deployed, including the ServiceAccount bindings, before you `kubectl apply` anything.
+Run `k8smatrixwarden roles` — it prints the exact, minimal `ClusterRole` generated per shard (only the resource verbs each shard's rules actually declared needing; every verb is `get`/`list`/`watch`, never a write). `k8smatrixwarden roles --bind` shows exactly what would be deployed, including the ServiceAccount bindings, before you `kubectl apply` anything.
 
 ---
 
@@ -732,68 +887,79 @@ Run `k8ssec roles` — it prints the exact, minimal `ClusterRole` generated per 
 
 ```bash
 # Getting started
-python -m k8ssec doctor                                          # validate install
-python -m k8ssec scan --mock                                     # full mock scan
-python -m k8ssec chat                                             # talk to it
+python -m k8smatrixwarden doctor                                          # validate install
+python -m k8smatrixwarden scan --mock                                     # full mock scan
+python -m k8smatrixwarden chat                                             # talk to it
 
 # Scoping
-python -m k8ssec scan -n NAMESPACE --mock
-python -m k8ssec scan --pod NAME -n NAMESPACE --mock
-python -m k8ssec scan --workload Deployment/NAME --mock
-python -m k8ssec scan --image REF --mock
+python -m k8smatrixwarden scan -n NAMESPACE --mock
+python -m k8smatrixwarden scan --pod NAME -n NAMESPACE --mock
+python -m k8smatrixwarden scan --workload Deployment/NAME --mock
+python -m k8smatrixwarden scan --image REF --mock
 
 # Selecting
-python -m k8ssec scan --tactic "Persistence" --mock
-python -m k8ssec scan --technique "Container Escape" --mock
-python -m k8ssec scan --module rbac_identity --mock
-python -m k8ssec scan --rule RULE_ID --mock
-python -m k8ssec scan --framework CIS --mock
-python -m k8ssec scan --severity-min CRITICAL --mock
+python -m k8smatrixwarden scan --tactic "Persistence" --mock
+python -m k8smatrixwarden scan --technique "Container Escape" --mock
+python -m k8smatrixwarden scan --module rbac_identity --mock
+python -m k8smatrixwarden scan --rule RULE_ID --mock
+python -m k8smatrixwarden scan --framework CIS --mock
+python -m k8smatrixwarden scan --severity-min CRITICAL --mock
 
 # Output — name the file directly
-python -m k8ssec scan --mock -o markdown --output-file report.md
-python -m k8ssec scan --mock -o sarif --output-file results.sarif
-python -m k8ssec scan --mock -o json
+python -m k8smatrixwarden scan --mock -o markdown --output-file report.md
+python -m k8smatrixwarden scan --mock -o sarif --output-file results.sarif
+python -m k8smatrixwarden scan --mock -o pdf --output-file report.pdf
+python -m k8smatrixwarden scan --mock -o json
 
 # Save once, download later in any format/filename
-python -m k8ssec scan --mock --save
-python -m k8ssec report list
-python -m k8ssec report download --format html --output audit.html
-python -m k8ssec report download --scan-id scan-… --format markdown --output report.md
+python -m k8smatrixwarden scan --mock --save
+python -m k8smatrixwarden report list
+python -m k8smatrixwarden report download --format html --output audit.html
+python -m k8smatrixwarden report download --scan-id scan-… --format markdown --output report.md
 
 # Compliance
-python -m k8ssec cis --mock
-python -m k8ssec cis --live --profile eks
-python -m k8ssec cis --live --kube-bench-json kb.json
+python -m k8smatrixwarden cis --mock
+python -m k8smatrixwarden cis --live --profile eks
+python -m k8smatrixwarden cis --live --kube-bench-json kb.json
 
 # CI gates
-python -m k8ssec scan --live --fail-on CRITICAL
-python -m k8ssec cis --live --fail-on-fail
+python -m k8smatrixwarden scan --live --fail-on CRITICAL
+python -m k8smatrixwarden cis --live --fail-on-fail
 
 # Inspection
-python -m k8ssec rules
-python -m k8ssec rules --module workload_pod_security
-python -m k8ssec coverage
-python -m k8ssec roles                    # inspect only
-python -m k8ssec roles --bind --output-file k8ssec-rbac.json   # deployable manifest
+python -m k8smatrixwarden rules
+python -m k8smatrixwarden rules --module workload_pod_security
+python -m k8smatrixwarden coverage
+python -m k8smatrixwarden roles                    # inspect only
+python -m k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json   # deployable manifest
 
 # Preview (no scan)
-python -m k8ssec scan --tactic Persistence --dry-run
+python -m k8smatrixwarden scan --tactic Persistence --dry-run
 
 # Live cluster
 pip install -e ".[live]"
-kubectl apply -f k8ssec-rbac.json                    # least-privilege RBAC (once)
-python -m k8ssec scan --live --context my-cluster
-python -m k8ssec scan --live --kubeconfig ~/.kube/config --context my-cluster
+kubectl apply -f k8smatrixwarden-rbac.json                    # least-privilege RBAC (once)
+python -m k8smatrixwarden scan --live --context my-cluster
+python -m k8smatrixwarden scan --live --kubeconfig ~/.kube/config --context my-cluster
+
+# Threat matrix
+python -m k8smatrixwarden matrix --mock                       # matrix for a scan
+python -m k8smatrixwarden matrix --coverage                    # global detection coverage
+python -m k8smatrixwarden matrix --scan-id scan-… -o markdown --output-file matrix.md
+
+# Web dashboard (browse scans, reports, threat matrix; run a scan)
+python -m k8smatrixwarden web                                  # http://127.0.0.1:8080
+python -m k8smatrixwarden web --port 9000 --open
+python -m k8smatrixwarden web --no-scan                        # read-only
 
 # MCP (AI-agent integration)
-python -m k8ssec mcp --list-tools
-python -m k8ssec mcp
+python -m k8smatrixwarden mcp --list-tools                     # lists all 27 tools
+python -m k8smatrixwarden mcp
 ```
 
 ---
 
 <p align="center">
   Need the architecture rationale instead of usage? See <code>README.md</code>.<br/>
-  Need the original design spec? See <code>K8s Security Tool v3.0 - MITRE-Aligned Architecture.md</code>.
+  Need the original design spec? See <code>K8sMatrixWarden v1.0 - MITRE-Aligned Architecture.md</code>.
 </p>

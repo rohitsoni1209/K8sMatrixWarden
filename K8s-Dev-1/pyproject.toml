@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "k8ssec"
-version = "3.0.0"
+name = "k8smatrixwarden"
+version = "1.0.0"
 description = "MITRE ATT&CK-aligned, domain-sharded Kubernetes security scanner"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,15 +22,17 @@ live = ["kubernetes>=28.0"]
 pretty = ["rich>=13.0"]
 # MCP protocol server
 mcp = ["mcp>=1.0"]
+# PDF report export
+pdf = ["fpdf2>=2.7"]
 # Everything
-all = ["kubernetes>=28.0", "rich>=13.0", "mcp>=1.0"]
+all = ["kubernetes>=28.0", "rich>=13.0", "mcp>=1.0", "fpdf2>=2.7"]
 dev = ["pytest>=7.0"]
 
 [project.scripts]
-k8ssec = "k8ssec.cli.main:main"
+k8smatrixwarden = "k8smatrixwarden.cli.main:main"
 
 [tool.setuptools.packages.find]
-include = ["k8ssec*"]
+include = ["k8smatrixwarden*"]
 
 [tool.setuptools.package-data]
-k8ssec = ["data/fixtures/*.json", "taxonomy/*.json", "config/*.json"]
+k8smatrixwarden = ["data/fixtures/*.json", "taxonomy/*.json", "config/*.json"]

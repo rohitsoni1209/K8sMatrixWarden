@@ -1,14 +1,14 @@
-# K8s-Dev-1 — Technical Analysis of the v3.0 Specification
+# K8s-Dev-1 — Technical Analysis of the Architecture Specification
 
 This document is the pre-implementation technical analysis of
-`K8s Security Tool v3.0 - MITRE-Aligned Architecture.md`. It maps every architectural
+`K8sMatrixWarden v1.0 - MITRE-Aligned Architecture.md`. It maps every architectural
 concept in the spec to a concrete Python component before any code is written.
 
 ## 1. What the spec actually requires (extracted contracts)
 
 | Spec concept (§) | Concrete obligation | Python realization |
 |---|---|---|
-| Domain-Sharded Execution (§3.3) | Rules grouped by data source; shard = execution/ownership boundary | `k8ssec/shards/*` each subclassing `DomainShard` |
+| Domain-Sharded Execution (§3.3) | Rules grouped by data source; shard = execution/ownership boundary | `k8smatrixwarden/shards/*` each subclassing `DomainShard` |
 | Rule model (§5.1) | Atomic check, self-declares MITRE/OWASP/CIS/NSA tags | `core/models.py::Rule` (+ `Finding`) |
 | Rule/Technique Registry (§6.1) | Catalog of all rules; `resolve(selector) → rule_id set` | `core/registry.py::RuleRegistry` |
 | MITRE Mapping Engine (§6) | Startup index tactic/technique/framework/alias → rule_ids; validate vs vendored taxonomy | `core/mapping_engine.py::MITREMappingEngine` |
@@ -44,7 +44,7 @@ rules, and the `EvidenceCollector` the *only* thing that touches the cluster.
 
 1. **Pure-stdlib core.** No third-party package is installed in the target environment.
    The engine, rules, CLI, scoring, and reporting use only the standard library so
-   `python -m k8ssec scan --mock` works with zero install. `kubernetes`, `rich`, and the
+   `python -m k8smatrixwarden scan --mock` works with zero install. `kubernetes`, `rich`, and the
    `mcp` SDK are *optional* and imported lazily with graceful fallbacks.
 2. **Rules as code, data as JSON.** Rules are `Rule` instances built in each shard (fast,
    type-checked, no YAML parser dependency). Taxonomy/config/fixtures are JSON.

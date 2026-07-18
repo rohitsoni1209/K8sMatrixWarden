@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.bootstrap import build_platform
+from k8smatrixwarden.bootstrap import build_platform
 
 
 def test_all_shards_and_rules_load():
@@ -23,6 +23,21 @@ def test_no_duplicate_rule_ids():
     p = build_platform()
     ids = p.registry.rules.ids()
     assert len(ids) == len(set(ids))
+
+
+def test_no_dangling_remediation_refs():
+    # A rule that declares a remediation_ref is promising a fix exists — it must resolve
+    # to something real (either a static playbook or a schema-aware FieldPatch), never
+    # silently to nothing. `remediation_ref=None` (no fix at all) is fine; a ref that
+    # points nowhere is a data-entry bug that would make `_fix_commands`/explain_
+    # remediation silently return no commands while looking like it should have one.
+    from k8smatrixwarden.core.remediation_engine import FIELD_PATCHES
+    from k8smatrixwarden.mcp.datasets import PLAYBOOKS
+    p = build_platform()
+    known = set(PLAYBOOKS.keys()) | set(FIELD_PATCHES.keys())
+    dangling = [(r.id, r.remediation_ref) for r in p.registry.rules.all()
+               if r.remediation_ref and r.remediation_ref not in known]
+    assert dangling == [], f"rules with a remediation_ref that resolves to nothing: {dangling}"
 
 
 def test_every_tactic_has_coverage():
@@ -53,8 +68,8 @@ def test_every_shard_has_nonempty_rbac_needs():
 
 def test_deployment_manifest_binds_every_shard():
     p = build_platform()
-    manifest = p.loader.deployment_manifest(service_account="k8ssec-scanner",
-                                            namespace="k8ssec-system")
+    manifest = p.loader.deployment_manifest(service_account="k8smatrixwarden-scanner",
+                                            namespace="k8smatrixwarden-system")
     assert manifest["kind"] == "List"
     kinds = [item["kind"] for item in manifest["items"]]
     assert kinds.count("ClusterRole") == 10
@@ -67,8 +82,8 @@ def test_deployment_manifest_binds_every_shard():
         if item["kind"] != "ClusterRoleBinding":
             continue
         assert item["roleRef"]["name"] in role_names
-        assert item["subjects"][0] == {"kind": "ServiceAccount", "name": "k8ssec-scanner",
-                                       "namespace": "k8ssec-system"}
+        assert item["subjects"][0] == {"kind": "ServiceAccount", "name": "k8smatrixwarden-scanner",
+                                       "namespace": "k8smatrixwarden-system"}
     # every rule verb across every emitted role must be read-only (get/list/watch)
     write_verbs = {"create", "update", "patch", "delete", "deletecollection"}
     for item in manifest["items"]:

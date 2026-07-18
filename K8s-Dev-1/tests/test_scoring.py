@@ -4,9 +4,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from k8ssec.core.models import (BlastRadius, Exploitability, Finding, MitreTag,
+from k8smatrixwarden.core.models import (BlastRadius, Exploitability, Finding, MitreTag,
                                 ResourceRef, Severity, Tactic)
-from k8ssec.core.scoring import RiskScoringEngine
+from k8smatrixwarden.core.scoring import RiskScoringEngine
 
 
 def _finding(sev, tactics, expl=Exploitability.REMOTE, blast=BlastRadius.CLUSTER):
