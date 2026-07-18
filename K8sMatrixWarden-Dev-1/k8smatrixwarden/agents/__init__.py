@@ -1,4 +1,4 @@
-"""Agents: Orchestrator, Scanner, Runtime, Remediation (§4, §5, §8, §9)."""
+"""Agents: Orchestrator, Scanner, Runtime (§4, §5, §8)."""
 from .orchestrator import Orchestrator
 from .scanner import ScannerAgent
 

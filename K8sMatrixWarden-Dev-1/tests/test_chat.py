@@ -109,14 +109,6 @@ def test_show_criticals_after_scan():
     assert "CRITICAL finding" in out
 
 
-def test_fix_followup_after_scan():
-    s = _session()
-    _scan(s)
-    out = s.handle_turn("how do I fix them?").output
-    assert "Remediation" in out
-    assert "$" in out            # shows a concrete command
-
-
 def test_details_followup():
     s = _session()
     _scan(s)

@@ -7,8 +7,8 @@ ReportStore, and threat-matrix builder the CLI/MCP use — the dashboard is a *v
 one engine, it never re-implements scanning or reporting.
 
 Read-mostly by design: the only state-changing route is `POST /api/scan`, which runs a
-read-only scan and saves the result. Remediation/apply is NOT exposed here for the same
-reason it is withheld from MCP (§9.1 — every fix needs interactive confirmation).
+read-only scan and saves the result. The tool detects and reports only — it never mutates
+the cluster from any surface.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from typing import Optional
 from urllib.parse import parse_qs
 
 from ..core.models import (ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity)
-from ..core.report_store import ReportStore
+from ..core.report_store import DEFAULT_DIR, ReportStore
 from ..core.results import ScanResult
 from ..core.threat_matrix import build_threat_matrix
 from . import pages
@@ -51,7 +51,7 @@ def _text(s: str, status: int = 200) -> Response:
 
 
 class WebApp:
-    def __init__(self, platform, reports_dir: str = "k8smatrixwarden-reports",
+    def __init__(self, platform, reports_dir: str = DEFAULT_DIR,
                  allow_scan: bool = True):
         self.p = platform
         self.reports_dir = reports_dir
@@ -82,7 +82,7 @@ class WebApp:
             if method == "GET" and path == "/api/reports":
                 return self._api_reports(q)
             if method == "GET" and path == "/api/dashboard":
-                return _json(self._dashboard_data())
+                return _json(self._dashboard_data(q.get("scan_id")))
             if method == "GET" and path == "/api/timeline":
                 return _json(self.store.timeline())
             if method == "POST" and path == "/api/scan":
@@ -119,13 +119,19 @@ class WebApp:
         # attack path, runtime) happens in the browser from that one JSON payload.
         return _html(pages.dashboard_page(has_scan=bool(self.store.list())))
 
-    def _dashboard_data(self) -> dict:
-        """Everything the dashboard needs, in one payload: latest scan + findings +
-        threat matrix + attack path + runtime readiness + risk trend + history."""
+    def _dashboard_data(self, scan_id: Optional[str] = None) -> dict:
+        """Everything the dashboard needs, in one payload: the selected (or latest) scan +
+        findings + threat matrix + attack path + runtime readiness + risk trend + history.
+
+        `scan_id` lets the dashboard render any saved report, not just the newest one — the
+        report selector posts the chosen id here. Falls back to the latest scan when the id
+        is missing/unknown so a stale selection never 404s the whole dashboard."""
         reports = self.store.list()
         if not reports:
             return {"has_scan": False, "history": []}
-        latest = self._load(reports[0].scan_id)
+        known = {r.scan_id for r in reports}
+        selected = scan_id if scan_id in known else reports[0].scan_id
+        latest = self._load(selected)
         matrix = build_threat_matrix(latest, self.p.registry.rules)
         from ..core.threat_matrix import attack_paths
         from ..agents.runtime import RuntimeAgent
@@ -138,6 +144,7 @@ class WebApp:
 
         return {
             "has_scan": True,
+            "selected_scan_id": selected,
             "scan": {"scan_id": latest.scan_id, "generated_at": latest.generated_at,
                      "mode": latest.mode, "scope": latest.request.scope.describe(),
                      "rating": latest.risk.rating,
@@ -267,6 +274,7 @@ class WebApp:
                       "security_score": result.risk.security_score,
                       "total_findings": result.total(),
                       "scope": result.request.scope.describe(),
+                      "warnings": list(getattr(collector, "warnings", [])),
                       "report_url": f"/report/{result.scan_id}",
                       "matrix_url": f"/report/{result.scan_id}/matrix"})
 

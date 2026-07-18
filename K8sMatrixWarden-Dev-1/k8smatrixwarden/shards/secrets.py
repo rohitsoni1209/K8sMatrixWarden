@@ -76,8 +76,7 @@ class SecretsShard(DomainShard):
                  ["Pod"], S.HIGH, DM.STATIC_CONFIG, _env_var_secrets,
                  mitre=[M(T.CREDENTIAL_ACCESS, "T1552.007",
                           "Container API Credentials")],
-                 owasp="K03", cis=["5.4.1"], evidence_needs=WORKLOAD_KINDS,
-                 remediation_ref="playbook/secret-as-volume"),
+                 owasp="K03", cis=["5.4.1"], evidence_needs=WORKLOAD_KINDS),
             Rule("sec-configmap-credentials", "Credentials in ConfigMap", self.name,
                  ["ConfigMap"], S.HIGH, DM.STATIC_CONFIG, _configmap_credentials,
                  mitre=[M(T.CREDENTIAL_ACCESS, "T1552", "Unsecured Credentials")],
@@ -89,8 +88,7 @@ class SecretsShard(DomainShard):
             Rule("sec-etcd-not-encrypted", "etcd not encrypted", self.name,
                  ["ComponentConfig"], S.CRITICAL, DM.STATIC_CONFIG, _etcd_encryption,
                  mitre=[M(T.CREDENTIAL_ACCESS, "T1552", "Unsecured Credentials")],
-                 owasp="K03", cis=["1.2.28"], evidence_needs=["ComponentConfig"],
-                 remediation_ref="playbook/etcd-encryption"),
+                 owasp="K03", cis=["1.2.28"], evidence_needs=["ComponentConfig"]),
         ]
 
 

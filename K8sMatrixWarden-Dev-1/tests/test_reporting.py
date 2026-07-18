@@ -30,16 +30,8 @@ def test_markdown_has_rich_structure():
     for marker in ("---", "# 🛡️ K8s Security Report", "## 1. 📊 Executive Summary",
                    "## 2. 🗺️ Kubernetes Threat Matrix", "## 3. 🎯 Coverage & Exposure",
                    "OWASP Kubernetes Top 10",
-                   "## 4. 🚨 Findings", "## 5. 🛠️ Prioritized Remediation Plan",
-                   "## 6. 📎 Appendix", "```bash"):
+                   "## 4. 🚨 Findings", "## 5. 📎 Appendix", "```bash"):
         assert marker in md, f"missing section: {marker!r}"
-
-
-def test_markdown_embeds_real_fix_commands():
-    p, res = _result()
-    md = p.reporting.render(res, "markdown")
-    # a concrete, resource-formatted kubectl command must appear in a fenced block
-    assert "kubectl delete clusterrolebinding default-admin" in md
 
 
 def test_markdown_tables_have_balanced_backticks():
@@ -51,13 +43,15 @@ def test_markdown_tables_have_balanced_backticks():
             assert ln.count("`") % 2 == 0, f"unbalanced backticks: {ln[:80]}"
 
 
-def test_json_has_summary_and_remediation():
+def test_json_has_summary_and_finding_context():
     p, res = _result()
     doc = json.loads(p.reporting.render(res, "json"))
     assert "summary" in doc
     assert set(doc["summary"]) >= {"rating", "risk_score", "security_score",
                                    "severity_percent", "owasp", "attack_path_amplified"}
-    assert all("remediation" in f for f in doc["findings"])
+    # per-finding report-grade context is present; remediation was removed by design
+    assert all("impact" in f and "validation_steps" in f for f in doc["findings"])
+    assert not any("remediation" in f for f in doc["findings"])
 
 
 def test_sarif_is_valid_and_enriched():
@@ -90,14 +84,14 @@ def test_html_is_self_contained_and_filterable():
 # ======================================================================= #
 # Report-grade per-finding sections: Summary / Standards & Benchmark Mapping
 # (with reference links) / MITRE ATT&CK Mapping (with reference links) / Impact /
-# Remediation (with reference links) / Validation (how to reproduce).
+# Validation (how to reproduce).
 # ======================================================================= #
 def test_markdown_finding_cards_have_all_required_sections():
     p, res = _result()
     md = p.reporting.render(res, "markdown")
     for marker in ("##### Summary", "##### 📚 Standards & Benchmark Mapping",
                   "##### 🎯 MITRE ATT&CK Mapping", "##### 💥 Impact",
-                  "##### 🛠️ Remediation", "##### ✅ Validation — How to Reproduce / Verify"):
+                  "##### ✅ Validation — How to Reproduce / Verify"):
         assert marker in md, f"missing per-finding section: {marker!r}"
 
 

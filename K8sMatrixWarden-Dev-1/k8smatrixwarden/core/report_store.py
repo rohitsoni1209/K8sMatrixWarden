@@ -20,7 +20,26 @@ from typing import Optional
 
 from .results import ScanResult
 
-DEFAULT_DIR = "k8smatrixwarden-reports"
+def default_reports_dir() -> str:
+    """The shared report store every surface (CLI, MCP, web) reads/writes by default.
+
+    Resolved independently of the current working directory, so a scan saved from the
+    CLI or an MCP/LLM client shows up in the web dashboard's scan history without every
+    process having to be launched from the same folder. Resolution order:
+      1. $K8SMATRIXWARDEN_REPORTS_DIR, if set (point it at an absolute path)
+      2. ~/.k8smatrixwarden/reports  — per-user, cwd-independent default
+
+    A relative "k8smatrixwarden-reports" used to be the default; because a relative path
+    resolves against each process's cwd, a CLI/MCP scan silently landed in a different
+    directory than the web server was reading, so it never appeared in the dashboard.
+    """
+    env = os.environ.get("K8SMATRIXWARDEN_REPORTS_DIR")
+    if env and env.strip():
+        return os.path.expanduser(env.strip())
+    return os.path.join(os.path.expanduser("~"), ".k8smatrixwarden", "reports")
+
+
+DEFAULT_DIR = default_reports_dir()
 #: Timeline index: finding-identity -> first/last seen + resolved. Lets the tool answer
 #: "how long has this been open" (MTTD proxy) and "when was it fixed" (MTTR), which a
 #: point-in-time scan alone can't. Granularity == scan cadence.

@@ -282,14 +282,13 @@ class ResourceRef:
     kind: str = ""
     name: str = ""
     namespace: Optional[str] = None
-    #: Direct/resolved owning controller (§ remediation engine — a Pod's controller,
-    #: resolved past ReplicaSet->Deployment and Job->CronJob where evidence allows).
-    #: None means no controller was found (a standalone resource).
+    #: Direct/resolved owning controller (a Pod's controller, resolved past
+    #: ReplicaSet->Deployment and Job->CronJob where evidence allows). None means no
+    #: controller was found (a standalone resource). Purely descriptive context.
     owner_kind: Optional[str] = None
     owner_name: Optional[str] = None
-    #: Labels/annotations of the object that should actually be patched (the owner's,
-    #: when one was resolved and found in evidence; otherwise the resource's own) — used
-    #: to detect Helm/ArgoCD/Flux management before ever proposing a live kubectl patch.
+    #: Labels/annotations of the resolved owner (or the resource's own) — descriptive
+    #: context, e.g. surfacing Helm/ArgoCD/Flux management in a report.
     labels: dict = field(default_factory=dict)
     annotations: dict = field(default_factory=dict)
 
@@ -315,7 +314,6 @@ class Finding:
     detection_method: Optional[DetectionMethod] = None
     exploitability: Exploitability = Exploitability.LOCAL
     blast_radius: BlastRadius = BlastRadius.POD
-    remediation_ref: Optional[str] = None
     evidence: dict = field(default_factory=dict)
     score: float = 0.0                      # filled in by RiskScoringEngine
 
@@ -361,7 +359,6 @@ class Finding:
             "surface": self.surface,
             "exploitability": self.exploitability.label,
             "blast_radius": self.blast_radius.label,
-            "remediation_ref": self.remediation_ref,
             "evidence": self.evidence,
             "score": round(self.score, 3),
         }
@@ -389,7 +386,6 @@ class Finding:
             detection_method=DetectionMethod(dm) if dm else None,
             exploitability=Exploitability.parse(d.get("exploitability", "Local")),
             blast_radius=BlastRadius.parse(d.get("blast_radius", "Pod")),
-            remediation_ref=d.get("remediation_ref"),
             evidence=d.get("evidence", {}) or {},
         )
         f.score = float(d.get("score", 0.0))
@@ -421,7 +417,6 @@ class Rule:
     cis: list[str] = field(default_factory=list)
     nsa_cisa: list[str] = field(default_factory=list)
     evidence_needs: list[str] = field(default_factory=list)
-    remediation_ref: Optional[str] = None
     default_exploitability: Exploitability = Exploitability.LOCAL
     default_blast_radius: BlastRadius = BlastRadius.POD
     enabled: bool = True
@@ -465,7 +460,6 @@ class Rule:
             detection_method=self.detection_method,
             exploitability=exploitability or self.default_exploitability,
             blast_radius=blast_radius or self.default_blast_radius,
-            remediation_ref=self.remediation_ref,
             evidence=evidence or {},
         )
 
@@ -483,6 +477,5 @@ class Rule:
             "cis": self.cis,
             "nsa_cisa": self.nsa_cisa,
             "evidence_needs": self.evidence_needs,
-            "remediation_ref": self.remediation_ref,
             "enabled": self.enabled,
         }

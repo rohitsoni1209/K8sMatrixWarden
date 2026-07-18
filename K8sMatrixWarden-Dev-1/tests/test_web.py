@@ -77,6 +77,27 @@ def test_scan_by_free_text_selector():
     assert persistence["techniques_hit"] > 0
 
 
+def test_scan_forwards_context_and_kubeconfig_to_collector():
+    # The Scan tab's live cluster selection (context + kubeconfig) must reach the
+    # collector. Spy on make_collector: record what the route requested, but hand back a
+    # working mock collector so the scan still runs without the kubernetes package.
+    app = _app()
+    captured = {}
+    orig = app.p.make_collector
+
+    def spy(**kwargs):
+        captured.update(kwargs)
+        return orig(mock=True, fixture=None)
+
+    app.p.make_collector = spy
+    r, d = _scan(app, {"scope_level": "cluster", "mock": False,
+                       "context": "kind-kind", "kubeconfig": "/tmp/kc"})
+    assert r.status == 200 and d["scan_id"]
+    assert captured.get("mock") is False
+    assert captured.get("context") == "kind-kind"
+    assert captured.get("kubeconfig") == "/tmp/kc"
+
+
 def test_coverage_matrix_route():
     r = _app().route("GET", "/matrix")
     assert r.status == 200 and "tmgrid" in r.text and "Threat Matrix" in r.text

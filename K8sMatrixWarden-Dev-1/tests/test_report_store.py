@@ -58,9 +58,9 @@ def test_stored_report_renders_all_formats():
         for fmt in ("markdown", "json", "sarif", "html", "text"):
             out = p.reporting.render(loaded, fmt)
             assert isinstance(out, str) and len(out) > 500, fmt
-        # embedded fix command survives the round-trip
+        # per-finding report context survives the round-trip
         md = p.reporting.render(loaded, "markdown")
-        assert "kubectl delete clusterrolebinding default-admin" in md
+        assert "##### 💥 Impact" in md
 
 
 def test_list_empty_dir():

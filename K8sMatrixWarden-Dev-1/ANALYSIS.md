@@ -23,8 +23,7 @@ concept in the spec to a concrete Python component before any code is written.
 | Orchestrator (§4) | intent → scope → selector → confirm → route | `agents/orchestrator.py` |
 | Scanner Agent (§5) | wire registry+evidence+detection+aggregate+score | `agents/scanner.py` |
 | Runtime Agent (§8) | Falco/audit/drift rules, same registry pattern | `agents/runtime.py` |
-| Remediation Agent (§9) | snapshot → diff → confirm → apply → health → rollback → audit | `agents/remediation.py` |
-| MCP Server 6 datasets (§10) | kubectl cmds, tool cmds, playbooks, CVE KB, compliance, taxonomy | `mcp/datasets.py` + `mcp/server.py` |
+| MCP Server 5 datasets (§10) | kubectl cmds, tool cmds, CVE KB, compliance, taxonomy | `mcp/datasets.py` + `mcp/server.py` |
 | Config (§16) | shards/rules/aliases/overrides | `config/default_config.json` |
 | Plugin model (§21) | register plugin, tag rule, scoped RBAC | `core/plugin.py` |
 

@@ -10,14 +10,14 @@ from k8smatrixwarden.mcp.server import build_tools
 
 ALL_TOOLS = {
     "list_rules", "resolve_selector", "get_kubectl_command", "list_kubectl_commands",
-    "get_tool_commands", "list_tool_commands", "get_playbook", "list_playbooks",
+    "get_tool_commands", "list_tool_commands",
     "lookup_cve", "list_cves", "get_compliance_ruleset", "get_taxonomy",
     "mitre_coverage", "list_shards", "list_namespaces", "detect_cluster_provider",
     "validate_platform",
     "preview_scan", "run_scan", "interpret_query", "intelligent_scan",
     "run_cis_benchmark", "evaluate_runtime_events", "correlate_runtime",
     "detect_drift", "deploy_falco", "list_runtime_detections",
-    "explain_remediation", "build_threat_matrix", "build_attack_path",
+    "build_threat_matrix", "build_attack_path",
     "list_reports", "download_report", "generate_rbac_manifest",
 }
 
@@ -61,10 +61,11 @@ def test_every_tool_has_a_nonempty_docstring():
 
 
 def test_no_remediation_or_apply_tool_is_exposed():
-    # §9.1 safety control: remediation must never be reachable without an interactive
-    # confirmation step, which an MCP tool call does not have. This must stay locked out.
+    # Safety control: the tool detects and reports only — no write/remediation/apply path
+    # is exposed over MCP (or anywhere). This must stay locked out.
     tools = build_tools()
-    forbidden_markers = ("apply", "remediate", "fix_", "patch", "rollback")
+    forbidden_markers = ("apply", "remediate", "remediation", "fix_", "patch", "rollback",
+                         "playbook")
     offenders = [name for name in tools
                  if any(m in name.lower() for m in forbidden_markers)]
     assert offenders == [], f"unexpected write-capable MCP tool(s): {offenders}"
@@ -76,8 +77,10 @@ def test_run_scan_mock_full_cluster_returns_findings():
     assert "error" not in doc
     assert doc["summary"]["total_findings"] > 0
     assert doc["risk"]["rating"] in ("Excellent", "Good", "Fair", "Poor", "Critical")
-    # remediation commands are embedded per finding, same as `-o json` from the CLI
-    assert any(f["remediation"]["commands"] for f in doc["findings"])
+    # per-finding report-grade context is embedded, same as `-o json` from the CLI;
+    # remediation was removed by design, so it must NOT be present
+    assert all(f.get("impact") for f in doc["findings"])
+    assert not any("remediation" in f for f in doc["findings"])
 
 
 def test_run_scan_respects_selector_and_scope():
@@ -191,19 +194,6 @@ def test_list_cves_covers_lookup_cve():
     assert all_cves["CVE-2024-9486"] == tools["lookup_cve"]("CVE-2024-9486")
 
 
-def test_list_playbooks_covers_both_static_and_schema_aware():
-    tools = build_tools()
-    pbs = tools["list_playbooks"]()
-    kinds = {v["kind"] for v in pbs.values()}
-    assert kinds == {"static", "schema-aware"}
-    # a static one must round-trip through get_playbook with real commands
-    static_ref = next(k for k, v in pbs.items() if v["kind"] == "static")
-    assert tools["get_playbook"](static_ref)["title"] == pbs[static_ref]["title"]
-    # a schema-aware one must NOT claim a single fixed command (that's the whole bug)
-    schema_ref = next(k for k, v in pbs.items() if v["kind"] == "schema-aware")
-    assert pbs[schema_ref].get("commands", []) == []
-    assert "note" in pbs[schema_ref]
-
 
 def test_get_compliance_ruleset_single_and_all():
     tools = build_tools()
@@ -268,37 +258,6 @@ def test_scan_rules_are_all_scan_surface():
     # the counterpart guarantee: every registry (Scanner) rule is point-in-time 'scan'
     tools = build_tools()
     assert all(r["surface"] == "scan" for r in tools["list_rules"]())
-
-
-# ======================================================================= #
-# explain_remediation (standalone access to the schema-aware engine)
-# ======================================================================= #
-def test_explain_remediation_daemonset_owned_pod_never_targets_the_pod():
-    tools = build_tools()
-    r = tools["explain_remediation"](
-        rule_id="workload-no-seccomp", resource_kind="Pod",
-        resource_name="aws-node-64w2k", namespace="kube-system",
-        owner_kind="DaemonSet", owner_name="aws-node")
-    assert r["automatable"] is True
-    assert "patch pod " not in r["kubectl_command"]
-    assert r["kubectl_command"].startswith("kubectl patch daemonset aws-node")
-    assert any("EKS managed component" in w for w in r["warnings"])
-
-
-def test_explain_remediation_standalone_pod_is_not_automated():
-    tools = build_tools()
-    r = tools["explain_remediation"](
-        rule_id="workload-no-seccomp", resource_kind="Pod",
-        resource_name="lonely", namespace="default")
-    assert r["automatable"] is False
-    assert r["kubectl_command"] is None
-
-
-def test_explain_remediation_unknown_rule_returns_error():
-    tools = build_tools()
-    r = tools["explain_remediation"](rule_id="not-a-real-rule",
-                                     resource_kind="Pod", resource_name="x")
-    assert "error" in r
 
 
 # ======================================================================= #

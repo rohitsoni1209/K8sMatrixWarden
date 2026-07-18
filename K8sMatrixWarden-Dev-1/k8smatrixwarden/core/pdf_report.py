@@ -3,8 +3,8 @@ PDF Report (§18.2 extension) — a professional, print/share-ready audit docume
 
 Mirrors the markdown report's structure exactly (title page -> executive summary ->
 coverage -> findings, each with Summary / Standards & Benchmark Mapping / MITRE ATT&CK
-Mapping / Impact / Remediation / Validation) so the two formats never disagree about what
-a finding means — both read from the same `core.finding_context.build_finding_context()`.
+Mapping / Impact / Validation) so the two formats never disagree about what a finding
+means — both read from the same `core.finding_context.build_finding_context()`.
 
 Requires the optional `fpdf2` dependency (`pip install -e ".[pdf]"`), imported lazily so
 the core engine stays dependency-free when PDF output isn't needed. Uses only the three
@@ -345,7 +345,6 @@ def _findings_section(pdf, findings: list[Finding], build_finding_context) -> No
 
 def _finding_block(pdf, f: Finding, i: int, build_finding_context) -> None:
     ctx = build_finding_context(f)
-    rem = ctx.remediation
     sev_rgb = _SEV_RGB[f.severity.label]
     sev_bg = _SEV_BG[f.severity.label]
 
@@ -373,8 +372,6 @@ def _finding_block(pdf, f: Finding, i: int, build_finding_context) -> None:
     kv = [("Rule ID", f.rule_id), ("Domain", f.owning_shard),
          ("Exploitability", f.exploitability.label),
          ("Blast radius", f.blast_radius.label), ("Risk score", str(round(f.score, 2)))]
-    if rem.owner_resource:
-        kv.insert(2, ("Owner resource", rem.owner_resource))
     _kv_table(pdf, kv)
 
     _h3(pdf, "Standards & Benchmark Mapping")
@@ -400,29 +397,8 @@ def _finding_block(pdf, f: Finding, i: int, build_finding_context) -> None:
     _h3(pdf, "Impact")
     _body(pdf, ctx.impact)
 
-    _h3(pdf, "Remediation")
-    if rem.automatable and rem.kubectl_command:
-        _body(pdf, rem.title or "", size=9.5)
-        _mono(pdf, rem.kubectl_command)
-        for u in rem.references:
-            _link_line(pdf, "Reference", u)
-    elif rem.reason_not_automated:
-        pdf.set_font("Helvetica", "B", 9.5)
-        pdf.set_text_color(*_SEV_RGB["HIGH"])
-        pdf.multi_cell(0, 5.5, "Cannot be safely automated.", new_x="LMARGIN", new_y="NEXT")
-        _body(pdf, rem.reason_not_automated, size=9.5)
-    else:
-        _body(pdf, "No automated remediation is registered for this rule -- review "
-                  "and fix manually.", size=9.5, color=_MUTED)
-    pdf.ln(1)
-
     _h3(pdf, "Validation -- How to Reproduce / Verify")
     _mono(pdf, "\n".join(ctx.validation_steps))
-
-    if rem.warnings:
-        _h3(pdf, "Warnings", color=_SEV_RGB["HIGH"])
-        for w in rem.warnings:
-            _body(pdf, f"- {w}", size=9)
 
     pdf.set_draw_color(*_LINE)
     pdf.line(10, pdf.get_y(), pdf.w - 10, pdf.get_y())

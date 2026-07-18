@@ -500,6 +500,43 @@ footer.site-footer {
 @media (max-width: 560px) {
   .search-wrap { display: none; }
 }
+/* ---------- Professional polish layer (additive; reduced-motion safe) ---------- */
+.info-card, .prob-card, .stat {
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.info-card:hover, .prob-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--line-strong);
+}
+/* accent rail that reveals on hover — dashboard-grade card feel */
+.info-card { position: relative; overflow: hidden; }
+.info-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--signal); opacity: 0; transition: opacity .18s ease;
+}
+.info-card:hover::before { opacity: 1; }
+/* stat cards read as KPIs: quiet accent rail + subtle lift */
+.stat { position: relative; border-left: 3px solid var(--signal); }
+.stat:hover { transform: translateY(-1px); box-shadow: var(--shadow); border-color: var(--line-strong); }
+/* headline KPI numbers on the home page get a refined gradient */
+#home .stat .stat-n {
+  background: linear-gradient(180deg, var(--signal-text), var(--signal));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: var(--signal-text);
+}
+/* section h1s get a subtle accent underline for scannability */
+.content section > h1 {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: .28em; position: relative;
+}
+.content section > h1::after {
+  content: ""; position: absolute; left: 0; bottom: -1px; width: 42px; height: 2px;
+  background: var(--signal); border-radius: 2px;
+}
+/* primary CTA gets a touch more depth on hover */
+.btn-primary { transition: transform .16s ease, box-shadow .16s ease, filter .16s ease; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); filter: saturate(1.08); }
 </style>
 </head>
 <body>
@@ -513,7 +550,7 @@ footer.site-footer {
     <input id="search" type="text" placeholder="Filter the docs…" autocomplete="off" spellcheck="false">
   </div>
   <div class="topbar-right">
-    <span class="badge-version">v1.0 · 56 rules · 27 MCP tools</span>
+    <span class="badge-version">v1.0 · 56 rules · 30 MCP tools · IST</span>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">◐</button>
   </div>
 </div>
@@ -534,7 +571,7 @@ footer.site-footer {
     <div class="nav-group">
       <p class="nav-group-label">Architecture</p>
       <ul class="nav-items">
-        <li><a href="#arch-overview">Four Agents</a></li>
+        <li><a href="#arch-overview">Core Agents</a></li>
         <li><a href="#arch-sharding">Domain-Sharded Design</a></li>
         <li><a href="#arch-flow">Data Flow</a></li>
         <li><a href="#arch-principles">Design Principles</a></li>
@@ -560,11 +597,9 @@ footer.site-footer {
     </div>
 
     <div class="nav-group">
-      <p class="nav-group-label">Remediation</p>
+      <p class="nav-group-label">Safety</p>
       <ul class="nav-items">
-        <li><a href="#remediation-bug">The Bug It Fixes</a></li>
-        <li><a href="#remediation-how">How It Works</a></li>
-        <li><a href="#remediation-output">Anatomy of a Fix</a></li>
+        <li><a href="#detect-report">Detect-and-Report Only</a></li>
       </ul>
     </div>
 
@@ -572,6 +607,7 @@ footer.site-footer {
       <p class="nav-group-label">Runtime</p>
       <ul class="nav-items">
         <li><a href="#runtime">Runtime Agent</a></li>
+        <li><a href="#correlation">Scan × Runtime Correlation</a></li>
       </ul>
     </div>
 
@@ -597,9 +633,9 @@ footer.site-footer {
       <ul class="nav-items">
         <li><a href="#mcp-connect">Connecting an Agent</a></li>
         <li><a href="#mcp-knowledge">Knowledge Layer (16)</a></li>
-        <li><a href="#mcp-scan">Scan / Audit / Runtime (8)</a></li>
+        <li><a href="#mcp-scan">Scan / Audit / Runtime (13)</a></li>
         <li><a href="#mcp-reports">Reports (2)</a></li>
-        <li><a href="#mcp-platform">Platform (1)</a></li>
+        <li><a href="#mcp-platform">Platform (2)</a></li>
       </ul>
     </div>
 
@@ -628,9 +664,10 @@ footer.site-footer {
           <span class="eyebrow">◈ MITRE ATT&amp;CK-ALIGNED · DOMAIN-SHARDED · MCP-NATIVE</span>
           <h1><span class="prompt">$</span> K8sMatrixWarden</h1>
           <p class="tagline">An AI-agent-operable Kubernetes security platform. It scans by
-            resource <em>or</em> by adversary behavior, fixes what it finds with commands
-            Kubernetes actually accepts, and hands every one of those capabilities to any
-            MCP-connected LLM — Claude, Cursor, or otherwise.</p>
+            resource <em>or</em> by adversary behavior, correlates every finding with live
+            runtime activity to expose the kill-chain, and hands every one of those
+            capabilities to any MCP-connected LLM — Claude, Cursor, or otherwise. Read-only
+            by design.</p>
           <div class="hero-btns">
             <a class="btn btn-primary" href="#quickstart">Quickstart →</a>
             <a class="btn btn-secondary" href="#mcp-connect">Connect an AI Agent</a>
@@ -648,41 +685,43 @@ footer.site-footer {
 <div class="ln"><span class="cr">🔴 CRITICAL</span>  16   <span class="hi">🟠 HIGH</span>  42</div>
 <div class="ln"><span class="me">🟡 MEDIUM</span>  22   <span class="lo">🟢 LOW</span>   1</div>
 <div class="ln"><span class="cm">→ 1. kubelet-authz-always-allow [cluster_control_plane]</span></div>
-<div class="ln"><span class="cm">     fix: kubectl patch daemonset aws-node -n kube-system …</span></div>
+<div class="ln"><span class="cm">     mitre: Initial Access → T1078 · why: unauthenticated kubelet API …</span></div>
             </div>
           </div>
         </div>
 
         <div class="home-sec">
-          <p class="home-eyebrow">The Problem</p>
-          <h2 class="home-h">Scanners find things. They don't fix them — or speak your language.</h2>
-          <p class="home-sub">Misconfigurations cause the majority of Kubernetes breaches, but the
-            tooling around them has stayed stuck in one shape: point-in-time, resource-only,
-            report-and-walk-away.</p>
+          <p class="home-eyebrow">The Approach</p>
+          <h2 class="home-h">Security findings that speak the attacker's language.</h2>
+          <p class="home-sub">Misconfigurations drive most Kubernetes breaches. K8sMatrixWarden
+            treats every finding the way an adversary would — mapped to a tactic, correlated
+            with what's happening live, and delivered with the exact commands to verify it.</p>
           <div class="prob-grid">
             <div class="prob-card">
-              <div class="pc-gap">GAP — Scan-only, no remediation</div>
-              <div class="pc-fix">K8sMatrixWarden's <b>Remediation Engine</b> resolves the exact,
-                schema-correct <code>kubectl</code> command for the resource that's actually
-                broken — never a guess that Kubernetes rejects.</div>
+              <div class="pc-gap">Context on every finding</div>
+              <div class="pc-fix">Every finding carries a full write-up — Summary, Standards &amp;
+                Benchmark mapping, MITRE ATT&amp;CK mapping, real-world Impact, and exact
+                <b>Validation</b> commands to reproduce and verify — and deep-links to its card
+                in the report.</div>
             </div>
             <div class="prob-card">
-              <div class="pc-gap">GAP — Can't scan by adversary behavior</div>
+              <div class="pc-gap">Scan by adversary behavior</div>
               <div class="pc-fix">Every one of the 56 rules carries its own <b>MITRE ATT&amp;CK</b>
                 tags. Ask for "Persistence" or "Container Escape" and get exactly those
                 rules, from any shard, through one registry.</div>
             </div>
             <div class="prob-card">
-              <div class="pc-gap">GAP — Siloed tools for RBAC, images, network…</div>
-              <div class="pc-fix">One platform, <b>10 domain shards</b>, one shared evidence
-                fetch per scan — control plane, workloads, RBAC, network, images, secrets,
-                compliance, attack surface, admission control, and cloud IAM.</div>
+              <div class="pc-gap">One platform, ten domains</div>
+              <div class="pc-fix">A single platform with <b>10 domain shards</b> and one shared
+                evidence fetch per scan — control plane, workloads, RBAC, network, images,
+                secrets, compliance, attack surface, admission control, and cloud IAM.</div>
             </div>
             <div class="prob-card">
-              <div class="pc-gap">GAP — Not reachable from an AI agent</div>
-              <div class="pc-fix">A <b>27-tool MCP server</b> exposes scanning, the CIS
-                benchmark, the threat matrix, remediation, and report export directly to
-                Claude, Cursor, or any MCP client — no bespoke integration.</div>
+              <div class="pc-gap">Native to AI agents</div>
+              <div class="pc-fix">A <b>30-tool MCP server</b> exposes scanning, the CIS
+                benchmark, the threat matrix, kill-chain attack paths, scan×runtime
+                correlation, and report export directly to Claude, Cursor, or
+                any MCP client — no bespoke integration.</div>
             </div>
           </div>
         </div>
@@ -694,8 +733,8 @@ footer.site-footer {
             <div class="stat"><div class="stat-n">56</div><div class="stat-l">rules across 10 shards</div></div>
             <div class="stat"><div class="stat-n">9</div><div class="stat-l">MITRE ATT&amp;CK tactics</div></div>
             <div class="stat"><div class="stat-n">130</div><div class="stat-l">CIS controls, every one graded</div></div>
-            <div class="stat"><div class="stat-n">27</div><div class="stat-l">MCP tools for AI agents</div></div>
-            <div class="stat"><div class="stat-n">197</div><div class="stat-l">tests, 0 required deps</div></div>
+            <div class="stat"><div class="stat-n">30</div><div class="stat-l">MCP tools for AI agents</div></div>
+            <div class="stat"><div class="stat-n">184</div><div class="stat-l">tests, 0 required deps</div></div>
           </div>
         </div>
       </div>
@@ -705,10 +744,12 @@ footer.site-footer {
 <section id="overview">
 <h1>Overview</h1>
 <p class="lede">K8sMatrixWarden is an AI-powered, Kubernetes-native security platform that
-continuously scans, monitors, and secures clusters. A multi-agent architecture —
-Orchestrator, Scanner, Runtime, Remediation — collaborates to detect vulnerabilities, map
-attack surfaces, enforce compliance, and generate <em>correct</em> fixes, all reachable
-from a CLI, a conversational chat, or any MCP-connected AI agent.</p>
+continuously scans and monitors clusters. A multi-agent architecture —
+Orchestrator, Scanner, Runtime — collaborates to detect vulnerabilities, map
+attack surfaces, <strong>correlate static findings with live runtime behaviour</strong>,
+and enforce compliance, all reachable from a CLI, a conversational chat, or any
+MCP-connected AI agent. It is <em>detect-and-report only</em> — read-only on every surface,
+with no apply/remediate path.</p>
 
 <p>Every check is a <strong>Rule</strong> — a technique-level detection that self-declares
 which MITRE tactic, OWASP category, CIS control, and NSA/CISA guidance it maps to. That
@@ -717,16 +758,16 @@ means the exact same engine answers "scan the <code>production</code> namespace"
 changes which rules get selected, never the code path that runs them.</p>
 
 <div class="panel">
-  <div class="panel-head"><span class="dot"></span>DETECT → ANALYZE → REMEDIATE → VERIFY</div>
+  <div class="panel-head"><span class="dot"></span>DETECT → ANALYZE → CORRELATE → REPORT</div>
   <div class="panel-body">
     <div class="flow">
       <div class="flow-step"><div class="fs-n">01</div><div class="fs-t">Detect</div><div class="fs-d">56 rules run by shard, resolved by tactic, technique, or resource scope.</div></div>
       <div class="flow-arrow">→</div>
       <div class="flow-step"><div class="fs-n">02</div><div class="fs-t">Analyze</div><div class="fs-d">Map to ATT&amp;CK, OWASP, CIS. Score by severity × exploitability × blast radius.</div></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="fs-n">03</div><div class="fs-t">Remediate</div><div class="fs-d">Resolve the owning controller, validate the schema, generate the correct patch.</div></div>
+      <div class="flow-step"><div class="fs-n">03</div><div class="fs-t">Correlate</div><div class="fs-d">Join findings to live runtime events + derive the kill-chain attack path.</div></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="fs-n">04</div><div class="fs-t">Verify</div><div class="fs-d">Re-scan to confirm the finding cleared; roll back automatically on failure.</div></div>
+      <div class="flow-step"><div class="fs-n">04</div><div class="fs-t">Report</div><div class="fs-d">Deep-linked findings with Validation steps, in 7 formats and the dashboard.</div></div>
     </div>
   </div>
 </div>
@@ -737,12 +778,13 @@ changes which rules get selected, never the code path that runs them.</p>
 <div class="card-grid">
   <div class="info-card"><span class="ic-icon">🎯</span><h4>ATT&amp;CK-Aligned Scanning</h4><p>Every finding is a rule tagged with MITRE tactic + technique — scan by adversary behavior, not just by resource.</p></div>
   <div class="info-card"><span class="ic-icon">🧩</span><h4>Domain-Sharded Execution</h4><p>10 shards own the evidence fetch and RBAC for their domain; tactics and frameworks are cross-cutting tags on top, never the execution boundary.</p></div>
-  <div class="info-card"><span class="ic-icon">🔧</span><h4>Schema-Aware Remediation</h4><p>Resolves a Pod's owning controller and each kind's real patch-path shape before ever proposing a fix — never a command Kubernetes rejects.</p></div>
+  <div class="info-card"><span class="ic-icon">🔗</span><h4>Deep-Linked Reports</h4><p>Every finding in the dashboard — in the Findings table, the Threat Matrix drill-downs, and the Attack Path / Attack Map stages — links straight to its card in the full report.</p></div>
   <div class="info-card"><span class="ic-icon">📋</span><h4>Full CIS Benchmark</h4><p>All 130 CIS Kubernetes Benchmark v1.8 controls evaluated — 65 straight from the API, 31 via kube-bench, 34 flagged manual, 0 silently skipped.</p></div>
-  <div class="info-card"><span class="ic-icon">🔌</span><h4>27-Tool MCP Server</h4><p>Scan, audit, build the threat matrix, evaluate runtime events, explain a remediation, and export reports — all reachable from Claude, Cursor, or any MCP client.</p></div>
+  <div class="info-card"><span class="ic-icon">🔌</span><h4>30-Tool MCP Server</h4><p>Scan, audit, build the threat matrix and kill-chain, correlate a live runtime feed against static findings, and export reports — all reachable from Claude, Cursor, or any MCP client. Read-only: no apply/remediate tool.</p></div>
   <div class="info-card"><span class="ic-icon">🗺️</span><h4>Kubernetes Threat Matrix</h4><p>Every scan projects its findings onto the 9-tactic Kubernetes Threat Matrix — a heatmap of covered, hit, and gap techniques, in reports, the web dashboard, and MCP.</p></div>
-  <div class="info-card"><span class="ic-icon">🖥️</span><h4>Web Dashboard</h4><p>A zero-dependency web UI to browse saved scans, open rich HTML reports, view the per-scan threat-matrix heatmap, and launch a scan from the browser.</p></div>
-  <div class="info-card"><span class="ic-icon">🛡️</span><h4>Confirm-First Safety</h4><p>Scanning is read-only by design. Remediation always shows the exact command and requires explicit confirmation — no exceptions, no auto-mode.</p></div>
+  <div class="info-card"><span class="ic-icon">🔴</span><h4>Scan × Runtime Correlation</h4><p>Joins static findings to live Falco/audit events by MITRE tactic — <em>confirmed / corroborated / runtime-only</em> — plus drift detection and a derived kill-chain: not "here's a weakness" but "this one is being exploited right now."</p></div>
+  <div class="info-card"><span class="ic-icon">🖥️</span><h4>Interactive Dashboard</h4><p>A zero-dependency single-page app — seven tabs (Overview, Findings, Threat Matrix, Attack Path, Attack Map, Runtime, Scan) with search/filter/sort, a report selector to switch between saved scans, finding deep-links, and live Falco ingestion. Timestamps in IST.</p></div>
+  <div class="info-card"><span class="ic-icon">🛡️</span><h4>Detect-and-Report Only</h4><p>Read-only by design across every surface — CLI, MCP, and web. Scanning uses get/list/watch only; there is no write/apply path anywhere, enforced by a standing test.</p></div>
 </div>
 </section>
 
@@ -799,22 +841,21 @@ k8smatrixwarden chat</code></pre>
 
 <section id="arch-overview">
 <h1>Architecture</h1>
-<p class="lede">Four agents, one shared registry, one execution path for every kind of
-request — resource-scoped, tactic-scoped, or plain English.</p>
+<p class="lede">Three agents, one shared registry, one execution path for every kind of
+request — resource-scoped, tactic-scoped, or plain English — all read-only.</p>
 
 <div class="table-scroll"><table>
 <thead><tr><th>Agent</th><th>Purpose</th><th>Runs as</th></tr></thead>
 <tbody>
-<tr><td>🧠 <strong>Orchestrator</strong></td><td>Classifies intent, extracts scope, resolves the selector against the registry, manages confirmations</td><td>Single entry point</td></tr>
-<tr><td>🔍 <strong>Scanner</strong></td><td>Registry-driven scanning across 10 domain shards; resolves any scan to a rule set</td><td>Deployment (HPA)</td></tr>
-<tr><td>🛡️ <strong>Runtime</strong></td><td>Real-time syscall + K8s audit-event matching against the same tagged-rule pattern</td><td>DaemonSet, 1/node</td></tr>
-<tr><td>🔧 <strong>Remediation</strong></td><td>Generates schema-validated fixes; only executes after explicit confirmation</td><td>Deployment</td></tr>
+<tr><td><strong>Orchestrator</strong></td><td>Classifies intent, extracts scope, resolves the selector against the registry, manages confirmations</td><td>Single entry point</td></tr>
+<tr><td><strong>Scanner</strong></td><td>Registry-driven scanning across 10 domain shards; resolves any scan to a rule set</td><td>Deployment (HPA)</td></tr>
+<tr><td><strong>Runtime</strong></td><td>Real-time syscall + K8s audit-event matching against the same tagged-rule pattern; correlates live events to static findings + detects drift</td><td>DaemonSet, 1/node</td></tr>
 </tbody>
 </table></div>
 
 <div class="callout safe">
   <span class="co-icon">◈</span>
-  <div class="co-body"><p>The Orchestrator never scans or fixes directly — it compiles every
+  <div class="co-body"><p>The Orchestrator never scans directly — it compiles every
   request, from any entry point (CLI flags, chat, or an MCP tool call), into one internal
   <code>ScanRequest</code> object and delegates. That's what makes "scan a namespace" and
   "scan for Persistence" the same code path.</p></div>
@@ -888,11 +929,11 @@ is reachable from three different tactic queries.</li>
 <tr><td>2</td><td>Domain-Sharded</td><td>Rules grouped by evidence pattern — the natural ownership boundary.</td></tr>
 <tr><td>3</td><td>Taxonomy is Metadata</td><td>MITRE/OWASP/CIS are tags on rules, never the execution boundary.</td></tr>
 <tr><td>4</td><td>Registry-Driven</td><td>Every scan resolves through one index — no per-request-type code paths.</td></tr>
-<tr><td>5</td><td>Human-in-the-Loop</td><td>All destructive actions require explicit confirmation. No exceptions.</td></tr>
-<tr><td>6</td><td>Least Privilege</td><td>Read-only by default; write scoped to Remediation; per-shard RBAC below that.</td></tr>
+<tr><td>5</td><td>Detect-and-Report</td><td>Read-only on every surface — no write/apply path anywhere. No exceptions.</td></tr>
+<tr><td>6</td><td>Least Privilege</td><td>Read-only <code>get</code>/<code>list</code>/<code>watch</code> only; per-shard scoped RBAC below that.</td></tr>
 <tr><td>7</td><td>Cloud-Agnostic</td><td>EKS, AKS, GKE, bare-metal, k3s, kind, minikube.</td></tr>
 <tr><td>8</td><td>Extensible</td><td>Plugins register rules; frameworks are tags; external tools are adapters.</td></tr>
-<tr><td>9</td><td>Idempotent</td><td>Same scan twice → same result; fixes are safe to re-apply.</td></tr>
+<tr><td>9</td><td>Idempotent</td><td>Same scan twice → same result.</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -915,7 +956,6 @@ full-registry scan.</p>
   mitre=[MitreTag(PRIVILEGE_ESCALATION, <span class="c-str">"T1610"</span>, <span class="c-str">"Deploy Container"</span>),
          MitreTag(EXECUTION,            <span class="c-str">"T1610"</span>, <span class="c-str">"Deploy Container"</span>)],
   owasp=<span class="c-str">"K01"</span>, cis=[<span class="c-str">"5.2.2"</span>], nsa_cisa=[<span class="c-str">"Pod Security"</span>],
-  remediation_ref=<span class="c-str">"playbook/pod-security-context"</span>,
 )</code></pre>
 </div>
 
@@ -1242,101 +1282,28 @@ k8smatrixwarden cis --fail-on-fail                       <span class="c-mut"># C
 
 <hr>
 
-<section id="remediation-bug">
-<h1>Remediation Engine</h1>
-<p class="lede">Schema-aware, resource-aware fix generation — built specifically because a
-naïve remediation generator can produce a command that is syntactically valid JSON and
-still something Kubernetes flatly rejects.</p>
+<section id="detect-report">
+<h1>Detect-and-Report Only</h1>
+<p class="lede">K8sMatrixWarden never mutates the cluster. Every surface — CLI, chat, MCP, and
+the web dashboard — is read-only: scanning uses <code>get</code>/<code>list</code>/<code>watch</code>
+only, and every output (reports, threat matrix, attack path, dashboard, MCP responses) is
+derived from that single read-only snapshot.</p>
 
-<h3>The bug it exists to fix</h3>
-<p>A hardcoded template always assumed a fix lived at <code>spec.template.spec</code> — true
-for a Deployment, false for a bare Pod (which has no <code>.spec.template</code> at all).
-Since findings report against the Pod, and a controller-owned Pod is the overwhelmingly
-common real-world case — an EKS <code>aws-node</code> DaemonSet pod, say — the naïve
-generator would produce exactly this:</p>
+<h3>No write / apply path anywhere</h3>
+<p>There is deliberately no remediation or apply tool on any surface. Findings still carry
+everything needed to fix them by hand — a Summary, Standards &amp; Benchmark mapping, the
+MITRE ATT&amp;CK mapping, real-world Impact, and step-by-step Validation commands to
+reproduce and verify — but the tool itself stops at <em>detect and report</em>, so it can
+run against production with a least-privilege read-only identity and no possibility of an
+accidental change.</p>
 
-<div class="code-card">
-  <div class="code-head"><span class="code-lang">✗ rejected by Kubernetes</span></div>
-  <pre><code>kubectl patch <span style="color:var(--crit-fg)">pod aws-node-64w2k</span> -n kube-system -p \
-  '{"spec":{"template":{"spec":{"securityContext":{...}}}}}'
-<span class="c-mut"># Pods have no spec.template — Kubernetes rejects this outright</span></code></pre>
+<div class="callout safe">
+<span class="co-icon">◈</span>
+<div class="co-body"><p>The read-only invariant is enforced by a standing test,
+<code>tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed</code>, which fails the
+build if a write-capable tool name ever appears on the MCP surface. The generated RBAC
+(<code>k8smatrixwarden roles</code>) is get/list/watch only for the same reason.</p></div>
 </div>
-
-<p>K8sMatrixWarden's remediation engine resolves the Pod's owning controller first — walking
-past intermediate objects (ReplicaSet, Job) to the real, persistent controller
-(Deployment, CronJob) — and generates against the correct kind and the correct schema
-shape:</p>
-
-<div class="code-card">
-  <div class="code-head"><span class="code-lang">✓ generated by K8sMatrixWarden</span><button class="copy-btn" data-copy>Copy</button></div>
-  <pre><code>kubectl patch daemonset aws-node -n kube-system -p \
-  '{"spec":{"template":{"spec":{"securityContext":{"runAsNonRoot":true,
-    "seccompProfile":{"type":"RuntimeDefault"}}}}}}'</code></pre>
-</div>
-
-<div class="callout warn">
-<span class="co-icon">⚠</span>
-<div class="co-body"><p>This exact scenario also happens to be a system-managed component —
-so the same fix carries a warning: <em>"This appears to be a Kubernetes/EKS managed
-component. Verify vendor documentation before changing its security context because the
-recommended hardening may break cluster functionality."</em></p></div>
-</div>
-</section>
-
-<section id="remediation-how">
-<h3>How it works</h3>
-<div class="panel">
-<div class="panel-head"><span class="dot"></span>FINDING → VALIDATED REMEDIATION</div>
-<div class="panel-body">
-<div class="flow">
-<div class="flow-step"><div class="fs-n">1</div><div class="fs-t">Resolve owner</div><div class="fs-d">Pod → ReplicaSet → Deployment, or Pod → Job → CronJob, using evidence already fetched this scan</div></div>
-<div class="flow-arrow">→</div>
-<div class="flow-step"><div class="fs-n">2</div><div class="fs-t">Deployment method</div><div class="fs-d">Helm / ArgoCD / Flux markers read from the owner's own labels — not the Pod's</div></div>
-<div class="flow-arrow">→</div>
-<div class="flow-step"><div class="fs-n">3</div><div class="fs-t">Patch path</div><div class="fs-d">Deployment/DaemonSet/StatefulSet → <code>spec.template.spec</code>; CronJob → one level deeper</div></div>
-</div>
-<div class="flow" style="margin-top:10px;">
-<div class="flow-step"><div class="fs-n">4</div><div class="fs-t">Validate mutability</div><div class="fs-d">Controller target → always safe. Bare Pod → immutable-after-creation fields are refused</div></div>
-<div class="flow-arrow">→</div>
-<div class="flow-step"><div class="fs-n">5</div><div class="fs-t">Generate + validate</div><div class="fs-d">Build the JSON/strategic-merge patch; re-check the schema before returning it</div></div>
-<div class="flow-arrow">→</div>
-<div class="flow-step" style="background:var(--signal-soft);border-color:var(--signal);"><div class="fs-n">6</div><div class="fs-t">Return</div><div class="fs-d">A validated command — or an explicit reason it can't be automated. Never a guess.</div></div>
-</div>
-</div>
-</div>
-
-<h4>What happens when it can't be automated</h4>
-<div class="table-scroll"><table>
-<thead><tr><th>Situation</th><th>Result</th></tr></thead>
-<tbody>
-<tr><td>Standalone Pod, no controller</td><td>Field is immutable on a live Pod → recommends delete + recreate with a corrected manifest</td></tr>
-<tr><td>ReplicaSet/Job owner can't be resolved further</td><td>Refuses to guess a Deployment/CronJob name → asks to confirm the real owner first</td></tr>
-<tr><td>Helm-managed resource</td><td>Still generates the command, but warns that a live patch will drift and be reverted on the next <code>helm upgrade</code></td></tr>
-<tr><td>ArgoCD/Flux-managed resource</td><td>Warns the fix will be reverted on the next GitOps sync — recommends updating the tracked manifest in Git instead</td></tr>
-<tr><td>kube-system / vendor component (aws-node, coredns, kube-proxy, …)</td><td>Warns to verify vendor docs before changing security context</td></tr>
-</tbody>
-</table></div>
-</section>
-
-<section id="remediation-output">
-<h3>Anatomy of a fix</h3>
-<p>Every remediation result carries the same structure, whether read from a real scan
-finding or requested standalone via <code>explain_remediation</code>:</p>
-<div class="table-scroll"><table>
-<tbody>
-<tr><td><strong>Finding / Affected Resource / Owner Resource</strong></td><td>what fired, on what, owned by what</td></tr>
-<tr><td><strong>Root Cause / Risk</strong></td><td>the plain-English reason, tied to severity</td></tr>
-<tr><td><strong>Remediation Steps</strong></td><td>ordered, human-readable — verify target → review → apply → confirm</td></tr>
-<tr><td><strong>Kubectl Command</strong></td><td>only present when validated automatable</td></tr>
-<tr><td><strong>Alternative YAML / Validation / Rollback commands</strong></td><td>a manifest fragment, a post-apply check, and an undo path</td></tr>
-<tr><td><strong>Warnings / References</strong></td><td>system-workload, GitOps drift caveats; linked K8s docs</td></tr>
-</tbody>
-</table></div>
-<p>9 fields (<code>FIELD_PATCHES</code>) are schema-aware today — every pod-template
-security-context and host-namespace fix. Everything else (ClusterRoleBinding deletion,
-NetworkPolicy creation, a dashboard Service patch…) already targets an unambiguous kind
-and is left as a static playbook — 15 of those, unaffected by the Pod/controller
-ambiguity in the first place.</p>
 </section>
 
 <hr>
@@ -1368,7 +1335,32 @@ the Scanner's point-in-time <code>surface=scan</code> rules. An MCP agent can en
 catalog with <code>list_runtime_detections</code> and match a batch of events with
 <code>evaluate_runtime_events</code> (alerts come back carrying <code>surface</code> +
 <code>source</code>). In production it runs as a DaemonSet tailing Falco/Tetragon and the
-audit webhook.</p>
+audit webhook — <code>deploy_falco</code> automates the helm install with the webhook
+pre-wired at <code>/api/runtime</code>.</p>
+
+<h3 id="correlation">Scan × Runtime correlation — the differentiator</h3>
+<p>Scanning alone is table stakes (Trivy, kubescape, and kube-bench all do it). The
+differentiator here is <strong>correlation + causality</strong>: not "here's a weakness" but
+"<strong>this</strong> weakness is being <strong>exploited right now</strong>, and here's the
+kill-chain." A static finding says "this config is weak" (point-in-time); a runtime alert says
+"this behaviour just happened" (live stream). Joined on the MITRE tactic they already share,
+they answer the question a responder actually has.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Signal</th><th>What it means</th><th>MCP tool</th></tr></thead>
+<tbody>
+<tr><td><span class="sev sev-critical">confirmed</span></td><td>Runtime alert matches a static finding on the <strong>same tactic + same namespace</strong> — the weakness is being acted on.</td><td rowspan="3"><code>correlate_runtime</code></td></tr>
+<tr><td><span class="tag tag-accent">corroborated</span></td><td>Same tactic — behaviour aligns with a known static gap.</td></tr>
+<tr><td><span class="tag">runtime-only</span></td><td>Live behaviour with no matching static finding — something the scan never predicted (often the most interesting).</td></tr>
+<tr><td><span class="sev sev-critical">drift</span></td><td>Runtime behaviour that <strong>contradicts a Pod's declared posture</strong> (uid 0 despite <code>runAsNonRoot</code>, a write despite <code>readOnlyRootFilesystem</code>, a privileged-only op from a non-privileged pod) — the strongest signal, because a control the operator thinks is enforced is not.</td><td><code>detect_drift</code></td></tr>
+</tbody>
+</table></div>
+<p>Both are pure functions of <code>(findings, events)</code> — no cluster access, no re-scan.
+Events that can't be attributed to a scanned pod are <strong>skipped, not guessed</strong>,
+keeping false positives near zero. From the hit cells of the threat matrix,
+<code>build_attack_path</code> chains a full <strong>kill-chain</strong> (Initial Access → … →
+Impact) with entry points and a reaches-Impact flag; <code>intelligent_scan</code> does the
+whole thing in one call — parse the request, detect the cluster, scan, build the matrix, and
+derive the attack path.</p>
 </section>
 
 <hr>
@@ -1392,7 +1384,7 @@ same engine. Pick whichever fits the moment.</p>
 <tr><td><code>roles</code></td><td>Print per-shard least-privilege RBAC</td></tr>
 <tr><td><code>report list / download</code></td><td>List saved scans; re-render any of them in any format</td></tr>
 <tr><td><code>doctor</code></td><td>Validate the whole platform's wiring</td></tr>
-<tr><td><code>mcp</code></td><td>Run the MCP server, or list its 27 tools</td></tr>
+<tr><td><code>mcp</code></td><td>Run the MCP server, or list its 30 tools</td></tr>
 </tbody>
 </table></div>
 
@@ -1401,8 +1393,8 @@ same engine. Pick whichever fits the moment.</p>
 <thead><tr><th>Format</th><th>Built for</th></tr></thead>
 <tbody>
 <tr><td><code>terminal</code></td><td>Rich panels + per-severity tables, interactive scans</td></tr>
-<tr><td><code>markdown</code></td><td>The flagship — frontmatter, risk gauge, embedded threat matrix, per-finding cards with fix commands</td></tr>
-<tr><td><code>json</code></td><td>Full structured data + summary + <code>threat_matrix</code> + remediation, ready for automation</td></tr>
+<tr><td><code>markdown</code></td><td>The flagship — frontmatter, risk gauge, embedded threat matrix, per-finding cards (summary, standards, MITRE, impact, validation)</td></tr>
+<tr><td><code>json</code></td><td>Full structured data + summary + <code>threat_matrix</code> + attack path + per-finding context, ready for automation</td></tr>
 <tr><td><code>sarif</code></td><td>GitHub Code Scanning / IDE-ready, with security-severity + fingerprints</td></tr>
 <tr><td><code>html</code></td><td>Self-contained, dark/light aware, threat-matrix heatmap + interactive severity filters</td></tr>
 <tr><td><code>pdf</code></td><td>Print/share-ready audit document (needs the <code>pdf</code> extra)</td></tr>
@@ -1447,7 +1439,7 @@ Proceed with this scan? [Y/n] <span class="c-mut">y</span>
 <span class="c-mut">   … full report …</span>
 
 <span class="c-mut">you›</span> show criticals
-<span class="c-mut">you›</span> how do I fix the secret issue?
+<span class="c-mut">you›</span> details sec-etcd-not-encrypted
 <span class="c-mut">you›</span> export markdown</code></pre>
 </div>
 </section>
@@ -1456,9 +1448,15 @@ Proceed with this scan? [Y/n] <span class="c-mut">y</span>
 
 <section id="web">
 <h1>Web Dashboard</h1>
-<p class="lede">A zero-dependency (stdlib <code>http.server</code>) Security Dashboard — browse
-every saved scan, open the full rich HTML report, view the per-scan threat-matrix heatmap,
-and launch a scan right from the browser.</p>
+<p class="lede">A zero-dependency Security Dashboard: a stdlib <code>http.server</code> back end
+serving a vanilla-JS single-page app — no framework, no build step, no CDN. The shell fetches
+<code>GET /api/dashboard</code> once and renders everything client-side across seven tabs.</p>
+
+<p>A <strong>report selector</strong> in the header switches the whole dashboard to any saved
+scan (<code>GET /api/dashboard?scan_id=…</code>), and <strong>every finding is click-through</strong>,
+opening straight to its card in the full report (<code>/report/&lt;scan_id&gt;#&lt;finding&gt;</code>).
+The interface uses a professional, low-emoji visual style, and <strong>all timestamps are shown
+in IST</strong> (e.g. <code>19 Jul 2026, 01:13 IST</code>).</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
@@ -1466,18 +1464,28 @@ and launch a scan right from the browser.</p>
 k8smatrixwarden web
 k8smatrixwarden web --port 9000 --open        <span class="c-mut"># custom port, open a browser</span>
 k8smatrixwarden web --no-scan                 <span class="c-mut"># serve saved reports read-only</span>
-k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># where to read/write saved scans</span></code></pre>
+k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the shared report store</span></code></pre>
 </div>
 
-<h3>How to interact with it</h3>
+<div class="callout">
+  <strong>One shared history across CLI, MCP, and web.</strong> By default all three surfaces
+  read/write the same store — <code>~/.k8smatrixwarden/reports</code> (override for all at once
+  with <code>$K8SMATRIXWARDEN_REPORTS_DIR</code>) — resolved independently of the working
+  directory. So a scan you <code>--save</code> from the CLI, or that an LLM runs through the
+  <code>run_scan</code> MCP tool, shows up in this dashboard's <em>Scan history</em> automatically.
+</div>
+
+<h3>The seven tabs</h3>
 <div class="table-scroll"><table>
-<thead><tr><th>On the page</th><th>What you do</th></tr></thead>
+<thead><tr><th>Tab</th><th>What you see</th></tr></thead>
 <tbody>
-<tr><td><strong>Dashboard</strong> (<code>/</code>)</td><td>KPIs (saved scans, worst rating, latest risk) plus a table of every saved scan — click one to open its report or matrix.</td></tr>
-<tr><td><strong>Run a scan</strong></td><td>The <em>Run a scan</em> panel: pick a scope (whole cluster / namespace), optionally type a selector (e.g. <code>Persistence</code>), choose mock or live, and click <em>Scan &amp; save</em> — the result appears in the list.</td></tr>
-<tr><td><strong>Report view</strong> (<code>/report/&lt;id&gt;</code>)</td><td>The full self-contained HTML report — risk gauge, threat-matrix heatmap, per-finding cards with fix commands, severity filters.</td></tr>
-<tr><td><strong>Threat-matrix page</strong> (<code>/report/&lt;id&gt;/matrix</code>)</td><td>The scan's 9-tactic Kubernetes Threat Matrix as a standalone heatmap.</td></tr>
-<tr><td><strong>Coverage matrix</strong> (<code>/matrix</code>)</td><td>The global "what can the tool detect" matrix — every rule's coverage, no scan overlaid.</td></tr>
+<tr><td><strong>Overview</strong></td><td>KPIs (risk · rating · high+ count · MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose exposed tactics are clickable (jump to that Attack Path stage), a risk-trend sparkline, and runtime readiness — which tactics have detections armed.</td></tr>
+<tr><td><strong>Findings</strong></td><td>Live search + severity chips + tactic filter + sortable columns across every finding. Each row is clickable and opens that finding in the report.</td></tr>
+<tr><td><strong>Threat Matrix</strong></td><td>The 9×N interactive heatmap; select a coloured cell to expand its findings inline — with enriched detail (resource, score, domain, technique, OWASP/CIS) and a link per finding to its report card.</td></tr>
+<tr><td><strong>Attack Path</strong></td><td>The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. Select any stage to list every finding under that tactic, each linking to the report.</td></tr>
+<tr><td><strong>Attack Map</strong></td><td>The kill-chain <em>with the vulnerable resources</em> (Pods/Deployments/…) grouped per tactic — an accordion; expand a stage to see its exposed resources and the findings there (each linking to the report).</td></tr>
+<tr><td><strong>Runtime</strong></td><td>Paste Falco events (or load a sample) → correlate against the scan's findings + detect drift, rendered as confirmed / corroborated / runtime-only cards and drift findings.</td></tr>
+<tr><td><strong>Scan</strong></td><td>A run-a-scan form (scope + selector + mock/live) and the saved-scan history table.</td></tr>
 </tbody>
 </table></div>
 
@@ -1486,10 +1494,14 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># where to rea
 <div class="table-scroll"><table>
 <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
 <tbody>
+<tr><td><code>GET /api/dashboard</code></td><td>Everything the SPA renders in one call: scan meta, findings, threat matrix, attack path, runtime readiness, risk trend, and timeline. Timestamps are IST.</td></tr>
+<tr><td><code>GET /api/dashboard?scan_id=&lt;id&gt;</code></td><td>Render a specific saved scan instead of the latest (the report selector) — falls back to the latest on an unknown id; includes <code>selected_scan_id</code>.</td></tr>
 <tr><td><code>GET /api/reports</code></td><td>List of saved scans (id, time, rating, risk, findings, scope).</td></tr>
 <tr><td><code>GET /api/report/&lt;id&gt;?format=json|markdown|sarif|html|text</code></td><td>The report re-rendered in the requested format.</td></tr>
 <tr><td><code>GET /api/report/&lt;id&gt;/matrix</code></td><td>The scan's threat matrix as JSON.</td></tr>
-<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scope_level","namespace?","selector?","mock"}</code> → returns the new scan id, rating, and report/matrix URLs.</td></tr>
+<tr><td><code>GET /api/timeline</code></td><td>Finding-age metrics — open/resolved counts, MTTD/MTTR, oldest critical.</td></tr>
+<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scope_level","namespace?","selector?","mock","context?","kubeconfig?"}</code> → returns the new scan id, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection. An unreachable live cluster returns a clean <code>400 {"error":…}</code>, never a stack trace.</td></tr>
+<tr><td><code>POST /api/runtime</code></td><td>Ingest Falco/audit events — a single falcosidekick event <em>or</em> a <code>{"events":[…]}</code> batch → <code>{correlation, drift}</code>. Read-only: never mutates the cluster.</td></tr>
 <tr><td><code>GET /health</code></td><td>Liveness + platform stats (rule/shard counts).</td></tr>
 </tbody>
 </table></div>
@@ -1497,10 +1509,11 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># where to rea
 <div class="callout safe">
 <span class="co-icon">◈</span>
 <div class="co-body"><p>The dashboard binds <code>127.0.0.1</code> by default and is <strong>read-mostly</strong> —
-the only state-changing route is <code>POST /api/scan</code> (a read-only scan that saves its
-result). Remediation/apply is <em>not</em> exposed here, for the same reason it's withheld from
-MCP: every fix needs interactive confirmation. Saved-report lookups are path-traversal-guarded,
-and <code>--no-scan</code> serves existing reports fully read-only.</p></div>
+the only state-changing routes are <code>POST /api/scan</code> (a read-only scan that saves its
+result) and <code>POST /api/runtime</code> (ingests events and returns correlation + drift; it
+never touches the cluster). The tool detects and reports only — there is no remediation/apply
+path on any surface. Saved-report lookups are
+path-traversal-guarded, and <code>--no-scan</code> serves existing reports fully read-only.</p></div>
 </div>
 </section>
 
@@ -1508,8 +1521,10 @@ and <code>--no-scan</code> serves existing reports fully read-only.</p></div>
 
 <section id="mcp-connect">
 <h1>MCP Server</h1>
-<p class="lede">27 tools across four layers, so any MCP-compatible AI agent — Claude,
-Cursor, VS Code, Windsurf — can do everything the CLI can, short of applying a fix.</p>
+<p class="lede">30 tools across four layers, so any MCP-compatible AI agent — Claude,
+Cursor, VS Code, Windsurf — can do everything the CLI can: scan, audit, project the threat
+matrix and kill-chain, correlate a live runtime feed against static findings, and export
+reports. The whole surface is read-only — there is no apply/remediate tool.</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">.cursor/mcp.json</span><button class="copy-btn" data-copy>Copy</button></div>
@@ -1522,21 +1537,20 @@ Cursor, VS Code, Windsurf — can do everything the CLI can, short of applying a
   }
 }</code></pre>
 </div>
-<p><code>k8smatrixwarden mcp --list-tools</code> lists all 27 without starting the server;
+<p><code>k8smatrixwarden mcp --list-tools</code> lists all 30 without starting the server;
 <code>k8smatrixwarden mcp</code> starts it over stdio (requires <code>pip install -e ".[mcp]"</code>).</p>
 
 <div class="callout danger">
 <span class="co-icon">⛔</span>
 <div class="co-body"><p><strong>Deliberately not exposed: remediation / apply.</strong>
-"Every remediation action requires explicit user confirmation — no exceptions, no bypass,
-no auto-mode" can't be honored by an MCP tool call, which has no interactive confirmation
-step. Everything below is read-only; the write path stays CLI/chat-only, enforced by a
-standing test that fails the build if a write-capable tool name ever appears.</p></div>
+The tool is detect-and-report only — there is no write/apply path on any surface, so the MCP
+server exposes none either. Everything below is read-only, enforced by a standing test that
+fails the build if a write-capable tool name ever appears.</p></div>
 </div>
 </section>
 
 <section id="mcp-knowledge">
-<h3>Layer 1 — Knowledge <span class="tag">16 tools</span></h3>
+<h3>Layer 1 — Knowledge <span class="tag">14 tools</span></h3>
 <p>No cluster access; safe to call anytime.</p>
 <div class="table-scroll"><table>
 <thead><tr><th>Tool</th><th>Description</th></tr></thead>
@@ -1544,8 +1558,7 @@ standing test that fails the build if a write-capable tool name ever appears.</p
 <tr><td><code>list_rules</code></td><td>List rules, filterable by shard and/or MITRE tactic — discovers valid <code>rule_ids</code>.</td></tr>
 <tr><td><code>resolve_selector</code></td><td>Resolve a raw selector to its rule ids, no scope, no scan.</td></tr>
 <tr><td><code>get_kubectl_command</code> / <code>list_kubectl_commands</code></td><td>One named kubectl one-liner, or all 9.</td></tr>
-<tr><td><code>get_tool_commands</code> / <code>list_tool_commands</code></td><td>Example invocations for trivy, kube-bench, kubescape, cosign… or all 8.</td></tr>
-<tr><td><code>get_playbook</code> / <code>list_playbooks</code></td><td>One static remediation playbook, or all 24 (15 static + 9 schema-aware).</td></tr>
+<tr><td><code>get_tool_commands</code> / <code>list_tool_commands</code></td><td>Example invocations for trivy, kube-bench, kubescape, cosign… or all of them.</td></tr>
 <tr><td><code>lookup_cve</code> / <code>list_cves</code></td><td>One CVE by id, or the full bundled K8s CVE knowledge base.</td></tr>
 <tr><td><code>get_compliance_ruleset</code></td><td>CIS / PSS / NSA_CISA metadata (or all three).</td></tr>
 <tr><td><code>get_taxonomy</code></td><td>The vendored MITRE ATT&amp;CK-for-Containers technique catalog + tactic coverage.</td></tr>
@@ -1558,18 +1571,22 @@ standing test that fails the build if a write-capable tool name ever appears.</p
 </section>
 
 <section id="mcp-scan">
-<h3>Layer 2 — Scan / Audit / Runtime <span class="tag">8 tools</span></h3>
+<h3>Layer 2 — Scan / Audit / Runtime / Analysis <span class="tag">12 tools</span></h3>
 <div class="table-scroll"><table>
 <thead><tr><th>Tool</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>preview_scan</code></td><td>Resolve scope+selector to the exact rule set — no cluster access, the plan-before-you-run step.</td></tr>
 <tr><td><code>run_scan</code></td><td>Run a real scan. <code>output_format</code> returns structured JSON (default, includes the <code>threat_matrix</code> block) or a fully rendered markdown/html/sarif/text/terminal/pdf report; <code>save</code> persists it.</td></tr>
 <tr><td><code>interpret_query</code></td><td>Parse natural language ("scan production for persistence") into scope/selector — no execution.</td></tr>
-<tr><td><code>run_cis_benchmark</code></td><td>The full 130-control CIS benchmark.</td></tr>
+<tr><td><code>intelligent_scan</code></td><td><strong>One call, everything:</strong> parse plain English → detect the cluster → scan → return findings, risk, the threat matrix, <em>and</em> the kill-chain attack path. Composes the five tools below.</td></tr>
+<tr><td><code>detect_cluster_provider</code></td><td>Detect the cluster from its Node objects — <code>cloud</code>, <code>managed</code>, and the CIS <code>profile</code> to feed <code>run_cis_benchmark</code>. Read-only, no control-plane access.</td></tr>
+<tr><td><code>run_cis_benchmark</code></td><td>The full 130-control CIS benchmark. <code>profile="auto"</code> auto-detects the provider.</td></tr>
 <tr><td><code>build_threat_matrix</code></td><td>Project findings onto the 9-tactic Kubernetes Threat Matrix (fresh scan, a saved report, or global detection coverage) — the same structure the report/dashboard heatmap uses.</td></tr>
+<tr><td><code>build_attack_path</code></td><td>Chain the matrix's <em>hit</em> cells into a kill-chain (Initial Access → … → Impact) with entry points, per-tactic steps, and a reaches-Impact flag.</td></tr>
 <tr><td><code>evaluate_runtime_events</code></td><td>Evaluate a batch of Falco/audit events against the Runtime Agent's catalog; alerts are tagged <code>surface=runtime</code>.</td></tr>
+<tr><td><code>correlate_runtime</code></td><td>Join a runtime event batch to a scan's static findings by MITRE tactic (+ namespace) → <code>confirmed</code> / <code>corroborated</code> / <code>runtime-only</code>: which weakness is being exploited right now.</td></tr>
+<tr><td><code>detect_drift</code></td><td>Flag runtime behaviour that contradicts a Pod's declared posture (uid 0 despite <code>runAsNonRoot</code>, writes despite <code>readOnlyRootFilesystem</code>, a privileged-only op from a non-privileged pod).</td></tr>
 <tr><td><code>list_runtime_detections</code></td><td>List the Runtime Agent's detection catalog — every rule tagged <code>surface=runtime</code> (the counterpart to <code>list_rules</code>, which is all <code>surface=scan</code>).</td></tr>
-<tr><td><code>explain_remediation</code></td><td>The full schema-aware, owner-resolved fix for a hypothetical resource — no scan needed.</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1592,11 +1609,12 @@ writes to arbitrary paths on the host.</p></div>
 </section>
 
 <section id="mcp-platform">
-<h3>Layer 4 — Platform <span class="tag">1 tool</span></h3>
+<h3>Layer 4 — Platform <span class="tag">2 tools</span></h3>
 <div class="table-scroll"><table>
 <thead><tr><th>Tool</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>generate_rbac_manifest</code></td><td>The least-privilege RBAC (get/list/watch only) K8sMatrixWarden needs against a real cluster. Only generates — never applies.</td></tr>
+<tr><td><code>deploy_falco</code></td><td>One-click <strong>Falco + falcosidekick</strong> deploy via <code>helm install</code>, with the webhook pre-wired at your <code>/api/runtime</code> endpoint so live events flow into <code>correlate_runtime</code>/<code>detect_drift</code>. Requires <code>helm</code> on the system.</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1605,14 +1623,14 @@ writes to arbitrary paths on the host.</p></div>
 
 <section id="rbac">
 <h1>RBAC &amp; Least Privilege</h1>
-<p class="lede">A two-tier model, plus a third tier generated per shard from what its rules
-actually declared needing — never more.</p>
+<p class="lede">A baseline read-only role, plus a scoped tier generated per shard from what its
+rules actually declared needing — never more. There is no write role, because there is no
+write path.</p>
 <div class="table-scroll"><table>
 <thead><tr><th>Tier</th><th>Role</th><th>Access</th></tr></thead>
 <tbody>
 <tr><td>1</td><td><code>k8smatrixwarden-reader</code></td><td>Baseline read-only — Scanner + Runtime</td></tr>
-<tr><td>2</td><td><code>k8smatrixwarden-remediator</code></td><td>Write, Remediation Agent only, only when triggered</td></tr>
-<tr><td>3</td><td><code>k8smatrixwarden-plugin-&lt;shard&gt;</code></td><td>Per-shard scoped role, generated from that shard's own declared verbs</td></tr>
+<tr><td>2</td><td><code>k8smatrixwarden-plugin-&lt;shard&gt;</code></td><td>Per-shard scoped role, generated from that shard's own declared verbs (get/list/watch only)</td></tr>
 </tbody>
 </table></div>
 <div class="code-card">
@@ -1630,12 +1648,12 @@ by a standing test that fails the build if any shard's role ever gains a write v
 <h3>Safety controls — non-negotiable</h3>
 <div class="table-scroll"><table>
 <tbody>
-<tr><td>No auto-remediation without confirmation</td><td>Orchestrator blocks the Remediation Agent until the user confirms</td></tr>
-<tr><td>Show exact changes before applying</td><td>The exact <code>kubectl patch</code> / diff is displayed first, always</td></tr>
+<tr><td>No write / apply path anywhere</td><td>Detect-and-report only on every surface (CLI, chat, MCP, web); enforced by a standing test</td></tr>
 <tr><td>Confirm the resolved rule set before scanning</td><td>Tactic/alias scans show the resolved rule list before executing</td></tr>
-<tr><td>Rollback on failure</td><td>Snapshots state before change; auto-rolls back if the health check fails</td></tr>
-<tr><td>Audit trail for every action</td><td>Every scan, finding, and remediation logged with timestamp and result</td></tr>
-<tr><td>Read-only by default</td><td>Scanner/Runtime use read-only roles; per-shard scoped below that</td></tr>
+<tr><td>Least-privilege identity</td><td>Generated RBAC is <code>get</code>/<code>list</code>/<code>watch</code> only; per-shard scoped</td></tr>
+<tr><td>No secret values printed</td><td>Secret rules report shape/location (env/key name), never decoded contents</td></tr>
+<tr><td>Audit trail</td><td>Every scan and finding is timestamped in IST and persisted to the shared report store</td></tr>
+<tr><td>Read-only by default</td><td>Scanner/Runtime derive everything from one read-only snapshot per scan</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1645,7 +1663,7 @@ by a standing test that fails the build if any shard's role ever gains a write v
 <section id="quality">
 <h1>Testing &amp; Quality</h1>
 <div class="stat-row">
-<div class="stat"><div class="stat-n">197</div><div class="stat-l">tests passing</div></div>
+<div class="stat"><div class="stat-n">184</div><div class="stat-l">tests passing</div></div>
 <div class="stat"><div class="stat-n">0</div><div class="stat-l">required dependencies</div></div>
 <div class="stat"><div class="stat-n">10/10</div><div class="stat-l">shards loaded clean</div></div>
 </div>
@@ -1655,11 +1673,11 @@ by a standing test that fails the build if any shard's role ever gains a write v
 python -m pytest tests/      <span class="c-mut"># also works if pytest is installed</span></code></pre>
 </div>
 <p>Covers: registry/taxonomy validation, selector resolution (union/dedup/unknown-selector
-errors), attack-path scoring, all 6 report formats, the CIS engine's full mitigation
-story, the Runtime Agent's event matching, and — the largest single suite — the
-remediation engine's owner-resolution across standalone / Deployment / DaemonSet /
-StatefulSet / Job / CronJob-owned Pods, Helm, ArgoCD, kube-system, immutable fields,
-invalid patch paths, and missing <code>ownerReferences</code>.</p>
+errors), attack-path scoring, all 7 report formats, the CIS engine's full mitigation
+story, the Runtime Agent's event matching, scan × runtime correlation + drift + Falco-event
+normalization, cloud-provider detection, the MTTD/MTTR timeline, live-scan resilience
+(unreachable-cluster message, skip-with-warning on RBAC 403 / absent API group), the shared
+report store, and the web dashboard / <code>/api/*</code> contract.</p>
 </section>
 
 <section id="glossary">
@@ -1671,10 +1689,10 @@ invalid patch paths, and missing <code>ownerReferences</code>.</p>
 <tr><td><strong>Rule Registry</strong></td><td>Catalog of every rule; resolves a selector → rule_id set.</td></tr>
 <tr><td><strong>MITRE Mapping Engine</strong></td><td>Startup-built index over rule tags — O(1) tactic/technique/framework/alias lookups.</td></tr>
 <tr><td><strong>Composite Alias</strong></td><td>A named outcome selector (e.g. "Container Escape") expanding to a curated rule set.</td></tr>
-<tr><td><strong>Evidence Collector</strong></td><td>Shared, scope-aware fetch/cache — each resource kind fetched once per scan.</td></tr>
+<tr><td><strong>Evidence Collector</strong></td><td>Shared, scope-aware fetch/cache — each resource kind fetched once per scan. Live mode preflights connectivity (unreachable cluster → one clear message, not a traceback) and skips-with-warning any resource type it can't read (RBAC 403 / absent API group) instead of aborting the whole scan.</td></tr>
 <tr><td><strong>Attack-Path Bonus</strong></td><td>A risk-score multiplier for a finding that enables multiple tactics along a chain.</td></tr>
-<tr><td><strong>FieldPatch</strong></td><td>A schema-aware, kind-independent field fix the Remediation Engine resolves per resource.</td></tr>
-<tr><td><strong>MCP</strong></td><td>Model Context Protocol — the open standard this tool's 27-tool server implements.</td></tr>
+<tr><td><strong>Finding anchor</strong></td><td>A stable, URL-safe slug for a finding; the report gives each card that <code>id</code> so any surface can deep-link to <code>/report/&lt;scan_id&gt;#&lt;anchor&gt;</code>.</td></tr>
+<tr><td><strong>MCP</strong></td><td>Model Context Protocol — the open standard this tool's 30-tool server implements.</td></tr>
 <tr><td><strong>Detection surface</strong></td><td><code>scan</code> (point-in-time config analysis, Scanner Agent) vs <code>runtime</code> (live event/behaviour observation, Runtime Agent) — every detection is tagged one or the other.</td></tr>
 <tr><td><strong>Threat Matrix</strong></td><td>The 9-tactic Kubernetes Threat Matrix; a scan's findings project onto it as a covered/hit/gap heatmap.</td></tr>
 </tbody>
@@ -1682,24 +1700,29 @@ invalid patch paths, and missing <code>ownerReferences</code>.</p>
 </section>
 
 <section id="roadmap">
-<h2><span class="h2-title">Roadmap &amp; Known Limitations</span></h2>
+<h2><span class="h2-title">Roadmap</span></h2>
+<p class="lede">K8sMatrixWarden ships today as a complete detect-and-report platform. The
+following enhancements are planned, each building on infrastructure that is already in place.</p>
 <ul>
-<li><strong>Live-mode synthetic buckets.</strong> <code>ComponentConfig</code> and
-<code>CloudIAM</code> have no direct K8s API — live coverage needs kube-bench JSON
-ingestion and a cloud IAM adapter respectively. Rule logic is already written.</li>
-<li><strong>Trivy / kubescape adapters</strong> are defined seams, not yet wired
-subprocess calls. The CIS engine itself is fully built.</li>
-<li><strong>Container-level patches</strong> (<code>drop-capabilities</code>,
-<code>read-only-root-fs</code>, <code>resource-limits</code>) are generated as a
-strategic-merge patch keyed by the container's <em>name</em> (from the finding evidence) —
-so they target the right container and create any missing intermediate objects, never a
-positional <code>containers[0]</code> json-add. If a finding somehow lacks the container
-name, the fix is marked non-automatable rather than guessing.</li>
-<li><strong>Runtime Agent</strong> is a rule catalog + matcher today, evaluating a
-provided event batch — a production DaemonSet would feed it Falco/Tetragon gRPC and the
-audit webhook directly.</li>
-<li><strong>NL intent parsing</strong> is deterministic keyword/fuzzy matching, not an
-LLM. <code>Orchestrator.interpret()</code> is the documented seam for layering one on.</li>
+<li><strong>Native live collectors.</strong> Direct in-cluster collectors for
+<code>ComponentConfig</code> and <code>CloudIAM</code> evidence, complementing today's
+kube-bench JSON ingestion and cloud IAM inputs — the rule logic is already written and runs
+identically in mock and live mode.</li>
+<li><strong>First-class Trivy / kubescape adapters.</strong> Wiring the external-tool
+adapter seams into live subprocess calls, on top of the fully built native CIS engine.</li>
+<li><strong>In-cluster Falco feed.</strong> The correlation and drift layer, Falco-event
+ingestion (<code>POST /api/runtime</code>, <code>normalize_events</code>), and the
+<code>deploy_falco</code> helm automation are built and tested; the next step runs Falco
+in-cluster so falcosidekick streams live events end to end.</li>
+<li><strong>Resource-level correlation.</strong> <code>correlate_runtime</code> joins on
+MITRE tactic + namespace today; adding <code>k8s.pod.name</code> enrichment from the live
+Falco feed will tighten <code>confirmed</code> matches to the exact resource.</li>
+<li><strong>Per-finding causal attack graph.</strong> Extending the kill-chain attack path
+from tactic-ordered chaining into a per-finding causal graph (e.g. pod-A's ServiceAccount
+reaching binding-B), surfaced across every report format.</li>
+<li><strong>LLM-assisted intent parsing.</strong> Layering an LLM onto the documented
+<code>Orchestrator.interpret()</code> seam, complementing today's fast deterministic
+keyword/fuzzy matching.</li>
 </ul>
 </section>
 
@@ -1707,7 +1730,8 @@ LLM. <code>Orchestrator.interpret()</code> is the documented seam for layering o
 
       <footer class="site-footer">
         K8sMatrixWarden v1.0 — MITRE ATT&amp;CK-Aligned · Domain-Sharded Execution ·
-        Schema-Aware Remediation · Threat Matrix · Web Dashboard · MCP-Native
+        Scan × Runtime Correlation · Kill-Chain Attack Path · Threat Matrix ·
+        Interactive Dashboard · MCP-Native · Detect-and-Report Only
       </footer>
     </main>
   </div>

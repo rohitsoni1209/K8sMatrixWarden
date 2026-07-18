@@ -1,4 +1,4 @@
-<h1 align="center">📖 k8smatrixwarden — Usage Guide</h1>
+<h1 align="center">k8smatrixwarden — Usage Guide</h1>
 
 <p align="center">
   <em>Everything you need to actually <strong>use</strong> the tool — install, commands, examples, workflows.</em><br/>
@@ -232,7 +232,7 @@ Run `doctor` any time something seems off, or after editing `config/default_conf
 Scan once with `--save`, then list and re-download the result in any format, to any filename:
 
 ```bash
-k8smatrixwarden scan --live --save                                   # persist to ./k8smatrixwarden-reports/
+k8smatrixwarden scan --live --save                                   # persist to the shared report store
 k8smatrixwarden report list                                          # what's stored
 k8smatrixwarden report download --scan-id scan-… --format html --output audit.html
 k8smatrixwarden report download --format markdown --output report.md   # (no --scan-id ⇒ latest)
@@ -243,27 +243,42 @@ k8smatrixwarden report download --format markdown --output report.md   # (no --s
 | `report list [--limit N] [--reports-dir DIR]` | list stored scans (id, time, rating, risk, findings, scope) |
 | `report download [--scan-id ID] [--format FMT] [--output FILE] [--reports-dir DIR]` | re-render a stored scan; `--scan-id` defaults to the latest; `--output` picks the filename (omit ⇒ print to stdout) |
 
+**Shared report store (one history across CLI, MCP, and web).** By default every surface
+reads and writes the **same** store, resolved independently of the working directory, so a
+scan you `--save` from the CLI — or that an LLM runs via the `run_scan` MCP tool — shows up
+in the web dashboard's **Scan history** without anything having to run from the same folder:
+
+- Default location: `~/.k8smatrixwarden/reports` (on Windows, `%USERPROFILE%\.k8smatrixwarden\reports`).
+- Override for all surfaces at once with the `K8SMATRIXWARDEN_REPORTS_DIR` environment
+  variable (point it at an absolute path), or per-command with `--reports-dir`.
+
+> Earlier versions defaulted to a **relative** `./k8smatrixwarden-reports`, which resolved
+> against each process's current directory — so a CLI/MCP scan silently landed somewhere the
+> web server never read. The absolute per-user default fixes that.
+
 Because the full result is stored, you can export it into a **different** format than you first viewed — scan once, download markdown for a PR *and* SARIF for CI *and* HTML for a stakeholder, all from the same saved scan. (CIS benchmark reports download via `k8smatrixwarden cis --output-file`.)
 
 ### 4.5 `k8smatrixwarden mcp`
 
 Run the tool as an MCP (Model Context Protocol) server, so any MCP-compatible AI agent
-(Claude, Cursor, VS Code, Windsurf, ...) can do essentially everything the CLI can do,
-short of applying a fix, over the exact same engine the CLI and chat use — including
-running real scans, the full CIS benchmark, evaluating a runtime event stream, exporting
-saved reports in any format, and getting a fully validated remediation for a specific
-resource.
+(Claude, Cursor, VS Code, Windsurf, ...) can do everything the CLI can do, over the exact
+same engine the CLI and chat use — including running real scans, a one-call
+`intelligent_scan` (parse → detect cluster → scan → threat matrix → attack path), the full
+CIS benchmark, projecting the Kubernetes Threat Matrix and kill-chain attack path,
+correlating a live runtime event stream against static findings (`correlate_runtime`) plus
+drift detection (`detect_drift`), and exporting saved reports in any format. It is
+read-only: there is no remediation/apply tool.
 
 ```bash
 k8smatrixwarden mcp --list-tools     # see what's exposed, without starting the server
 k8smatrixwarden mcp                  # start the MCP server over stdio (requires: pip install -e ".[mcp]")
 ```
 
-**27 tools, four layers.** Every tool's description below is verbatim its Python
+**30 tools, four layers.** Every tool's description below is verbatim its Python
 docstring — that's exactly what the calling LLM sees, since FastMCP reads docstrings
 directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 
-#### Layer 1 — Knowledge (no cluster access; safe to call anytime)
+#### Layer 1 — Knowledge & introspection (14 tools · read-only, no scan execution)
 
 | Tool | Description |
 |---|---|
@@ -273,8 +288,6 @@ directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 | `list_kubectl_commands()` | List every named kubectl command in the dataset (9 total). |
 | `get_tool_commands(tool)` | Look up example invocation(s) for one external tool (trivy, kube-bench, kubescape, cosign, ...). |
 | `list_tool_commands()` | List every external tool the dataset knows, with its example invocation(s). |
-| `get_playbook(ref)` | Look up one static remediation playbook by ref (unambiguous-target-kind fixes only — see `list_playbooks`). |
-| `list_playbooks()` | List every playbook, both static (fixed command) and schema-aware (resolved per-resource — see `explain_remediation`). |
 | `lookup_cve(cve_id)` | Look up one CVE in the bundled K8s CVE knowledge base. |
 | `list_cves()` | List every CVE in the bundled knowledge base (severity, affected range, description). |
 | `get_compliance_ruleset(framework?)` | Get metadata for CIS / PSS / NSA_CISA (or all three) — summary only; use `run_cis_benchmark` for the full 130-control evaluation. |
@@ -284,18 +297,22 @@ directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 | `list_namespaces(mock?, fixture?, kubeconfig?, context?)` | List namespace names in the target cluster — check before scoping a scan to one. |
 | `validate_platform()` | Validate the install itself (`doctor` equivalent) — shard/rule counts, taxonomy/alias validation problems if any. |
 
-#### Layer 2 — Scan / audit / runtime (read-only cluster access)
+#### Layer 2 — Scan · audit · runtime · analysis (12 tools · read-only cluster access)
 
 | Tool | Description |
 |---|---|
 | `preview_scan(scope..., selector...)` | Resolve a scan's scope+selector to the exact rule set **without scanning** — the plan-before-you-run step. |
-| `run_scan(scope..., selector..., mock?, output_format?, save?, max_findings?)` | Run a real scan. `output_format="json"` (default) returns structured findings + risk + the `threat_matrix` block + full per-finding context (summary/impact/standards/MITRE/remediation/validation); `"markdown"/"html"/"sarif"/"text"/"terminal"` instead returns the fully rendered report string. `"pdf"` returns base64-encoded PDF bytes (`content_base64` + `encoding: "base64"` instead of `content`) — requires the `pdf` extra server-side. `save=True` persists it for later `list_reports`/`download_report`. |
+| `run_scan(scope..., selector..., mock?, output_format?, save?, max_findings?)` | Run a real scan. `output_format="json"` (default) returns structured findings + risk + the `threat_matrix` block + full per-finding context (summary/impact/standards/MITRE/validation); `"markdown"/"html"/"sarif"/"text"/"terminal"` instead returns the fully rendered report string. `"pdf"` returns base64-encoded PDF bytes (`content_base64` + `encoding: "base64"` instead of `content`) — requires the `pdf` extra server-side. `save=True` persists it for later `list_reports`/`download_report`. |
 | `interpret_query(text)` | Parse a natural-language request ("scan production for persistence") into scope/selector/resolved rules — no execution. |
-| `run_cis_benchmark(mock?, profile?, kube_bench_json?)` | Run the full CIS Kubernetes Benchmark v1.8 (130 controls, PASS/FAIL/MANUAL/NA/NEEDS_NODE). |
-| `build_threat_matrix(scope..., selector..., scan_id?, coverage?, mock?)` | Project findings onto the 9-tactic **Kubernetes Threat Matrix** — from a fresh scan, a saved report (`scan_id`), or global detection coverage (`coverage=True`). Returns the same `{summary, columns[cells]}` structure the report/dashboard heatmap uses. |
-| `evaluate_runtime_events(events)` | Evaluate a batch of Falco-style syscall or K8s audit events against the Runtime Agent's rule catalog; returns any alerts (each tagged `surface="runtime"` + its `source`). |
-| `list_runtime_detections()` | List the Runtime Agent's detection catalog — every rule tagged `surface="runtime"` (Falco/audit/drift). The counterpart to `list_rules`, whose Scanner rules are all `surface="scan"`. |
-| `explain_remediation(rule_id, resource_kind, resource_name, namespace?, owner_kind?, owner_name?, labels?, annotations?)` | Get the full schema-aware, owner-resolved remediation for a *hypothetical* resource — no scan needed. |
+| `intelligent_scan(query, scope..., include_attack_path?, mock?)` | **One call, everything:** parse plain English → detect the cluster → run the read-only scan → return findings, risk, the threat matrix, **and** the kill-chain attack path. Composes `detect_cluster_provider` + `interpret_query` + `run_scan` + `build_threat_matrix` + `build_attack_path`. Use it to just ask and get the full analysis. |
+| `detect_cluster_provider(mock?, fixture?, kubeconfig?, context?)` | Detect the cluster kind from its Node objects — `cloud` (gcp/aws/azure/local), `managed` (is the control plane GKE/EKS/AKS), and `profile` (feed straight into `run_cis_benchmark`). Reads Node `providerID` + managed-service labels only; no writes, no control-plane access. |
+| `run_cis_benchmark(mock?, profile?, kube_bench_json?)` | Run the full CIS Kubernetes Benchmark v1.8 (130 controls, PASS/FAIL/MANUAL/NA/NEEDS_NODE). `profile="auto"` (default) auto-detects the provider via `detect_cluster_provider`. |
+| `build_threat_matrix(scope..., selector..., scan_id?, coverage?, mock?)` | Project findings onto the 9-tactic **Kubernetes Threat Matrix** — from a fresh scan, a saved report (`scan_id`), or global detection coverage (`coverage=True`). Returns the same `{summary, columns[cells]}` structure the report/dashboard heatmap uses. Cells are `hit`/`covered`/`gap`. |
+| `build_attack_path(scope..., selector..., scan_id?, mock?)` | Chain the threat matrix's **hit** cells into a kill-chain exploit path (Initial Access → … → Impact). Returns `chain`, per-tactic `steps` (techniques + exposing resources + worst severity), `entry_points`, and `reaches_impact`. From a fresh scan or a saved `scan_id`. |
+| `evaluate_runtime_events(events)` | Evaluate a batch of Falco-style syscall or K8s audit events against the Runtime Agent's rule catalog; returns any alerts (each tagged `surface="runtime"` + its `source`). Detects shell-in-container, metadata-API access, network recon, crypto-miners, escape indicators, log tampering, new RoleBindings, secret enumeration, and more. |
+| `correlate_runtime(events, scan_id?, scope..., selector..., mock?)` | **The "what's being exploited right now" view.** Evaluate `events` into runtime alerts, then join them to scan findings by MITRE tactic (+ namespace): `confirmed` (same tactic + namespace — actively exploited), `corroborated` (same tactic), `runtime-only` (never predicted). Correlates against a saved `scan_id` or a fresh read-only scan. |
+| `detect_drift(events, namespace?, mock?)` | Detect runtime behaviour that **contradicts a Pod's declared security posture** — the strongest exploitation signal. Flags process-as-uid-0 despite `runAsNonRoot`, writes despite `readOnlyRootFilesystem`, and privileged-only ops from a non-privileged pod. Read-only; each drift finding is CRITICAL (declared vs observed vs pod). |
+| `list_runtime_detections()` | List the Runtime Agent's detection catalog — every rule tagged `surface="runtime"` (source: falco/audit/drift). The counterpart to `list_rules`, whose Scanner rules are all `surface="scan"`. |
 
 #### Layer 3 — Reports (persist a scan once, export in any format later)
 
@@ -304,24 +321,23 @@ directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 | `list_reports(reports_dir?, limit?)` | List previously saved scans (from `run_scan(..., save=True)`). |
 | `download_report(scan_id?, format?, reports_dir?)` | Re-render a saved scan in any of the 7 formats without re-scanning; omit `scan_id` for the latest. Returns the rendered content — save it to a file yourself using your own file-write tool. `format="pdf"` returns base64-encoded bytes instead (same convention as `run_scan`). |
 
-#### Layer 4 — Platform
+#### Layer 4 — Platform (2 tools)
 
 | Tool | Description |
 |---|---|
-| `generate_rbac_manifest(service_account?, namespace?, create_namespace?, bind?)` | Generate the least-privilege RBAC (get/list/watch only) k8smatrixwarden needs against a real cluster. Only generates — never applies. |
+| `generate_rbac_manifest(service_account?, namespace?, create_namespace?, bind?)` | Generate the least-privilege RBAC (get/list/watch only) k8smatrixwarden needs against a real cluster. `bind=True` returns a full deployable manifest (Namespace + ServiceAccount + per-shard ClusterRole/ClusterRoleBinding); `bind=False` returns just the bare ClusterRoles for review. Only generates — never applies. |
+| `deploy_falco(webhook_url, namespace?)` | One-click **Falco + falcosidekick** deploy: runs `helm install` to set up Falco with a webhook pointing at your K8sMatrixWarden runtime endpoint (e.g. `http://host.minikube.internal:8080/api/runtime`), so live syscall/audit events flow into `correlate_runtime`/`detect_drift`. Returns the install log + next steps. Requires `helm` on the system. |
 
 `preview_scan` / `interpret_query` resolve a scope+selector (or a natural-language
 request) to the exact rule set **without touching the cluster** — the same "show the
 plan, then run it" pattern `k8smatrixwarden chat` uses. An agent should call one of those first,
 then call `run_scan` with the same arguments to execute.
 
-**Deliberately not exposed: remediation / apply.** §9's core rule — "every remediation
-action requires explicit user confirmation, no exceptions, no bypass, no auto-mode" —
-can't be honored by an MCP tool call (there's no interactive confirmation step), so the
-write path stays CLI/chat-only. Everything above is read-only — scanning, the knowledge
-datasets, runtime-event evaluation, and report rendering never mutate the cluster or
-write to disk on their own; `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`
-enforces this stays true as the tool surface grows.
+**Detect-and-report only — no remediation/apply tool.** Everything above is read-only:
+scanning, the knowledge datasets, runtime-event evaluation, and report rendering never
+mutate the cluster or write to disk on their own. There is no write/apply path anywhere in
+the tool; `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed` enforces this
+stays true as the tool surface grows.
 
 ### 4.7 `k8smatrixwarden matrix` — Kubernetes Threat Matrix
 
@@ -347,7 +363,9 @@ The same matrix is embedded in the markdown/JSON/HTML scan reports, shown as a h
 
 ### 4.8 `k8smatrixwarden web` — Security Dashboard
 
-Launch the **Security Dashboard**, a zero-dependency (stdlib `http.server`) web UI. Browse every saved scan, open the full rich HTML report, view the per-scan threat-matrix heatmap, and run a scan from the browser.
+Launch the **Security Dashboard**, a zero-dependency (stdlib `http.server` back end + a vanilla-JS single-page app, no framework/build step/CDN). The shell fetches `GET /api/dashboard` once and renders everything client-side across **seven tabs**: Overview, Findings, Threat Matrix, Attack Path, Attack Map, Runtime, and Scan.
+
+A **report selector** at the top switches the entire dashboard to any saved scan (not just the latest), and **every finding is click-through** — in the Findings table, the Threat Matrix cell drill-downs, the Overview "fix first" list, and each Attack Path / Attack Map stage — opening straight to that finding's card in the full report (`/report/<scan_id>#<finding>`). The interface uses a clean, professional (low-emoji) visual style, and **all timestamps are shown in IST** (e.g. `19 Jul 2026, 01:13 IST`).
 
 ```bash
 k8smatrixwarden web                              # serve on http://127.0.0.1:8080
@@ -360,32 +378,40 @@ k8smatrixwarden web --reports-dir ./my-reports   # where to read/write saved sca
 |---|---|---|
 | `--host HOST` | `127.0.0.1` | interface to bind (keep it on localhost unless you know what you're doing) |
 | `--port PORT` | `8080` | port to listen on |
-| `--reports-dir DIR` | `k8smatrixwarden-reports` | directory the dashboard lists scans from and saves new ones to |
+| `--reports-dir DIR` | `~/.k8smatrixwarden/reports` (shared; or `$K8SMATRIXWARDEN_REPORTS_DIR`) | directory the dashboard lists scans from and saves new ones to — the same shared store the CLI and MCP `run_scan` write to, so their saved scans appear here too |
 | `--no-scan` | off | serve existing reports read-only; disable the in-browser *Run a scan* button and `POST /api/scan` |
 | `--open` | off | open your default browser at the dashboard URL on startup |
 
-**How to interact with it:**
+**The seven tabs:**
 
-| Page | What you do |
+| Tab | What you see |
 |---|---|
-| **Dashboard** (`/`) | See KPIs (saved scans, worst rating, latest risk) and a table of every saved scan. Click a row to open its **report** or **matrix**. |
-| **Run a scan** | The *Run a scan* panel: pick a scope (whole cluster / namespace), optionally type a selector (e.g. `Persistence`), choose the bundled mock or a live cluster, and click **Scan & save** — the new scan appears in the list. |
-| **Report** (`/report/<id>`) | The full self-contained HTML report — risk gauge, threat-matrix heatmap, per-finding cards with fix commands, and interactive severity filters. |
-| **Threat matrix** (`/report/<id>/matrix`) | The scan's 9-tactic Kubernetes Threat Matrix as a standalone heatmap page. |
-| **Coverage matrix** (`/matrix`) | The global "what can the tool detect" matrix — every rule's coverage, no scan overlaid. |
+| **Overview** | KPIs (risk / rating / high+ count / MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose **exposed tactics are clickable → jump to that stage in Attack Path**, a risk-trend sparkline, and runtime readiness (which tactics have detections armed). |
+| **Findings** | Live search + severity chips (CRITICAL/HIGH/MEDIUM/LOW) + tactic filter + sortable columns across every finding. **Each row is clickable and opens that finding in the report.** |
+| **Threat Matrix** | The 9×N interactive Kubernetes Threat Matrix heatmap; select a coloured cell to expand its findings inline — with enriched detail (resource, score, domain, MITRE technique, OWASP/CIS, message) and a **link per finding to its report card**. |
+| **Attack Path** | The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. **Select any stage to list every finding under that tactic**, each linking to the report. |
+| **Attack Map** | The kill-chain **with the vulnerable resources** (Pods/Deployments/…) grouped per tactic — an accordion; **expand a stage** to see its exposed resources and the findings at that stage (each linking to the report). |
+| **Runtime** | Paste Falco events (or load a sample) → **correlate** them against the scan's findings + **detect drift**, rendered as confirmed/corroborated/runtime-only cards and drift findings. |
+| **Scan** | A run-a-scan form (scope + selector + mock/live) and the saved-scan history table (each row can be opened in the dashboard, or as a report/matrix/JSON). |
 
 **HTTP API** — the same dashboard is a small read-mostly JSON API, scriptable with `curl`:
 
 ```bash
+curl http://127.0.0.1:8080/api/dashboard                        # everything the SPA renders (latest scan)
+curl "http://127.0.0.1:8080/api/dashboard?scan_id=scan-…"       # render a specific saved scan (report selector)
 curl http://127.0.0.1:8080/api/reports                          # list saved scans
-curl "http://127.0.0.1:8080/api/report/latest?format=markdown"  # a report, any format
+curl "http://127.0.0.1:8080/api/report/latest?format=markdown"  # a saved report, any format
 curl http://127.0.0.1:8080/api/report/latest/matrix             # a scan's threat matrix (JSON)
+curl http://127.0.0.1:8080/api/timeline                         # finding age / MTTD / MTTR metrics
 curl -X POST http://127.0.0.1:8080/api/scan \
      -H 'Content-Type: application/json' \
      -d '{"scope_level":"cluster","selector":"Persistence","mock":true}'   # run & save a scan
+curl -X POST http://127.0.0.1:8080/api/runtime \
+     -H 'Content-Type: application/json' \
+     -d '{"events":[ ... ]}'                                     # ingest Falco events → {correlation, drift}
 ```
 
-The server binds `127.0.0.1` by default and is **read-mostly** — the only state-changing route is `POST /api/scan` (a read-only scan that saves its result). Remediation/apply is **not** exposed here, for the same reason it's withheld from MCP: every fix needs interactive confirmation. Saved-report lookups are path-traversal-guarded.
+The server binds `127.0.0.1` by default and is **read-mostly** — the only state-changing routes are `POST /api/scan` (a read-only scan that saves its result) and `POST /api/runtime` (ingests Falco/audit events and returns correlation + drift; it does not mutate the cluster). `POST /api/runtime` accepts a single falcosidekick event **or** a `{"events":[...]}` batch. The tool detects and reports only — no remediation/apply path is exposed from any surface. Saved-report lookups are path-traversal-guarded.
 
 ---
 
@@ -513,7 +539,6 @@ It has **session memory**, so after a scan you can drill in with follow-ups:
 you› scan production for credential access
      … (report) …
 you› show criticals              # filter the last results by severity
-you› how do I fix the secret issue?   # exact kubectl remediation commands
 you› details sec-etcd-not-encrypted   # deep-dive one finding
 you› export markdown             # save the last report to a file
 ```
@@ -543,22 +568,21 @@ k8smatrixwarden scan --mock -o pdf --output-file report.pdf   # audit-ready PDF 
 ```
 
 Every format is designed to be genuinely useful, not a flat dump. **Every finding, in
-every format, carries the same seven report-grade sections** — Summary, Standards &
+every format, carries the same report-grade sections** — Summary, Standards &
 Benchmark Mapping (with a reference link per framework), MITRE ATT&CK Mapping (with a
-reference link per technique), Impact, Remediation (with a reference link), Validation
-(exact steps to reproduce/verify), and Warnings — sourced from one shared content layer
-(`core/finding_context.py`) so no format can say something different from another about
-what a finding means or how to fix it.
+reference link per technique), Impact, and Validation (exact steps to reproduce/verify) —
+sourced from one shared content layer (`core/finding_context.py`) so no format can say
+something different from another about what a finding means.
 
 | Format | What you get |
 |---|---|
-| **terminal** | A risk panel, findings grouped by severity in colored tables (⚡ marks attack-path-amplified findings), and a "Top Remediations" panel. Needs `rich` (`pip install -e ".[pretty]"`); falls back to `text` otherwise. |
+| **terminal** | A risk panel and findings grouped by severity in colored tables (⚡ marks attack-path-amplified findings). Needs `rich` (`pip install -e ".[pretty]"`); falls back to `text` otherwise. |
 | **text** | The same content as terminal in dependency-free plain text, plus a compact `standards` tag line, a real-world `why` (impact) line, and a `verify` command per finding. |
-| **markdown** | YAML frontmatter · verdict · risk gauge · severity/tactic/OWASP dashboards · an **⚡ Attack-Path Amplified** section · a full report-grade card per finding (Summary, Standards & Benchmark Mapping table with links, MITRE ATT&CK Mapping table with links, Impact, Remediation with alternative YAML/rollback/references, Validation steps) · a **Prioritized Remediation Plan** table · appendix. Renders beautifully on GitHub/GitLab. |
-| **json** | The full finding data **plus** a `summary` block **plus**, per finding: `summary`, `impact`, `validation_steps`, `standards` (framework/control/title/url), `mitre_mapping` (tactic/technique/url), and the full `remediation` breakdown (title, commands, automatable, owner_resource, alternative_yaml, validation_commands, rollback_commands, warnings, references) — ready for dashboards/automation. |
-| **sarif** | SARIF 2.1 with `security-severity`, rich `tags`, a `help.markdown` block (impact + standards + remediation + validation — what GitHub Code Scanning actually renders), and `partialFingerprints` for stable de-duplication. |
-| **html** | One self-contained file (no external assets), dark/light aware: risk gauge, severity chips, a Summary + Standards & Benchmark table + MITRE ATT&CK table + Impact + Remediation + Validation per card, and **interactive severity filter buttons**. |
-| **pdf** | A print/share-ready audit document — title page with a colored risk score, executive summary, coverage tables, and the full seven-section write-up per finding. Requires the optional `pdf` extra (`pip install -e ".[pdf]"`, pulls in `fpdf2` — pure Python, no system dependencies); without it you get a clear error telling you to install it or use another format. |
+| **markdown** | YAML frontmatter · verdict · risk gauge · severity/tactic/OWASP dashboards · an **⚡ Attack-Path Amplified** section · a full report-grade card per finding (Summary, Standards & Benchmark Mapping table with links, MITRE ATT&CK Mapping table with links, Impact, Validation steps) · appendix. Renders beautifully on GitHub/GitLab. |
+| **json** | The full finding data **plus** a `summary` block **plus**, per finding: `summary`, `impact`, `validation_steps`, `standards` (framework/control/title/url), and `mitre_mapping` (tactic/technique/url) — ready for dashboards/automation. |
+| **sarif** | SARIF 2.1 with `security-severity`, rich `tags`, a `help.markdown` block (impact + standards + validation — what GitHub Code Scanning actually renders), and `partialFingerprints` for stable de-duplication. |
+| **html** | One self-contained file (no external assets), dark/light aware: risk gauge, severity chips, a Summary + Standards & Benchmark table + MITRE ATT&CK table + Impact + Validation per card, and **interactive severity filter buttons**. |
+| **pdf** | A print/share-ready audit document — title page with a colored risk score, executive summary, coverage tables, and the full per-finding write-up. Requires the optional `pdf` extra (`pip install -e ".[pdf]"`, pulls in `fpdf2` — pure Python, no system dependencies); without it you get a clear error telling you to install it or use another format. |
 
 **Two ways to save a report to a file of your choosing:**
 
@@ -583,17 +607,15 @@ what a finding means or how to fix it.
 
 In `k8smatrixwarden chat`, just say **“export markdown to my-report.md”** (or `save html as findings.html`, or `export pdf`).
 
-The **markdown report embeds the actual remediation command** for each finding (formatted with the real resource name/namespace), alongside the rest of that finding's report-grade sections, e.g.:
+Each finding's card carries a **Validation** section with the exact commands to reproduce and verify the finding against your cluster, alongside its Summary, Standards, MITRE, and Impact sections, e.g.:
 
-> ##### 🛠️ Remediation
+> ##### ✅ Validation — How to Reproduce / Verify
 >
-> **Remove cluster-admin from default SA**
 > ```bash
-> kubectl delete clusterrolebinding default-admin
+> kubectl get clusterrolebinding default-admin -o yaml
 > ```
-> _References:_ [Kubernetes docs](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
 
-— so a report doubles as a runnable, cited fix checklist. (Destructive commands still require confirmation through the Remediation Agent; the report only *shows* them.)
+— so a report doubles as a cited, verifiable audit record.
 
 ---
 
@@ -820,6 +842,7 @@ Always run `k8smatrixwarden doctor --config my-config.json` after editing — it
 
 Every scan report has the same shape, regardless of output format:
 
+- **Generated time & scan id** — in **Indian Standard Time (IST, UTC+05:30)**. `generated_at` is written as an ISO-8601 timestamp with the `+05:30` offset (e.g. `2026-07-19T01:13:00+05:30`) and shown in reports/dashboard as `19 Jul 2026, 01:13 IST`; the scan id's date (`scan-YYYYMMDD-…`) is the IST date.
 - **Risk score** — `0–10`, plus a rating (`Excellent → Critical`) and a `0–100` security score.
 - **Severity counts** — 🔴 CRITICAL · 🟠 HIGH · 🟡 MEDIUM · 🟢 LOW.
 - **Findings**, each with:
@@ -827,7 +850,7 @@ Every scan report has the same shape, regardless of output format:
   - the **resource** affected (kind/name/namespace)
   - its **MITRE ATT&CK** tactic + technique, **OWASP** category, and **CIS** control (when applicable)
   - a plain-English **message**
-  - a **remediation reference** pointing at a fix playbook, where one exists
+  - report-grade context (impact, standards mapping, and validation steps to reproduce/verify)
 
 Findings that touch *multiple* MITRE tactics (e.g. a writable hostPath mount, which enables Persistence, Privilege Escalation, *and* Lateral Movement) are scored higher — this is the "attack-path bonus," and it's why one finding can outweigh several single-tactic ones.
 
@@ -872,8 +895,11 @@ Install the optional live-scanning dependency: `pip install -e ".[live]"`.
 **"`--live --context X` says it couldn't load the kubeconfig/context"**
 The error names the exact file and context it tried. Run `kubectl config get-contexts` to see valid names — a typo'd `--context` fails loudly rather than silently falling back to some other cluster.
 
+**"`--live` says *Cannot reach the Kubernetes API server*"**
+The context is valid but the cluster isn't answering (it's stopped, or the endpoint is wrong). The tool preflights connectivity and fails fast with a clear message instead of a raw connection traceback — it even prints the `kubectl … cluster-info` command to verify, and reminds you that `--mock` scans the bundled sample cluster. Start the cluster (e.g. minikube/docker-desktop/kind) and retry. This is surfaced the same way everywhere: the CLI exits non-zero with the message, and the web `POST /api/scan` returns a clean `400 {"error": …}` (never a 500 stack trace).
+
 **"Live scan gets `Forbidden`/403 errors"**
-The identity you're scanning with doesn't have enough read access. Either use an identity that already has broad read access (fine for a first personal-cluster test), or generate and apply the tool's own least-privilege manifest: `k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json && kubectl apply -f k8smatrixwarden-rbac.json` (§9.3), then scan as that ServiceAccount.
+The identity you're scanning with can't read some resource types. **This no longer aborts the scan** — each inaccessible resource type (RBAC-forbidden, or an API group absent on that cluster) is *skipped and recorded as a warning*, and the scan completes with everything else. The skipped types are reported back: on the CLI as `warning: <Kind>: skipped (…)` lines, and via `run_scan`/`intelligent_scan` (MCP) and `POST /api/scan` (web) in a `warnings[]` field — so partial coverage is visible, never silently under-reported. To get full coverage, scan with an identity that has broad read access, or generate and apply the tool's own least-privilege manifest: `k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json && kubectl apply -f k8smatrixwarden-rbac.json` (§9.3), then scan as that ServiceAccount.
 
 **"CIS report shows a lot of `NEEDS_NODE`"**
 That's expected and correct on a fresh run — those controls need on-node file reads that the Kubernetes API cannot provide. Run `kube-bench` on your nodes and pass `--kube-bench-json` (§9). If you're on a managed cluster, also pass `--profile eks|gke|aks` to correctly exclude the provider-owned control plane instead of marking it un-checkable.
@@ -953,7 +979,7 @@ python -m k8smatrixwarden web --port 9000 --open
 python -m k8smatrixwarden web --no-scan                        # read-only
 
 # MCP (AI-agent integration)
-python -m k8smatrixwarden mcp --list-tools                     # lists all 27 tools
+python -m k8smatrixwarden mcp --list-tools                     # lists all 30 tools
 python -m k8smatrixwarden mcp
 ```
 

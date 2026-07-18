@@ -2,16 +2,15 @@
 Reporting Engine (§18.2) — rich, multi-format, audit-grade security reports.
 
 Renders a ScanResult in seven formats, each designed to be genuinely useful rather than a
-flat dump. Every finding, in every format, carries the same seven report-grade sections
+flat dump. Every finding, in every format, carries the same report-grade sections
 (sourced from `core.finding_context.build_finding_context()`, the single shared content
 layer): Summary, Standards & Benchmark Mapping (with reference links), MITRE ATT&CK
-Mapping (with reference links), Impact, Remediation (with reference links), and
-Validation/reproduction steps.
+Mapping (with reference links), Impact, and Validation/reproduction steps.
 
   terminal  — rich panels + per-severity tables (falls back to `text` with no `rich`)
   text      — grouped, sectioned plain-text (zero dependency)
   markdown  — the flagship: frontmatter, verdict, risk gauge, coverage dashboards,
-              full per-finding report cards, a prioritized remediation plan, an appendix
+              full per-finding report cards, an appendix
   json      — full structured data + a summary block + the same per-finding context
   sarif     — SARIF 2.1 with security-severity, tags, rich help.markdown, fingerprints
   html      — self-contained, responsive, dark/light card report with the same sections
@@ -26,11 +25,29 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Optional
 
 from .models import Finding, Severity
 from .results import ScanResult
 from .threat_matrix_render import THREAT_MATRIX_CSS
+from .timeutil import format_ist
+
+
+def finding_anchor(rule_id: str, kind: str = "", name: str = "",
+                   namespace: Optional[str] = None) -> str:
+    """Stable, URL-safe HTML anchor for a finding, so any surface (the web dashboard's
+    Findings / Threat Matrix / Attack views) can deep-link straight to a finding's card
+    in the rendered report via ``/report/<scan_id>#<anchor>``. The same slug is computed
+    client-side in the dashboard JS, so both sides agree without shipping it in the data."""
+    raw = f"{rule_id}-{kind}-{name}-{namespace or ''}"
+    slug = re.sub(r"[^a-z0-9]+", "-", raw.lower()).strip("-")
+    return "f-" + (slug or "finding")
+
+
+def _finding_anchor(f: Finding) -> str:
+    r = f.resource
+    return finding_anchor(f.rule_id, r.kind, r.name, r.namespace)
 
 try:  # optional pretty terminal output
     from rich.console import Console
@@ -114,17 +131,6 @@ class ReportingEngine:
                               _mitre_short(f), f.message)
             console.print(table)
 
-        # A short prioritized fix list.
-        top = [f for f in findings if f.remediation_ref][:5]
-        if top:
-            lines = []
-            for i, f in enumerate(top, 1):
-                title, cmds = _fix_commands(f)
-                lines.append(f"[bold]{i}.[/bold] {f.title} — {f.resource}")
-                if cmds:
-                    lines.append(f"   [green]$ {cmds[0]}[/green]")
-            console.print(Panel("\n".join(lines), title="🛠️  Top Remediations",
-                                border_style="green", expand=True))
         return console.export_text()
 
     # ================================================================== #
@@ -180,13 +186,6 @@ class ReportingEngine:
                     out.append("     standards : " + "  ".join(
                         f"{s.framework.split()[0]}:{s.control}" for s in ctx.standards))
                 out.append(f"     why    : {_truncate(ctx.impact, 140)}")
-                rem = ctx.remediation
-                if rem.automatable and rem.kubectl_command:
-                    out.append(f"     fix    : {rem.title}")
-                    out.append(f"            $ {rem.kubectl_command}")
-                elif rem.reason_not_automated:
-                    out.append(f"     fix    : cannot be automated — "
-                               f"{_truncate(rem.reason_not_automated, 120)}")
                 if ctx.validation_steps:
                     out.append(f"     verify : {ctx.validation_steps[0]}")
         if not findings:
@@ -243,8 +242,7 @@ class ReportingEngine:
             "3. [Coverage & Exposure](#coverage)",
             "4. [Findings](#findings)"
             + (" · [⚡ Attack-Path Amplified](#attackpaths)" if multi else ""),
-            "5. [Prioritized Remediation Plan](#remediation)",
-            "6. [Appendix](#appendix)",
+            "5. [Appendix](#appendix)",
             "",
             "---",
             "",
@@ -355,34 +353,10 @@ class ReportingEngine:
                 md += _finding_card(f, i)
         md += ["[↑ top](#top)", "", "---", ""]
 
-        # ---- remediation plan ------------------------------------------ #
-        md += [
-            "<a id=\"remediation\"></a>",
-            "## 5. 🛠️ Prioritized Remediation Plan",
-            "",
-            "Fixes ordered by risk (highest first). Every command is shown exactly as it "
-            "would run — **review before applying**; destructive actions require confirmation "
-            "through the Remediation Agent.",
-            "",
-        ]
-        fixable = [f for f in findings if _fix_commands(f)[1]][:15]
-        if not fixable:
-            md += ["_No automated remediations available for these findings._", ""]
-        else:
-            md += ["| # | Priority | Finding | Resource | Fix |",
-                   "|--:|:--|:--|:--|:--|"]
-            for i, f in enumerate(fixable, 1):
-                _t, cmds = _fix_commands(f)
-                cmd = _table_cmd(cmds[0]) if cmds else "—"
-                md.append(f"| {i} | {f.severity.emoji} {f.severity.label} | {f.title} "
-                          f"| `{f.resource}` | {cmd} |")
-            md.append("")
-        md += ["[↑ top](#top)", "", "---", ""]
-
         # ---- appendix --------------------------------------------------- #
         md += [
             "<a id=\"appendix\"></a>",
-            "## 6. 📎 Appendix",
+            "## 5. 📎 Appendix",
             "",
             "<details><summary><strong>Scan metadata</strong></summary>",
             "",
@@ -412,7 +386,7 @@ class ReportingEngine:
         return "\n".join(md)
 
     # ================================================================== #
-    # JSON (structured + summary + remediation)
+    # JSON (structured + summary + per-finding context)
     # ================================================================== #
     def json(self, result: ScanResult) -> str:
         doc = result.as_dict()
@@ -439,14 +413,13 @@ class ReportingEngine:
         # tactics an attacker can actually string together in this cluster.
         doc["attack_path"] = attack_paths(_tm)
         # attach the full report-grade context to each finding: summary, standards &
-        # benchmark mapping (with links), MITRE mapping (with links), impact, validation
-        # steps, and the schema-aware remediation breakdown (§8) — the same data every
-        # other renderer (markdown/html/sarif/pdf) sources from build_finding_context(),
-        # so a JSON/API consumer never sees less than a human-facing report does.
+        # benchmark mapping (with links), MITRE mapping (with links), impact, and
+        # validation steps — the same data every other renderer (markdown/html/sarif/pdf)
+        # sources from build_finding_context(), so a JSON/API consumer never sees less
+        # than a human-facing report does.
         from .finding_context import build_finding_context
         for fd, f in zip(doc["findings"], result.findings):
             ctx = build_finding_context(f)
-            rem = ctx.remediation
             fd["summary"] = ctx.summary
             fd["impact"] = ctx.impact
             fd["validation_steps"] = ctx.validation_steps
@@ -455,20 +428,6 @@ class ReportingEngine:
             fd["mitre_mapping"] = [{"tactic": m.tactic, "technique_id": m.technique_id,
                                     "technique_name": m.technique_name, "url": m.url}
                                    for m in ctx.mitre]
-            fd["remediation"] = {
-                "title": rem.title,
-                "commands": [rem.kubectl_command] if rem.automatable and rem.kubectl_command
-                            else [],
-                "automatable": rem.automatable,
-                "owner_resource": rem.owner_resource,
-                "deployment_method": rem.deployment_method,
-                "alternative_yaml": rem.alternative_yaml,
-                "validation_commands": rem.validation_commands,
-                "rollback_commands": rem.rollback_commands,
-                "warnings": rem.warnings,
-                "references": rem.references,
-                "reason_not_automated": rem.reason_not_automated,
-            }
         return json.dumps(doc, indent=2)
 
     # ================================================================== #
@@ -484,7 +443,6 @@ class ReportingEngine:
                 continue
             if f.rule_id not in rules:
                 ctx = build_finding_context(f)
-                rem = ctx.remediation
                 help_uri = (ctx.standards[0].url if ctx.standards else
                            (ctx.mitre[0].url if ctx.mitre else
                             "https://owasp.org/www-project-kubernetes-top-ten/"))
@@ -494,7 +452,8 @@ class ReportingEngine:
                     "shortDescription": {"text": f.title},
                     "fullDescription": {"text": ctx.summary},
                     "helpUri": help_uri,
-                    "help": {"text": _fix_text(f), "markdown": _sarif_help_md(ctx, rem)},
+                    "help": {"text": ctx.impact or f.message,
+                             "markdown": _sarif_help_md(ctx)},
                     "defaultConfiguration": {"level": _sarif_level(f.severity)},
                     "properties": {
                         "security-severity": _security_severity(f.severity),
@@ -559,7 +518,6 @@ class ReportingEngine:
         cards = []
         for f in findings:
             ctx = build_finding_context(f)
-            rem = ctx.remediation
 
             mitre_tags = " ".join(f"<span class='tag mitre'>{_esc(m.tactic)} · "
                                   f"{_esc(m.technique_id)}</span>" for m in ctx.mitre)
@@ -580,33 +538,12 @@ class ReportingEngine:
                 for s in ctx.standards) or "<tr><td colspan='3' class='muted'>No named " \
                 "standard or benchmark maps to this finding.</td></tr>"
 
-            if rem.automatable and rem.kubectl_command:
-                refs_html = ""
-                if rem.references:
-                    refs_html = "<div class='refs'>References: " + " · ".join(
-                        f"<a href='{_esc(u)}' target='_blank' rel='noopener'>"
-                        f"{_esc(_ref_label(u))}</a>" for u in rem.references) + "</div>"
-                remediation_html = (
-                    f"<details open><summary>🛠️ Remediation — {_esc(rem.title or '')}"
-                    f"</summary><pre class='cmd'>{_esc(rem.kubectl_command)}</pre>{refs_html}</details>")
-            elif rem.reason_not_automated:
-                remediation_html = (f"<div class='callout warn'>⚠️ <strong>Cannot be safely "
-                                    f"automated.</strong> {_esc(rem.reason_not_automated)}</div>")
-            else:
-                remediation_html = "<div class='muted'>No automated remediation registered "\
-                                   "for this rule — review and fix manually.</div>"
-
-            validation_html = ("<details><summary>✅ Validation — how to reproduce</summary>"
+            validation_html = ("<details><summary>Validation — how to reproduce</summary>"
                                f"<pre class='cmd'>{_esc(chr(10).join(ctx.validation_steps))}"
                                "</pre></details>")
-            warn_html = ""
-            if rem.warnings:
-                warn_html = ("<details><summary>⚠️ Warnings</summary><ul class='warnlist'>"
-                            + "".join(f"<li>{_esc(w)}</li>" for w in rem.warnings)
-                            + "</ul></details>")
 
             cards.append(
-                f"<div class='card {f.severity.label.lower()}'>"
+                f"<div class='card {f.severity.label.lower()}' id='{_finding_anchor(f)}'>"
                 f"<div class='chead'><span class='badge {f.severity.label.lower()}'>"
                 f"{f.severity.emoji} {f.severity.label}</span>"
                 f"<span class='ctitle'>{_esc(f.title)}</span>"
@@ -616,12 +553,12 @@ class ReportingEngine:
                 f"<div class='tags'>{mitre_tags}{std_tags}"
                 f"<span class='tag'>score {round(f.score,1)}</span>"
                 f"<span class='tag'>{_esc(f.owning_shard)}</span></div>"
-                f"<details><summary>📚 Standards &amp; Benchmark Mapping</summary>"
+                f"<details><summary>Standards &amp; Benchmark Mapping</summary>"
                 f"<table class='ctx-table'>{std_rows}</table></details>"
-                f"<details><summary>🎯 MITRE ATT&amp;CK Mapping</summary>"
+                f"<details><summary>MITRE ATT&amp;CK Mapping</summary>"
                 f"<table class='ctx-table'>{mitre_rows}</table></details>"
-                f"<div class='cimpact'><strong>💥 Impact:</strong> {_esc(ctx.impact)}</div>"
-                f"{remediation_html}{validation_html}{warn_html}"
+                f"<div class='cimpact'><strong>Impact:</strong> {_esc(ctx.impact)}</div>"
+                f"{validation_html}"
                 f"</div>")
 
         filters = ("<button data-f='all' class='on'>All</button>"
@@ -632,7 +569,7 @@ class ReportingEngine:
 
         from .threat_matrix import build_threat_matrix
         from .threat_matrix_render import render_html_grid
-        matrix_html = ("<section class='matrix'><h2>🗺️ Kubernetes Threat Matrix</h2>"
+        matrix_html = ("<section class='matrix'><h2>Kubernetes Threat Matrix</h2>"
                        + render_html_grid(build_threat_matrix(result, self.registry))
                        + "</section>")
 
@@ -645,7 +582,8 @@ class ReportingEngine:
             scope=_esc(result.request.scope.describe()),
             selector=_esc(result.request.selector.describe()),
             mode=result.mode, rules=len(result.resolved_rule_ids),
-            generated=result.generated_at, verdict=_esc(_verdict(r.rating)),
+            generated=_esc(format_ist(result.generated_at)),
+            verdict=_esc(_verdict(r.rating)),
             chips=chips, filters=filters,
             gaugepct=min(100, round(r.cluster_risk * 10)),
             cards=("".join(cards) or "<p class='ok'>✅ No findings for this scan.</p>"),
@@ -665,12 +603,11 @@ def _display_findings(findings: list[Finding]) -> list[Finding]:
 def _finding_card(f: Finding, i: int) -> list[str]:
     """A full, report-grade finding write-up — the seven sections a professional scan
     report is expected to carry: Summary, Standards & Benchmark Mapping, MITRE ATT&CK
-    Mapping, Impact, Remediation, Validation (how to reproduce), and Evidence. All
-    content beyond the raw Finding fields comes from build_finding_context(), the single
-    place this and every other renderer (html/json/sarif/pdf) source it from."""
+    Mapping, Impact, Validation (how to reproduce), and Evidence. All content beyond the
+    raw Finding fields comes from build_finding_context(), the single place this and every
+    other renderer (html/json/sarif/pdf) source it from."""
     from .finding_context import build_finding_context
     ctx = build_finding_context(f)
-    rem = ctx.remediation
     amp = " ⚡ Attack-Path Amplified" if len(f.tactics) > 1 else ""
 
     rows = [
@@ -680,8 +617,6 @@ def _finding_card(f: Finding, i: int) -> list[str]:
         f"| **Blast radius** | {f.blast_radius.label} |",
         f"| **Risk score** | {round(f.score, 2)} |",
     ]
-    if rem.owner_resource:
-        rows.insert(2, f"| **Owner resource** | `{rem.owner_resource}` |")
 
     out = [
         f"#### {i}. {f.severity.emoji} {f.title}{amp}",
@@ -724,91 +659,19 @@ def _finding_card(f: Finding, i: int) -> list[str]:
     # ---- impact --------------------------------------------------------- #
     out += ["##### 💥 Impact", "", ctx.impact, ""]
 
-    # ---- remediation ------------------------------------------------------ #
-    out += ["##### 🛠️ Remediation", ""]
-    if rem.automatable and rem.kubectl_command:
-        out += [f"**{rem.title}**", "", "```bash", rem.kubectl_command, "```", ""]
-        if rem.alternative_yaml:
-            out += ["<details><summary>Alternative — apply via YAML</summary>", "",
-                    rem.alternative_yaml, "", "</details>", ""]
-        if rem.rollback_commands:
-            out += ["<details><summary>Rollback (if the fix causes issues)</summary>",
-                    "", "```bash", *rem.rollback_commands, "```", "</details>", ""]
-    elif rem.reason_not_automated:
-        out += [f"⚠️ **This remediation cannot be safely automated.** "
-                f"{rem.reason_not_automated}", ""]
-        if rem.remediation_steps:
-            out += ["Manual steps:", ""] + [f"{n}. {s}" for n, s in
-                                            enumerate(rem.remediation_steps, 1)] + [""]
-    elif f.remediation_ref:
-        out += [f"_Remediation playbook: `{f.remediation_ref}`_", ""]
-    else:
-        out += ["_No automated remediation is registered for this rule — review and "
-               "fix manually._", ""]
-    if rem.references:
-        out += ["_References:_ " + " · ".join(f"[{_ref_label(u)}]({u})"
-                                              for u in rem.references), ""]
-
     # ---- validation / reproduction --------------------------------------- #
     out += ["##### ✅ Validation — How to Reproduce / Verify", "",
-            "Run before remediating to confirm the finding, and again afterward to "
-            "confirm it cleared:", "", "```bash"]
+            "Run this to confirm the finding, and again after any change to confirm it "
+            "cleared:", "", "```bash"]
     out += ctx.validation_steps
     out += ["```", ""]
-    if rem.validation_commands:
-        out += ["_Post-remediation check:_", "", "```bash", *rem.validation_commands,
-                "```", ""]
 
-    if rem.warnings:
-        out += ["<details><summary>⚠️ Warnings</summary>", ""]
-        out += [f"- {w}" for w in rem.warnings]
-        out += ["", "</details>", ""]
     if f.evidence:
         out += ["<details><summary>🔎 Evidence</summary>", "", "```json",
                 json.dumps(f.evidence, indent=2, default=str), "```", "</details>", ""]
     out.append("---")
     out.append("")
     return out
-
-
-def _ref_label(url: str) -> str:
-    """A short, readable label for a reference URL in a markdown link."""
-    for host, label in (("attack.mitre.org", "MITRE ATT&CK"),
-                        ("kubernetes.io", "Kubernetes docs"),
-                        ("cisecurity.org", "CIS Benchmark"),
-                        ("owasp.org", "OWASP"),
-                        ("media.defense.gov", "NSA/CISA Guide")):
-        if host in url:
-            return label
-    return "Reference"
-
-
-# -- fix commands: schema-aware, resource-aware (core/remediation_engine.py) -------- #
-def _remediation(f: Finding):
-    """Full RemediationResult for a finding — owner-resolved, schema-validated. See
-    core/remediation_engine.py; this is the single source of truth every renderer below
-    reads from, so markdown/json/sarif/html/terminal can never disagree with each other
-    (or with `k8smatrixwarden chat`'s "how do I fix it") about what command is safe to run."""
-    from .remediation_engine import generate_remediation
-    return generate_remediation(f)
-
-
-def _fix_commands(f: Finding):
-    """Backward-compatible (title, [commands]) view for callers that only want a
-    ready-to-run command line, not the full RemediationResult."""
-    result = _remediation(f)
-    cmds = [result.kubectl_command] if result.automatable and result.kubectl_command else []
-    return result.title, cmds
-
-
-def _fix_text(f: Finding) -> str:
-    title, cmds = _fix_commands(f)
-    if cmds:
-        return f"{title}:\n" + "\n".join(cmds)
-    result = _remediation(f)
-    if result.reason_not_automated:
-        return f"Manual remediation required: {result.reason_not_automated}"
-    return f.message
 
 
 # -- OWASP names (lazy cached) ------------------------------------------ #
@@ -902,9 +765,9 @@ def _verdict(rating: str) -> str:
         "Fair": "Fair posture. Several high-severity issues need prioritized attention "
                 "before they are chained together.",
         "Poor": "Poor posture. Critical, likely-exploitable issues are present and should "
-                "be remediated promptly.",
+                "be addressed promptly.",
         "Critical": "Critical risk. The cluster has severe, likely-exploitable exposures "
-                    "requiring emergency remediation.",
+                    "requiring immediate action.",
     }.get(rating, "")
 
 
@@ -923,13 +786,6 @@ def _truncate(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def _table_cmd(cmd: str) -> str:
-    """Make a shell command safe for a single markdown table cell: collapse newlines,
-    neutralize inner backticks and pipes, truncate, wrap in one inline code span."""
-    one = " ".join(str(cmd).split()).replace("`", "'").replace("|", "\\|")
-    return "`" + _truncate(one, 68) + "`"
-
-
 def _wrap_ids(ids: list[str], per_line: int = 4) -> list[str]:
     lines = []
     for i in range(0, len(ids), per_line):
@@ -938,7 +794,7 @@ def _wrap_ids(ids: list[str], per_line: int = 4) -> list[str]:
 
 
 # -- SARIF helpers -------------------------------------------------------- #
-def _sarif_help_md(ctx, rem) -> str:
+def _sarif_help_md(ctx) -> str:
     """GitHub Code Scanning (and most other SARIF viewers) render `help.markdown` in
     preference to `help.text` when both are present — give it the same substance as the
     markdown/html reports rather than the one-line `help.text` fallback."""
@@ -947,10 +803,6 @@ def _sarif_help_md(ctx, rem) -> str:
         lines.append("**Standards & Benchmark Mapping:**")
         lines += [f"- {s.framework} — {s.control}: [{s.title}]({s.url})" for s in ctx.standards]
         lines.append("")
-    if rem.automatable and rem.kubectl_command:
-        lines += ["**Remediation:**", "```bash", rem.kubectl_command, "```", ""]
-    elif rem.reason_not_automated:
-        lines += [f"**Remediation:** cannot be safely automated — {rem.reason_not_automated}", ""]
     if ctx.validation_steps:
         lines += ["**Validation:**", "```bash", *ctx.validation_steps, "```"]
     return "\n".join(lines)
@@ -1025,6 +877,8 @@ h1{font-size:1.6rem;margin:.2rem 0}.sub{color:var(--muted);font-size:.9rem}
  margin:.75rem 0;background:var(--card)}
 .card.critical{border-left-color:var(--crit)}.card.high{border-left-color:var(--high)}
 .card.medium{border-left-color:var(--med)}.card.low{border-left-color:var(--low)}
+.card.flash{box-shadow:0 0 0 2px var(--accent);animation:cardflash 2s ease-out 1}
+@keyframes cardflash{0%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 2px var(--accent)}}
 .chead{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
 .badge{font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:6px;color:#fff}
 .badge.critical{background:var(--crit)}.badge.high{background:var(--high)}
@@ -1066,13 +920,24 @@ document.querySelectorAll('.filters button').forEach(function(b){
   b.classList.add('on');var f=b.dataset.f;
   document.querySelectorAll('.card').forEach(function(c){
    c.style.display=(f==='all'||c.classList.contains(f))?'':'none';});};});
+function focusHash(){
+ if(!location.hash) return;
+ var el=null; try{el=document.querySelector(location.hash);}catch(e){}
+ if(!el) return;
+ el.style.display='';                 // ensure a filtered-out card is shown when targeted
+ document.querySelectorAll('.card.flash').forEach(function(c){c.classList.remove('flash');});
+ el.classList.add('flash');
+ el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+window.addEventListener('load',focusHash);
+window.addEventListener('hashchange',focusHash);
 """
 
 _HTML_TMPL = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>K8s Security Report · {scan}</title><style>{css}</style></head>
 <body><div class="wrap">
-<h1>🛡️ K8s Security Report</h1>
+<h1>K8s Security Report</h1>
 <div class="sub">{cluster} · scan <code>{scan}</code> · {generated} · mode {mode}</div>
 <div class="hero">
  <div class="score {rating_class}">{rating_emoji} {risk}/10 <span style="font-size:1rem">({rating})</span></div>
@@ -1084,8 +949,8 @@ _HTML_TMPL = """<!doctype html><html><head><meta charset="utf-8">
  <div>{chips}</div>
 </div>
 {matrix}
-<h2>🚨 Findings</h2>
+<h2>Findings</h2>
 <div class="filters">{filters}</div>
 {cards}
-<footer>Generated by 🛡️ k8smatrixwarden — MITRE ATT&amp;CK-aligned Kubernetes security scanner.</footer>
+<footer>Generated by k8smatrixwarden — MITRE ATT&amp;CK-aligned Kubernetes security scanner.</footer>
 </div><script>{js}</script></body></html>"""

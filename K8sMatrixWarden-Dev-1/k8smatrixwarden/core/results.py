@@ -1,19 +1,19 @@
 """The aggregate result object produced by a scan and consumed by reporting."""
 from __future__ import annotations
 
-import datetime as _dt
 import hashlib
 from dataclasses import dataclass, field
 from typing import Optional
 
 from .models import Finding, ScanRequest
 from .scoring import RiskResult
+from .timeutil import ist_date_compact, ist_timestamp, now_ist
 
 
 def _scan_id() -> str:
-    now = _dt.datetime.now(_dt.timezone.utc)
+    now = now_ist()
     digest = hashlib.sha1(now.isoformat().encode()).hexdigest()[:4]
-    return f"scan-{now:%Y%m%d}-{digest}"
+    return f"scan-{ist_date_compact()}-{digest}"
 
 
 @dataclass
@@ -27,9 +27,7 @@ class ScanResult:
     by_shard: dict[str, int] = field(default_factory=dict)
     scan_id: str = field(default_factory=_scan_id)
     cluster_name: str = "target-cluster"
-    generated_at: str = field(
-        default_factory=lambda: _dt.datetime.now(_dt.timezone.utc)
-        .strftime("%Y-%m-%dT%H:%M:%SZ"))
+    generated_at: str = field(default_factory=ist_timestamp)
     tool_version: str = "1.0"
     mode: str = "mock"
 

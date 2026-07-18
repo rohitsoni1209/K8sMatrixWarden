@@ -101,8 +101,7 @@ class NetworkSecurityShard(DomainShard):
             Rule("net-dashboard-exposed", "Kubernetes dashboard exposed", self.name,
                  ["Service"], S.CRITICAL, DM.NETWORK, _dashboard,
                  mitre=[M(T.DISCOVERY, "T1613", "Container and Resource Discovery")],
-                 owasp="K06", evidence_needs=["Service"],
-                 remediation_ref="playbook/restrict-dashboard"),
+                 owasp="K06", evidence_needs=["Service"]),
             Rule("net-ingress-no-tls", "Ingress without TLS", self.name, ["Ingress"],
                  S.HIGH, DM.NETWORK, _ingress_no_tls,
                  mitre=[M(T.INITIAL_ACCESS, "T1133", "External Remote Services")],
@@ -111,16 +110,14 @@ class NetworkSecurityShard(DomainShard):
                  ["NetworkPolicy", "Namespace"], S.HIGH, DM.NETWORK, _no_networkpolicy,
                  mitre=[M(T.LATERAL_MOVEMENT, "T1610", "Deploy Container")],
                  owasp="K05", cis=["5.3.2"], nsa_cisa=["Network Policy"],
-                 evidence_needs=["NetworkPolicy", "Namespace"],
-                 remediation_ref="playbook/default-deny-netpol"),
+                 evidence_needs=["NetworkPolicy", "Namespace"]),
             Rule("net-metadata-api-open", "Metadata API not blocked", self.name,
                  ["NetworkPolicy", "Namespace"], S.HIGH, DM.NETWORK, _metadata_open,
                  mitre=[M(T.CREDENTIAL_ACCESS, "T1552.005",
                           "Cloud Instance Metadata API"),
                         M(T.LATERAL_MOVEMENT, "T1552.005",
                           "Cloud Instance Metadata API")],
-                 owasp="K08", evidence_needs=["NetworkPolicy", "Namespace"],
-                 remediation_ref="playbook/block-metadata-api"),
+                 owasp="K08", evidence_needs=["NetworkPolicy", "Namespace"]),
         ]
 
 

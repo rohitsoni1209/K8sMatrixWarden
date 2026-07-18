@@ -55,7 +55,16 @@
       "Bash(timeout 30 python3 -m tests.run_tests)",
       "Bash(python3 -m pytest tests/ -q)",
       "Bash(python3 -c \"exec\\(open\\('tests/run_tests.py'\\).read\\(\\)\\)\")",
-      "Bash(python3 tests/run_tests.py)"
+      "Bash(python3 tests/run_tests.py)",
+      "Bash(python -m tests.run_tests)",
+      "Read(//c/Users/hp/**)",
+      "Bash(exit 1)",
+      "Bash(python -m k8smatrixwarden scan --live --context docker-desktop -o terminal)",
+      "Bash(echo \"CLI exit code \\(expect 2\\): $?\")",
+      "Bash(python -m k8smatrixwarden web --port 8093)",
+      "Bash(python -c \"import sys,json; print\\('error field:', json.load\\(sys.stdin\\)['error'].splitlines\\(\\)[0]\\)\")",
+      "Bash(python -m k8smatrixwarden scan --mock -o terminal)",
+      "Bash(python -)"
     ]
   }
 }

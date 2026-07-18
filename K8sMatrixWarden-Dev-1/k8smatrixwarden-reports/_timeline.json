@@ -5,7 +5,7 @@
     "severity": "CRITICAL",
     "resource": "ControlPlane/etcd",
     "first_seen": "2026-07-18T06:33:55Z",
-    "last_seen": "2026-07-18T06:33:55Z",
+    "last_seen": "2026-07-18T15:59:13Z",
     "resolved_at": null
   },
   "workload-missing-limits|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
@@ -15,7 +15,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-missing-limits",
@@ -24,7 +24,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-missing-limits",
@@ -33,7 +33,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-missing-limits",
@@ -42,7 +42,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -51,7 +51,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -60,7 +60,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -69,7 +69,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -78,7 +78,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -87,7 +87,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -96,7 +96,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-missing-limits",
@@ -105,7 +105,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-missing-limits",
@@ -114,7 +114,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Deployment|health-check-deployment|default": {
     "rule_id": "workload-missing-limits",
@@ -123,7 +123,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-missing-limits",
@@ -132,7 +132,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-missing-limits",
@@ -141,7 +141,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-missing-limits",
@@ -150,7 +150,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-missing-limits",
@@ -159,7 +159,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-missing-limits",
@@ -168,7 +168,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Job|batch-check-job|default": {
     "rule_id": "workload-missing-limits",
@@ -177,7 +177,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-missing-limits|Job|hidden-in-layers|default": {
     "rule_id": "workload-missing-limits",
@@ -186,7 +186,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "sec-configmap-credentials|ConfigMap|kube-proxy|kube-system": {
     "rule_id": "sec-configmap-credentials",
@@ -195,7 +195,7 @@
     "resource": "ConfigMap/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-hostpath-writable",
@@ -204,7 +204,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -213,7 +213,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -222,7 +222,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -231,7 +231,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -240,7 +240,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -249,7 +249,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -258,7 +258,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|Deployment|health-check-deployment|default": {
     "rule_id": "workload-hostpath-writable",
@@ -267,7 +267,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-hostpath-writable",
@@ -276,7 +276,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-writable|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-hostpath-writable",
@@ -285,7 +285,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "sec-env-var-secrets|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "sec-env-var-secrets",
@@ -294,7 +294,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "sec-env-var-secrets|Deployment|system-monitor-deployment|default": {
     "rule_id": "sec-env-var-secrets",
@@ -303,7 +303,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "sec-env-var-secrets|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "sec-env-var-secrets",
@@ -312,7 +312,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-hostpath-root",
@@ -321,7 +321,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-hostpath-root",
@@ -330,7 +330,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|Deployment|health-check-deployment|default": {
     "rule_id": "workload-hostpath-root",
@@ -339,7 +339,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-hostpath-root",
@@ -348,7 +348,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-hostpath-root",
@@ -357,7 +357,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-hostpath-root|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-hostpath-root",
@@ -366,7 +366,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "workload-caps-not-dropped",
@@ -375,7 +375,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -384,7 +384,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -393,7 +393,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -402,7 +402,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -411,7 +411,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -420,7 +420,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -429,7 +429,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -438,7 +438,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -447,7 +447,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -456,7 +456,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -465,7 +465,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -474,7 +474,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -483,7 +483,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -492,7 +492,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -501,7 +501,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-caps-not-dropped",
@@ -510,7 +510,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-caps-not-dropped",
@@ -519,7 +519,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|build-code-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -528,7 +528,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|health-check-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -537,7 +537,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -546,7 +546,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -555,7 +555,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -564,7 +564,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -573,7 +573,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-caps-not-dropped",
@@ -582,7 +582,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-caps-not-dropped",
@@ -591,7 +591,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-caps-not-dropped",
@@ -600,7 +600,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -609,7 +609,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -618,7 +618,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -627,7 +627,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -636,7 +636,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -645,7 +645,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -654,7 +654,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-caps-not-dropped",
@@ -663,7 +663,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Job|batch-check-job|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -672,7 +672,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-caps-not-dropped|Job|hidden-in-layers|default": {
     "rule_id": "workload-caps-not-dropped",
@@ -681,7 +681,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|admin|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -690,7 +690,7 @@
     "resource": "ClusterRole/admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|cluster-admin|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -699,7 +699,7 @@
     "resource": "ClusterRole/cluster-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|edit|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -708,7 +708,7 @@
     "resource": "ClusterRole/edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|system:aggregate-to-edit|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -717,7 +717,7 @@
     "resource": "ClusterRole/system:aggregate-to-edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|system:controller:generic-garbage-collector|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -726,7 +726,7 @@
     "resource": "ClusterRole/system:controller:generic-garbage-collector",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|ClusterRole|system:controller:root-ca-cert-publisher|": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -735,7 +735,7 @@
     "resource": "ClusterRole/system:controller:root-ca-cert-publisher",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-coredns-configmap-write|Role|system:controller:bootstrap-signer|kube-public": {
     "rule_id": "rbac-coredns-configmap-write",
@@ -744,7 +744,7 @@
     "resource": "Role/system:controller:bootstrap-signer (kube-public)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-verbs|ClusterRole|cluster-admin|": {
     "rule_id": "rbac-wildcard-verbs",
@@ -753,7 +753,7 @@
     "resource": "ClusterRole/cluster-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-verbs|ClusterRole|system:kubelet-api-admin|": {
     "rule_id": "rbac-wildcard-verbs",
@@ -762,7 +762,7 @@
     "resource": "ClusterRole/system:kubelet-api-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-pid|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-host-pid",
@@ -771,7 +771,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-pid|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-host-pid",
@@ -780,7 +780,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-pid|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-host-pid",
@@ -789,7 +789,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-docker-socket|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-docker-socket",
@@ -798,7 +798,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-docker-socket|Deployment|health-check-deployment|default": {
     "rule_id": "workload-docker-socket",
@@ -807,7 +807,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-docker-socket|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-docker-socket",
@@ -816,7 +816,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-metadata-api-open|Namespace|big-monolith|": {
     "rule_id": "net-metadata-api-open",
@@ -825,7 +825,7 @@
     "resource": "Namespace/big-monolith",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-metadata-api-open|Namespace|default|": {
     "rule_id": "net-metadata-api-open",
@@ -834,7 +834,7 @@
     "resource": "Namespace/default",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-metadata-api-open|Namespace|secure-middleware|": {
     "rule_id": "net-metadata-api-open",
@@ -843,7 +843,7 @@
     "resource": "Namespace/secure-middleware",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|admin|": {
     "rule_id": "rbac-can-delete-events",
@@ -852,7 +852,7 @@
     "resource": "ClusterRole/admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|cluster-admin|": {
     "rule_id": "rbac-can-delete-events",
@@ -861,7 +861,7 @@
     "resource": "ClusterRole/cluster-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|edit|": {
     "rule_id": "rbac-can-delete-events",
@@ -870,7 +870,7 @@
     "resource": "ClusterRole/edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|system:aggregate-to-edit|": {
     "rule_id": "rbac-can-delete-events",
@@ -879,7 +879,7 @@
     "resource": "ClusterRole/system:aggregate-to-edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|system:controller:generic-garbage-collector|": {
     "rule_id": "rbac-can-delete-events",
@@ -888,7 +888,7 @@
     "resource": "ClusterRole/system:controller:generic-garbage-collector",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-can-delete-events|ClusterRole|system:controller:namespace-controller|": {
     "rule_id": "rbac-can-delete-events",
@@ -897,7 +897,7 @@
     "resource": "ClusterRole/system:controller:namespace-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-ipc|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-host-ipc",
@@ -906,7 +906,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-ipc|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-host-ipc",
@@ -915,7 +915,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-ipc|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-host-ipc",
@@ -924,7 +924,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "workload-writable-root-fs",
@@ -933,7 +933,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-writable-root-fs",
@@ -942,7 +942,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-writable-root-fs",
@@ -951,7 +951,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-writable-root-fs",
@@ -960,7 +960,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-writable-root-fs",
@@ -969,7 +969,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-writable-root-fs",
@@ -978,7 +978,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-writable-root-fs",
@@ -987,7 +987,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-writable-root-fs",
@@ -996,7 +996,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1005,7 +1005,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1014,7 +1014,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1023,7 +1023,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1032,7 +1032,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1041,7 +1041,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1050,7 +1050,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1059,7 +1059,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-writable-root-fs",
@@ -1068,7 +1068,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-writable-root-fs",
@@ -1077,7 +1077,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|build-code-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1086,7 +1086,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|health-check-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1095,7 +1095,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1104,7 +1104,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1113,7 +1113,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1122,7 +1122,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1131,7 +1131,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-writable-root-fs",
@@ -1140,7 +1140,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-writable-root-fs",
@@ -1149,7 +1149,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-writable-root-fs",
@@ -1158,7 +1158,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1167,7 +1167,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1176,7 +1176,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1185,7 +1185,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1194,7 +1194,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1203,7 +1203,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1212,7 +1212,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-writable-root-fs",
@@ -1221,7 +1221,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Job|batch-check-job|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1230,7 +1230,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-writable-root-fs|Job|hidden-in-layers|default": {
     "rule_id": "workload-writable-root-fs",
@@ -1239,7 +1239,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-no-networkpolicy|Namespace|big-monolith|": {
     "rule_id": "net-no-networkpolicy",
@@ -1248,7 +1248,7 @@
     "resource": "Namespace/big-monolith",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-no-networkpolicy|Namespace|default|": {
     "rule_id": "net-no-networkpolicy",
@@ -1257,7 +1257,7 @@
     "resource": "Namespace/default",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-no-networkpolicy|Namespace|secure-middleware|": {
     "rule_id": "net-no-networkpolicy",
@@ -1266,7 +1266,7 @@
     "resource": "Namespace/secure-middleware",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|admin|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1275,7 +1275,7 @@
     "resource": "ClusterRole/admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|cluster-admin|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1284,7 +1284,7 @@
     "resource": "ClusterRole/cluster-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|edit|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1293,7 +1293,7 @@
     "resource": "ClusterRole/edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:aggregate-to-edit|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1302,7 +1302,7 @@
     "resource": "ClusterRole/system:aggregate-to-edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:controller:generic-garbage-collector|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1311,7 +1311,7 @@
     "resource": "ClusterRole/system:controller:generic-garbage-collector",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:controller:horizontal-pod-autoscaler|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1320,7 +1320,7 @@
     "resource": "ClusterRole/system:controller:horizontal-pod-autoscaler",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:controller:namespace-controller|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1329,7 +1329,7 @@
     "resource": "ClusterRole/system:controller:namespace-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:controller:resourcequota-controller|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1338,7 +1338,7 @@
     "resource": "ClusterRole/system:controller:resourcequota-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:kube-controller-manager|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1347,7 +1347,7 @@
     "resource": "ClusterRole/system:kube-controller-manager",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-secret-read-broad|ClusterRole|system:node|": {
     "rule_id": "rbac-secret-read-broad",
@@ -1356,7 +1356,7 @@
     "resource": "ClusterRole/system:node",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "img-not-signed|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "img-not-signed",
@@ -1365,7 +1365,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "net-nodeport-service|Service|internal-proxy-info-app-service|default": {
     "rule_id": "net-nodeport-service",
@@ -1374,7 +1374,7 @@
     "resource": "Service/internal-proxy-info-app-service (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-host-network",
@@ -1383,7 +1383,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-host-network",
@@ -1392,7 +1392,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-host-network",
@@ -1401,7 +1401,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-host-network",
@@ -1410,7 +1410,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-host-network",
@@ -1419,7 +1419,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-host-network",
@@ -1428,7 +1428,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-host-network|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-host-network",
@@ -1437,7 +1437,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1446,7 +1446,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1455,7 +1455,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1464,7 +1464,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1473,7 +1473,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1482,7 +1482,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1491,7 +1491,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1500,7 +1500,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1509,7 +1509,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1518,7 +1518,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1527,7 +1527,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1536,7 +1536,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1545,7 +1545,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1554,7 +1554,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1563,7 +1563,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1572,7 +1572,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1581,7 +1581,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1590,7 +1590,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|build-code-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1599,7 +1599,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|health-check-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1608,7 +1608,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1617,7 +1617,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1626,7 +1626,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1635,7 +1635,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1644,7 +1644,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1653,7 +1653,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1662,7 +1662,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1671,7 +1671,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1680,7 +1680,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1689,7 +1689,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1698,7 +1698,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1707,7 +1707,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1716,7 +1716,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1725,7 +1725,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1734,7 +1734,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Job|batch-check-job|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1743,7 +1743,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-allow-priv-escalation|Job|hidden-in-layers|default": {
     "rule_id": "workload-allow-priv-escalation",
@@ -1752,7 +1752,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-bind-escalate-verbs|ClusterRole|admin|": {
     "rule_id": "rbac-bind-escalate-verbs",
@@ -1761,7 +1761,7 @@
     "resource": "ClusterRole/admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-bind-escalate-verbs|ClusterRole|edit|": {
     "rule_id": "rbac-bind-escalate-verbs",
@@ -1770,7 +1770,7 @@
     "resource": "ClusterRole/edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-bind-escalate-verbs|ClusterRole|system:aggregate-to-edit|": {
     "rule_id": "rbac-bind-escalate-verbs",
@@ -1779,7 +1779,7 @@
     "resource": "ClusterRole/system:aggregate-to-edit",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-bind-escalate-verbs|ClusterRole|system:controller:clusterrole-aggregation-controller|": {
     "rule_id": "rbac-bind-escalate-verbs",
@@ -1788,7 +1788,7 @@
     "resource": "ClusterRole/system:controller:clusterrole-aggregation-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "workload-latest-tag",
@@ -1797,7 +1797,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-latest-tag",
@@ -1806,7 +1806,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-latest-tag",
@@ -1815,7 +1815,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-latest-tag",
@@ -1824,7 +1824,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-latest-tag",
@@ -1833,7 +1833,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-latest-tag",
@@ -1842,7 +1842,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-latest-tag",
@@ -1851,7 +1851,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-latest-tag",
@@ -1860,7 +1860,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-latest-tag",
@@ -1869,7 +1869,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-latest-tag",
@@ -1878,7 +1878,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-latest-tag",
@@ -1887,7 +1887,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|build-code-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1896,7 +1896,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|health-check-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1905,7 +1905,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1914,7 +1914,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1923,7 +1923,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1932,7 +1932,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-latest-tag",
@@ -1941,7 +1941,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-latest-tag",
@@ -1950,7 +1950,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-latest-tag",
@@ -1959,7 +1959,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-latest-tag",
@@ -1968,7 +1968,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-latest-tag",
@@ -1977,7 +1977,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-latest-tag",
@@ -1986,7 +1986,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-latest-tag",
@@ -1995,7 +1995,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-latest-tag",
@@ -2004,7 +2004,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-latest-tag",
@@ -2013,7 +2013,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-latest-tag",
@@ -2022,7 +2022,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Job|batch-check-job|default": {
     "rule_id": "workload-latest-tag",
@@ -2031,7 +2031,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-latest-tag|Job|hidden-in-layers|default": {
     "rule_id": "workload-latest-tag",
@@ -2040,7 +2040,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "apiserver-audit-logging|ControlPlane|apiServer|": {
     "rule_id": "apiserver-audit-logging",
@@ -2048,7 +2048,7 @@
     "severity": "HIGH",
     "resource": "ControlPlane/apiServer",
     "first_seen": "2026-07-18T06:33:55Z",
-    "last_seen": "2026-07-18T06:33:55Z",
+    "last_seen": "2026-07-18T15:59:13Z",
     "resolved_at": null
   },
   "workload-run-as-root|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
@@ -2058,7 +2058,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-run-as-root",
@@ -2067,7 +2067,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-run-as-root",
@@ -2076,7 +2076,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-run-as-root",
@@ -2085,7 +2085,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-run-as-root",
@@ -2094,7 +2094,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-run-as-root",
@@ -2103,7 +2103,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-run-as-root",
@@ -2112,7 +2112,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-run-as-root",
@@ -2121,7 +2121,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-run-as-root",
@@ -2130,7 +2130,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|coredns-7d764666f9-wn2gn|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2139,7 +2139,7 @@
     "resource": "Pod/coredns-7d764666f9-wn2gn (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2148,7 +2148,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2157,7 +2157,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2166,7 +2166,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2175,7 +2175,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2184,7 +2184,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2193,7 +2193,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-run-as-root",
@@ -2202,7 +2202,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-run-as-root",
@@ -2211,7 +2211,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|build-code-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2220,7 +2220,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|health-check-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2229,7 +2229,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2238,7 +2238,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2247,7 +2247,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2256,7 +2256,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-run-as-root",
@@ -2265,7 +2265,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|coredns|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2274,7 +2274,7 @@
     "resource": "Deployment/coredns (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-run-as-root",
@@ -2283,7 +2283,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2292,7 +2292,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-run-as-root",
@@ -2301,7 +2301,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-run-as-root",
@@ -2310,7 +2310,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-run-as-root",
@@ -2319,7 +2319,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-run-as-root",
@@ -2328,7 +2328,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-run-as-root",
@@ -2337,7 +2337,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-run-as-root",
@@ -2346,7 +2346,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-run-as-root",
@@ -2355,7 +2355,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|coredns-7d764666f9|kube-system": {
     "rule_id": "workload-run-as-root",
@@ -2364,7 +2364,7 @@
     "resource": "ReplicaSet/coredns-7d764666f9 (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-run-as-root",
@@ -2373,7 +2373,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Job|batch-check-job|default": {
     "rule_id": "workload-run-as-root",
@@ -2382,7 +2382,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-run-as-root|Job|hidden-in-layers|default": {
     "rule_id": "workload-run-as-root",
@@ -2391,7 +2391,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-cluster-admin-default-sa|ClusterRoleBinding|minikube-rbac|": {
     "rule_id": "rbac-cluster-admin-default-sa",
@@ -2400,7 +2400,7 @@
     "resource": "ClusterRoleBinding/minikube-rbac",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
     "rule_id": "workload-sa-token-automount",
@@ -2409,7 +2409,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2418,7 +2418,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2427,7 +2427,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2436,7 +2436,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2445,7 +2445,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2454,7 +2454,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2463,7 +2463,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2472,7 +2472,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2481,7 +2481,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|coredns-7d764666f9-wn2gn|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2490,7 +2490,7 @@
     "resource": "Pod/coredns-7d764666f9-wn2gn (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|etcd-minikube|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2499,7 +2499,7 @@
     "resource": "Pod/etcd-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|kube-apiserver-minikube|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2508,7 +2508,7 @@
     "resource": "Pod/kube-apiserver-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|kube-controller-manager-minikube|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2517,7 +2517,7 @@
     "resource": "Pod/kube-controller-manager-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2526,7 +2526,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|kube-scheduler-minikube|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2535,7 +2535,7 @@
     "resource": "Pod/kube-scheduler-minikube (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2544,7 +2544,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-sa-token-automount",
@@ -2553,7 +2553,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-sa-token-automount",
@@ -2562,7 +2562,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|build-code-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2571,7 +2571,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|health-check-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2580,7 +2580,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2589,7 +2589,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2598,7 +2598,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2607,7 +2607,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2616,7 +2616,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|coredns|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2625,7 +2625,7 @@
     "resource": "Deployment/coredns (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-sa-token-automount",
@@ -2634,7 +2634,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2643,7 +2643,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-sa-token-automount",
@@ -2652,7 +2652,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2661,7 +2661,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2670,7 +2670,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2679,7 +2679,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2688,7 +2688,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2697,7 +2697,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2706,7 +2706,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|coredns-7d764666f9|kube-system": {
     "rule_id": "workload-sa-token-automount",
@@ -2715,7 +2715,7 @@
     "resource": "ReplicaSet/coredns-7d764666f9 (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-sa-token-automount",
@@ -2724,7 +2724,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Job|batch-check-job|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2733,7 +2733,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-sa-token-automount|Job|hidden-in-layers|default": {
     "rule_id": "workload-sa-token-automount",
@@ -2742,7 +2742,7 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "compliance-psa-not-restricted|Namespace|big-monolith|": {
     "rule_id": "compliance-psa-not-restricted",
@@ -2751,7 +2751,7 @@
     "resource": "Namespace/big-monolith",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "compliance-psa-not-restricted|Namespace|default|": {
     "rule_id": "compliance-psa-not-restricted",
@@ -2760,7 +2760,7 @@
     "resource": "Namespace/default",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "compliance-psa-not-restricted|Namespace|secure-middleware|": {
     "rule_id": "compliance-psa-not-restricted",
@@ -2769,7 +2769,7 @@
     "resource": "Namespace/secure-middleware",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-privileged-container",
@@ -2778,7 +2778,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-privileged-container",
@@ -2787,7 +2787,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-privileged-container",
@@ -2796,7 +2796,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|Deployment|health-check-deployment|default": {
     "rule_id": "workload-privileged-container",
@@ -2805,7 +2805,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-privileged-container",
@@ -2814,7 +2814,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-privileged-container",
@@ -2823,7 +2823,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-privileged-container",
@@ -2832,7 +2832,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-privileged-container|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-privileged-container",
@@ -2841,7 +2841,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|cluster-admin|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2850,7 +2850,7 @@
     "resource": "ClusterRole/cluster-admin",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|system:controller:generic-garbage-collector|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2859,7 +2859,7 @@
     "resource": "ClusterRole/system:controller:generic-garbage-collector",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|system:controller:horizontal-pod-autoscaler|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2868,7 +2868,7 @@
     "resource": "ClusterRole/system:controller:horizontal-pod-autoscaler",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|system:controller:namespace-controller|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2877,7 +2877,7 @@
     "resource": "ClusterRole/system:controller:namespace-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|system:controller:resourcequota-controller|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2886,7 +2886,7 @@
     "resource": "ClusterRole/system:controller:resourcequota-controller",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|ClusterRole|system:kube-controller-manager|": {
     "rule_id": "rbac-wildcard-resources",
@@ -2895,7 +2895,7 @@
     "resource": "ClusterRole/system:kube-controller-manager",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "rbac-wildcard-resources|Role|secret-reader|big-monolith": {
     "rule_id": "rbac-wildcard-resources",
@@ -2904,7 +2904,7 @@
     "resource": "Role/secret-reader (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "etcd-encryption-missing|ControlPlane|apiServer|": {
     "rule_id": "etcd-encryption-missing",
@@ -2912,7 +2912,7 @@
     "severity": "HIGH",
     "resource": "ControlPlane/apiServer",
     "first_seen": "2026-07-18T06:33:55Z",
-    "last_seen": "2026-07-18T06:33:55Z",
+    "last_seen": "2026-07-18T15:59:13Z",
     "resolved_at": null
   },
   "workload-no-seccomp|Pod|hunger-check-deployment-5488f8b86c-wxlpk|big-monolith": {
@@ -2922,7 +2922,7 @@
     "resource": "Pod/hunger-check-deployment-5488f8b86c-wxlpk (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|batch-check-job-nksgj|default": {
     "rule_id": "workload-no-seccomp",
@@ -2931,7 +2931,7 @@
     "resource": "Pod/batch-check-job-nksgj (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|build-code-deployment-84fb858df9-8d6jw|default": {
     "rule_id": "workload-no-seccomp",
@@ -2940,7 +2940,7 @@
     "resource": "Pod/build-code-deployment-84fb858df9-8d6jw (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|health-check-deployment-5f8b94447d-blxwg|default": {
     "rule_id": "workload-no-seccomp",
@@ -2949,7 +2949,7 @@
     "resource": "Pod/health-check-deployment-5f8b94447d-blxwg (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|hidden-in-layers-sp2dm|default": {
     "rule_id": "workload-no-seccomp",
@@ -2958,7 +2958,7 @@
     "resource": "Pod/hidden-in-layers-sp2dm (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|internal-proxy-deployment-c59c45d94-jh4hf|default": {
     "rule_id": "workload-no-seccomp",
@@ -2967,7 +2967,7 @@
     "resource": "Pod/internal-proxy-deployment-c59c45d94-jh4hf (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|kubernetes-goat-home-deployment-cd46cd955-db22l|default": {
     "rule_id": "workload-no-seccomp",
@@ -2976,7 +2976,7 @@
     "resource": "Pod/kubernetes-goat-home-deployment-cd46cd955-db22l (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|poor-registry-deployment-7b75fbd7-6sl4h|default": {
     "rule_id": "workload-no-seccomp",
@@ -2985,7 +2985,7 @@
     "resource": "Pod/poor-registry-deployment-7b75fbd7-6sl4h (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|system-monitor-deployment-866f697c75-tsz9n|default": {
     "rule_id": "workload-no-seccomp",
@@ -2994,7 +2994,7 @@
     "resource": "Pod/system-monitor-deployment-866f697c75-tsz9n (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|coredns-7d764666f9-wn2gn|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3003,7 +3003,7 @@
     "resource": "Pod/coredns-7d764666f9-wn2gn (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|kube-proxy-62wwg|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3012,7 +3012,7 @@
     "resource": "Pod/kube-proxy-62wwg (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|storage-provisioner|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3021,7 +3021,7 @@
     "resource": "Pod/storage-provisioner (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Pod|cache-store-deployment-8bf8d695b-54h9x|secure-middleware": {
     "rule_id": "workload-no-seccomp",
@@ -3030,7 +3030,7 @@
     "resource": "Pod/cache-store-deployment-8bf8d695b-54h9x (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|hunger-check-deployment|big-monolith": {
     "rule_id": "workload-no-seccomp",
@@ -3039,7 +3039,7 @@
     "resource": "Deployment/hunger-check-deployment (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|build-code-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3048,7 +3048,7 @@
     "resource": "Deployment/build-code-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|health-check-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3057,7 +3057,7 @@
     "resource": "Deployment/health-check-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|internal-proxy-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3066,7 +3066,7 @@
     "resource": "Deployment/internal-proxy-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|kubernetes-goat-home-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3075,7 +3075,7 @@
     "resource": "Deployment/kubernetes-goat-home-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|poor-registry-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3084,7 +3084,7 @@
     "resource": "Deployment/poor-registry-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|system-monitor-deployment|default": {
     "rule_id": "workload-no-seccomp",
@@ -3093,7 +3093,7 @@
     "resource": "Deployment/system-monitor-deployment (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|coredns|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3102,7 +3102,7 @@
     "resource": "Deployment/coredns (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Deployment|cache-store-deployment|secure-middleware": {
     "rule_id": "workload-no-seccomp",
@@ -3111,7 +3111,7 @@
     "resource": "Deployment/cache-store-deployment (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|DaemonSet|kube-proxy|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3120,7 +3120,7 @@
     "resource": "DaemonSet/kube-proxy (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|hunger-check-deployment-5488f8b86c|big-monolith": {
     "rule_id": "workload-no-seccomp",
@@ -3129,7 +3129,7 @@
     "resource": "ReplicaSet/hunger-check-deployment-5488f8b86c (big-monolith)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|build-code-deployment-84fb858df9|default": {
     "rule_id": "workload-no-seccomp",
@@ -3138,7 +3138,7 @@
     "resource": "ReplicaSet/build-code-deployment-84fb858df9 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|health-check-deployment-5f8b94447d|default": {
     "rule_id": "workload-no-seccomp",
@@ -3147,7 +3147,7 @@
     "resource": "ReplicaSet/health-check-deployment-5f8b94447d (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|internal-proxy-deployment-c59c45d94|default": {
     "rule_id": "workload-no-seccomp",
@@ -3156,7 +3156,7 @@
     "resource": "ReplicaSet/internal-proxy-deployment-c59c45d94 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|kubernetes-goat-home-deployment-cd46cd955|default": {
     "rule_id": "workload-no-seccomp",
@@ -3165,7 +3165,7 @@
     "resource": "ReplicaSet/kubernetes-goat-home-deployment-cd46cd955 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|poor-registry-deployment-7b75fbd7|default": {
     "rule_id": "workload-no-seccomp",
@@ -3174,7 +3174,7 @@
     "resource": "ReplicaSet/poor-registry-deployment-7b75fbd7 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|system-monitor-deployment-866f697c75|default": {
     "rule_id": "workload-no-seccomp",
@@ -3183,7 +3183,7 @@
     "resource": "ReplicaSet/system-monitor-deployment-866f697c75 (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|coredns-7d764666f9|kube-system": {
     "rule_id": "workload-no-seccomp",
@@ -3192,7 +3192,7 @@
     "resource": "ReplicaSet/coredns-7d764666f9 (kube-system)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|ReplicaSet|cache-store-deployment-8bf8d695b|secure-middleware": {
     "rule_id": "workload-no-seccomp",
@@ -3201,7 +3201,7 @@
     "resource": "ReplicaSet/cache-store-deployment-8bf8d695b (secure-middleware)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Job|batch-check-job|default": {
     "rule_id": "workload-no-seccomp",
@@ -3210,7 +3210,7 @@
     "resource": "Job/batch-check-job (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-18T15:59:13Z"
   },
   "workload-no-seccomp|Job|hidden-in-layers|default": {
     "rule_id": "workload-no-seccomp",
@@ -3219,6 +3219,708 @@
     "resource": "Job/hidden-in-layers (default)",
     "first_seen": "2026-07-18T06:33:55Z",
     "last_seen": "2026-07-18T06:33:55Z",
+    "resolved_at": "2026-07-18T15:59:13Z"
+  },
+  "workload-host-ipc|Pod|payment-api|production": {
+    "rule_id": "workload-host-ipc",
+    "title": "Host IPC namespace shared",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-no-seccomp|Pod|payment-api|production": {
+    "rule_id": "workload-no-seccomp",
+    "title": "No seccomp profile",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-no-seccomp|Pod|cache-redis|staging": {
+    "rule_id": "workload-no-seccomp",
+    "title": "No seccomp profile",
+    "severity": "MEDIUM",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-no-seccomp|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-no-seccomp",
+    "title": "No seccomp profile",
+    "severity": "MEDIUM",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-bind-escalate-verbs|ClusterRole|binder|": {
+    "rule_id": "rbac-bind-escalate-verbs",
+    "title": "bind/escalate/impersonate verbs",
+    "severity": "CRITICAL",
+    "resource": "ClusterRole/binder",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-run-as-root|Pod|payment-api|production": {
+    "rule_id": "workload-run-as-root",
+    "title": "Container runs as root",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-run-as-root|Pod|cache-redis|staging": {
+    "rule_id": "workload-run-as-root",
+    "title": "Container runs as root",
+    "severity": "HIGH",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-run-as-root|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-run-as-root",
+    "title": "Container runs as root",
+    "severity": "HIGH",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-can-delete-events|ClusterRole|super-role|": {
+    "rule_id": "rbac-can-delete-events",
+    "title": "Can delete Kubernetes events",
+    "severity": "HIGH",
+    "resource": "ClusterRole/super-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-can-delete-events|ClusterRole|cm-writer|": {
+    "rule_id": "rbac-can-delete-events",
+    "title": "Can delete Kubernetes events",
+    "severity": "HIGH",
+    "resource": "ClusterRole/cm-writer",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "kubelet-read-only-port|ControlPlane|kubelet|": {
+    "rule_id": "kubelet-read-only-port",
+    "title": "Kubelet read-only port open",
+    "severity": "HIGH",
+    "resource": "ControlPlane/kubelet",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "iam-managed-identity-reachable|ServiceAccount|shared-sa|production": {
+    "rule_id": "iam-managed-identity-reachable",
+    "title": "Managed identity reachable",
+    "severity": "MEDIUM",
+    "resource": "ServiceAccount/shared-sa (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-wildcard-resources|ClusterRole|super-role|": {
+    "rule_id": "rbac-wildcard-resources",
+    "title": "Wildcard resources in role",
+    "severity": "CRITICAL",
+    "resource": "ClusterRole/super-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "as-sa-fanout|ServiceAccount|shared-sa|": {
+    "rule_id": "as-sa-fanout",
+    "title": "ServiceAccount fan-out",
+    "severity": "MEDIUM",
+    "resource": "ServiceAccount/shared-sa",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-hostpath-root|Pod|payment-api|production": {
+    "rule_id": "workload-hostpath-root",
+    "title": "Sensitive hostPath mount",
+    "severity": "CRITICAL",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "img-not-signed|Pod|payment-api|production": {
+    "rule_id": "img-not-signed",
+    "title": "Image not signed",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-docker-socket|Pod|payment-api|production": {
+    "rule_id": "workload-docker-socket",
+    "title": "Docker socket mounted",
+    "severity": "CRITICAL",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-cluster-admin-default-sa|ClusterRoleBinding|default-admin|": {
+    "rule_id": "rbac-cluster-admin-default-sa",
+    "title": "cluster-admin on default SA",
+    "severity": "CRITICAL",
+    "resource": "ClusterRoleBinding/default-admin",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "deprecated-k8s-version|ControlPlane|version|": {
+    "rule_id": "deprecated-k8s-version",
+    "title": "Deprecated/EOL Kubernetes version",
+    "severity": "HIGH",
+    "resource": "ControlPlane/version",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "sec-mounted-cloud-creds|Pod|cache-redis|staging": {
+    "rule_id": "sec-mounted-cloud-creds",
+    "title": "Mounted cloud credentials",
+    "severity": "HIGH",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-wildcard-verbs|ClusterRole|super-role|": {
+    "rule_id": "rbac-wildcard-verbs",
+    "title": "Wildcard verbs in role",
+    "severity": "CRITICAL",
+    "resource": "ClusterRole/super-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-hostpath-writable|Pod|payment-api|production": {
+    "rule_id": "workload-hostpath-writable",
+    "title": "Writable hostPath mount",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-coredns-configmap-write|ClusterRole|super-role|": {
+    "rule_id": "rbac-coredns-configmap-write",
+    "title": "Can write ConfigMaps (CoreDNS risk)",
+    "severity": "HIGH",
+    "resource": "ClusterRole/super-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-coredns-configmap-write|ClusterRole|cm-writer|": {
+    "rule_id": "rbac-coredns-configmap-write",
+    "title": "Can write ConfigMaps (CoreDNS risk)",
+    "severity": "HIGH",
+    "resource": "ClusterRole/cm-writer",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-missing-limits|Pod|payment-api|production": {
+    "rule_id": "workload-missing-limits",
+    "title": "Missing resource limits",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-missing-limits|Pod|cache-redis|staging": {
+    "rule_id": "workload-missing-limits",
+    "title": "Missing resource limits",
+    "severity": "MEDIUM",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-missing-limits|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-missing-limits",
+    "title": "Missing resource limits",
+    "severity": "MEDIUM",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "compliance-psa-not-restricted|Namespace|production|": {
+    "rule_id": "compliance-psa-not-restricted",
+    "title": "PSA not enforcing 'restricted'",
+    "severity": "HIGH",
+    "resource": "Namespace/production",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "compliance-psa-not-restricted|Namespace|staging|": {
+    "rule_id": "compliance-psa-not-restricted",
+    "title": "PSA not enforcing 'restricted'",
+    "severity": "HIGH",
+    "resource": "Namespace/staging",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "iam-overpermissive|CloudIAM|shared-sa|production": {
+    "rule_id": "iam-overpermissive",
+    "title": "Over-permissive workload identity",
+    "severity": "HIGH",
+    "resource": "CloudIAM/shared-sa (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "iam-overpermissive|CloudIAM|?|": {
+    "rule_id": "iam-overpermissive",
+    "title": "Over-permissive workload identity",
+    "severity": "HIGH",
+    "resource": "CloudIAM/?",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-allow-priv-escalation|Pod|payment-api|production": {
+    "rule_id": "workload-allow-priv-escalation",
+    "title": "Privilege escalation allowed",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-allow-priv-escalation|Pod|cache-redis|staging": {
+    "rule_id": "workload-allow-priv-escalation",
+    "title": "Privilege escalation allowed",
+    "severity": "HIGH",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-allow-priv-escalation|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-allow-priv-escalation",
+    "title": "Privilege escalation allowed",
+    "severity": "HIGH",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-secret-read-broad|ClusterRole|super-role|": {
+    "rule_id": "rbac-secret-read-broad",
+    "title": "Broad secret read access",
+    "severity": "HIGH",
+    "resource": "ClusterRole/super-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "rbac-secret-read-broad|ClusterRole|secret-reader|": {
+    "rule_id": "rbac-secret-read-broad",
+    "title": "Broad secret read access",
+    "severity": "HIGH",
+    "resource": "ClusterRole/secret-reader",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "admission-webhook-failurepolicy|MutatingWebhookConfiguration|evil-webhook|": {
+    "rule_id": "admission-webhook-failurepolicy",
+    "title": "Webhook failurePolicy=Ignore",
+    "severity": "HIGH",
+    "resource": "MutatingWebhookConfiguration/evil-webhook",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-lb-no-source-range|Service|lb-public|production": {
+    "rule_id": "net-lb-no-source-range",
+    "title": "LoadBalancer without source range",
+    "severity": "HIGH",
+    "resource": "Service/lb-public (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-dangerous-caps|Pod|payment-api|production": {
+    "rule_id": "workload-dangerous-caps",
+    "title": "Dangerous capabilities added",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-dangerous-caps|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-dangerous-caps",
+    "title": "Dangerous capabilities added",
+    "severity": "HIGH",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "kubelet-authz-always-allow|ControlPlane|kubelet|": {
+    "rule_id": "kubelet-authz-always-allow",
+    "title": "Kubelet AlwaysAllow authz",
+    "severity": "CRITICAL",
+    "resource": "ControlPlane/kubelet",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "apiserver-anonymous-auth|ControlPlane|apiServer|": {
+    "rule_id": "apiserver-anonymous-auth",
+    "title": "API server anonymous auth enabled",
+    "severity": "CRITICAL",
+    "resource": "ControlPlane/apiServer",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-writable-root-fs|Pod|payment-api|production": {
+    "rule_id": "workload-writable-root-fs",
+    "title": "Writable root filesystem",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-writable-root-fs|Pod|cache-redis|staging": {
+    "rule_id": "workload-writable-root-fs",
+    "title": "Writable root filesystem",
+    "severity": "MEDIUM",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-writable-root-fs|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-writable-root-fs",
+    "title": "Writable root filesystem",
+    "severity": "MEDIUM",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-nodeport-service|Service|api-nodeport|production": {
+    "rule_id": "net-nodeport-service",
+    "title": "NodePort service exposed",
+    "severity": "MEDIUM",
+    "resource": "Service/api-nodeport (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-nodeport-service|Service|kubernetes-dashboard|kubernetes-dashboard": {
+    "rule_id": "net-nodeport-service",
+    "title": "NodePort service exposed",
+    "severity": "MEDIUM",
+    "resource": "Service/kubernetes-dashboard (kubernetes-dashboard)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-sa-token-automount|Pod|payment-api|production": {
+    "rule_id": "workload-sa-token-automount",
+    "title": "SA token auto-mounted",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-sa-token-automount|Pod|cache-redis|staging": {
+    "rule_id": "workload-sa-token-automount",
+    "title": "SA token auto-mounted",
+    "severity": "MEDIUM",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-sa-token-automount|Pod|nignx-web|production": {
+    "rule_id": "workload-sa-token-automount",
+    "title": "SA token auto-mounted",
+    "severity": "MEDIUM",
+    "resource": "Pod/nignx-web (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-sa-token-automount|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-sa-token-automount",
+    "title": "SA token auto-mounted",
+    "severity": "MEDIUM",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-sa-token-automount|ReplicaSet|payment-api-7d9f8c9d76|production": {
+    "rule_id": "workload-sa-token-automount",
+    "title": "SA token auto-mounted",
+    "severity": "MEDIUM",
+    "resource": "ReplicaSet/payment-api-7d9f8c9d76 (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-host-network|Pod|payment-api|production": {
+    "rule_id": "workload-host-network",
+    "title": "Host network shared",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-host-network|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-host-network",
+    "title": "Host network shared",
+    "severity": "HIGH",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "sec-env-var-secrets|Pod|payment-api|production": {
+    "rule_id": "sec-env-var-secrets",
+    "title": "Secret exposed as env var",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "cronjob-suspicious|CronJob|backup-cron|production": {
+    "rule_id": "cronjob-suspicious",
+    "title": "Suspicious CronJob",
+    "severity": "HIGH",
+    "resource": "CronJob/backup-cron (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "admission-sidecar-injection|MutatingWebhookConfiguration|evil-webhook|": {
+    "rule_id": "admission-sidecar-injection",
+    "title": "Unrecognized sidecar injection",
+    "severity": "HIGH",
+    "resource": "MutatingWebhookConfiguration/evil-webhook",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-caps-not-dropped|Pod|payment-api|production": {
+    "rule_id": "workload-caps-not-dropped",
+    "title": "Capabilities not dropped (ALL)",
+    "severity": "HIGH",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-caps-not-dropped|Pod|cache-redis|staging": {
+    "rule_id": "workload-caps-not-dropped",
+    "title": "Capabilities not dropped (ALL)",
+    "severity": "HIGH",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-caps-not-dropped|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-caps-not-dropped",
+    "title": "Capabilities not dropped (ALL)",
+    "severity": "HIGH",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "admission-malicious-webhook|MutatingWebhookConfiguration|evil-webhook|": {
+    "rule_id": "admission-malicious-webhook",
+    "title": "Suspicious mutating webhook",
+    "severity": "CRITICAL",
+    "resource": "MutatingWebhookConfiguration/evil-webhook",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-latest-tag|Pod|payment-api|production": {
+    "rule_id": "workload-latest-tag",
+    "title": "Mutable :latest image tag",
+    "severity": "MEDIUM",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-latest-tag|Pod|cache-redis|staging": {
+    "rule_id": "workload-latest-tag",
+    "title": "Mutable :latest image tag",
+    "severity": "MEDIUM",
+    "resource": "Pod/cache-redis (staging)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-latest-tag|Pod|nignx-web|production": {
+    "rule_id": "workload-latest-tag",
+    "title": "Mutable :latest image tag",
+    "severity": "MEDIUM",
+    "resource": "Pod/nignx-web (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-host-pid|Pod|payment-api|production": {
+    "rule_id": "workload-host-pid",
+    "title": "Host PID namespace shared",
+    "severity": "CRITICAL",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "img-pull-policy|Pod|payment-api|production": {
+    "rule_id": "img-pull-policy",
+    "title": "Stale-image pull policy",
+    "severity": "LOW",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-metadata-api-open|Namespace|production|": {
+    "rule_id": "net-metadata-api-open",
+    "title": "Metadata API not blocked",
+    "severity": "HIGH",
+    "resource": "Namespace/production",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-metadata-api-open|Namespace|staging|": {
+    "rule_id": "net-metadata-api-open",
+    "title": "Metadata API not blocked",
+    "severity": "HIGH",
+    "resource": "Namespace/staging",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-no-networkpolicy|Namespace|production|": {
+    "rule_id": "net-no-networkpolicy",
+    "title": "Namespace without NetworkPolicy",
+    "severity": "HIGH",
+    "resource": "Namespace/production",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-no-networkpolicy|Namespace|staging|": {
+    "rule_id": "net-no-networkpolicy",
+    "title": "Namespace without NetworkPolicy",
+    "severity": "HIGH",
+    "resource": "Namespace/staging",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-ingress-no-tls|Ingress|web-ingress|production": {
+    "rule_id": "net-ingress-no-tls",
+    "title": "Ingress without TLS",
+    "severity": "HIGH",
+    "resource": "Ingress/web-ingress (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "iam-node-role-broad|CloudIAM|eks-node-role|": {
+    "rule_id": "iam-node-role-broad",
+    "title": "Broad node instance role",
+    "severity": "HIGH",
+    "resource": "CloudIAM/eks-node-role",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "etcd-client-cert-auth|ControlPlane|etcd|": {
+    "rule_id": "etcd-client-cert-auth",
+    "title": "etcd client cert auth disabled",
+    "severity": "CRITICAL",
+    "resource": "ControlPlane/etcd",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "sec-configmap-credentials|ConfigMap|app-config|production": {
+    "rule_id": "sec-configmap-credentials",
+    "title": "Credentials in ConfigMap",
+    "severity": "HIGH",
+    "resource": "ConfigMap/app-config (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "net-dashboard-exposed|Service|kubernetes-dashboard|kubernetes-dashboard": {
+    "rule_id": "net-dashboard-exposed",
+    "title": "Kubernetes dashboard exposed",
+    "severity": "CRITICAL",
+    "resource": "Service/kubernetes-dashboard (kubernetes-dashboard)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-privileged-container|Pod|payment-api|production": {
+    "rule_id": "workload-privileged-container",
+    "title": "Privileged container",
+    "severity": "CRITICAL",
+    "resource": "Pod/payment-api (production)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "workload-privileged-container|Pod|aws-node-64w2k|kube-system": {
+    "rule_id": "workload-privileged-container",
+    "title": "Privileged container",
+    "severity": "CRITICAL",
+    "resource": "Pod/aws-node-64w2k (kube-system)",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
+    "resolved_at": null
+  },
+  "kubelet-anonymous-auth|ControlPlane|kubelet|": {
+    "rule_id": "kubelet-anonymous-auth",
+    "title": "Kubelet anonymous auth enabled",
+    "severity": "CRITICAL",
+    "resource": "ControlPlane/kubelet",
+    "first_seen": "2026-07-18T15:59:13Z",
+    "last_seen": "2026-07-18T15:59:13Z",
     "resolved_at": null
   }
 }

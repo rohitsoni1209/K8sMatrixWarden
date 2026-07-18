@@ -17,6 +17,7 @@ import sys
 
 from ..bootstrap import build_platform
 from ..core.models import (ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity)
+from ..core.report_store import DEFAULT_DIR as _DEFAULT_REPORTS_DIR
 from ..agents.orchestrator import Orchestrator
 from ..agents.scanner import ScannerAgent
 
@@ -112,7 +113,14 @@ def cmd_scan(a) -> int:
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    result = orch.run(request, collector, mode_label=mode_label)
+    try:
+        result = orch.run(request, collector, mode_label=mode_label)
+    except RuntimeError as exc:
+        # A clean, actionable message (e.g. cluster unreachable) — not a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    for w in getattr(collector, "warnings", []):
+        print(f"warning: {w}", file=sys.stderr)
 
     if a.output == "pdf":
         try:
@@ -420,8 +428,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="exit 1 if a finding at/above this severity is found (CI mode)")
     s.add_argument("--save", action="store_true",
                    help="persist the result to the report store for later download")
-    s.add_argument("--reports-dir", default="k8smatrixwarden-reports",
-                   help="report store directory (default: ./k8smatrixwarden-reports)")
+    s.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR,
+                   help=f"report store directory (shared default: {_DEFAULT_REPORTS_DIR}; "
+                        f"override with $K8SMATRIXWARDEN_REPORTS_DIR)")
     s.set_defaults(func=cmd_scan)
 
     r = sub.add_parser("rules", help="list the rule registry")
@@ -477,12 +486,12 @@ def build_parser() -> argparse.ArgumentParser:
     rp = sub.add_parser("report", help="list / download stored scan reports")
     rpsub = rp.add_subparsers(dest="report_cmd", required=True)
     rl = rpsub.add_parser("list", help="list stored reports")
-    rl.add_argument("--reports-dir", default="k8smatrixwarden-reports")
+    rl.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR)
     rl.add_argument("--limit", type=int)
     rl.set_defaults(func=cmd_report)
     rd = rpsub.add_parser("download",
                           help="re-render a stored report in any format, to any filename")
-    rd.add_argument("--reports-dir", default="k8smatrixwarden-reports")
+    rd.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR)
     rd.add_argument("--scan-id", help="scan id to download (default: latest)")
     rd.add_argument("--format", "-f", default="markdown", choices=fmts)
     rd.add_argument("--output", "-o", help="output filename (default: print to stdout)")
@@ -495,7 +504,7 @@ def build_parser() -> argparse.ArgumentParser:
     w = sub.add_parser("web", help="launch the Security Dashboard web interface")
     w.add_argument("--host", default="127.0.0.1")
     w.add_argument("--port", type=int, default=8080)
-    w.add_argument("--reports-dir", default="k8smatrixwarden-reports")
+    w.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR)
     w.add_argument("--no-scan", action="store_true",
                    help="serve saved reports read-only; disable the in-dashboard scan button")
     w.add_argument("--open", action="store_true", help="open a browser at startup")
@@ -506,7 +515,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_scope_args(mx)
     _add_selector_args(mx)
     mx.add_argument("--scan-id", help="build the matrix from a saved report instead of scanning")
-    mx.add_argument("--reports-dir", default="k8smatrixwarden-reports")
+    mx.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR)
     mx.add_argument("--coverage", action="store_true",
                     help="show global detection coverage (all rules), not a specific scan")
     mx.add_argument("--mock", action="store_true")

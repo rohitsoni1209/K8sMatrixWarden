@@ -4,11 +4,23 @@ This is the required review pass after the initial build. It records what was ve
 refinements made to improve the code over a naive reading of the spec, the deliberate
 deviations (with justification), and the known limitations / next steps.
 
-**Status at review:** 10 shards, **56 rules**, **25/25 tests passing**, `doctor` validation
-clean (no duplicate rule ids, every rule's technique id present in the vendored taxonomy,
-all aliases resolve). End-to-end mock scan produces a Critical-rated report; tactic/technique/
-module/framework slices, namespace scoping, all six report formats, and CI exit codes all
-verified working.
+**Status at review:** 10 shards, **56 rules**, **30 MCP tools**, **184/184 tests passing**,
+`doctor` validation clean (no duplicate rule ids, every rule's technique id present in the
+vendored taxonomy, all aliases resolve). End-to-end mock scan produces a Critical-rated report;
+tactic/technique/module/framework slices, namespace scoping, all seven report formats
+(terminal/text/markdown/json/sarif/html/pdf), and CI exit codes all verified working. The
+scanner core has since been extended with a scan × runtime **correlation** layer, **drift**
+detection, **attack-path** derivation, and an interactive **SPA dashboard** — see §6f — and
+the dashboard was then overhauled for deep-linking, report selection, an IST time base, and a
+professional visual pass (§6g). The tool is now **detect-and-report only**: the earlier
+remediation engine (§6c/§6d) has been removed, so no write/apply path exists on any surface.
+
+> **Note on the numbered history below.** Sections §6a–§6f record the review passes in the
+> order they happened, so their inline test/tool counts (25 → 31 → 113 → 137 → 163 → 229) are
+> *historical checkpoints*, not the current totals. The current totals are the ones in this
+> status block (56 rules, 30 MCP tools, 184 tests); §6g brings the story up to date. In
+> particular, the remediation engine described in §6c and the `explain_remediation` MCP tool
+> in §6d were subsequently **removed** — those sections are kept as historical record.
 
 ---
 
@@ -28,7 +40,7 @@ verified working.
 | Report formats | terminal/text/markdown/json/sarif/html all render |
 | CI mode | `--fail-on CRITICAL` → exit 1 with critical, 0 without |
 | Runtime agent | Falco + audit events matched to tagged rules (unit-tested) |
-| Remediation safety | dry-run default; declines without confirmation (unit-tested) |
+| Detect-and-report only | no remediation/apply path on any surface; MCP write-tool guard test passes |
 | Zero-dependency core | platform builds & scans with no `kubernetes`/`rich`/`mcp`/`pyyaml`/`pytest` |
 
 ---
@@ -125,8 +137,9 @@ tool runnable and honest.
 
 ## 6. Security posture of the tool itself
 
-- **Read-only by default**; the only write path is the Remediation Agent, gated by mandatory
-  confirmation + snapshot + rollback.
+- **Detect-and-report only**: the tool has no write/apply path on any surface (the earlier
+  Remediation Agent has been removed — see the status block and §0.2 in `HANDOFF.md`). Scanning
+  is get/list/watch only and no output mutates the cluster.
 - **Per-plugin least privilege**: `k8smatrixwarden roles` emits a scoped ClusterRole per shard so a
   compromised/buggy shard is limited to what it declared (§20). Cloud IAM's external
   credential is declared in its manifest, not granted globally.
@@ -324,10 +337,12 @@ every format**, a full write-up with —
 4. **Impact** — the concrete, real-world consequence if left unaddressed (not a severity
    restatement — an actual explanation, e.g. what a container-escape primitive lets an
    attacker do next)
-5. **Remediation** — the exact command (from the existing schema-aware remediation
-   engine, §6c) plus a reference link, or, when it can't be automated, why not
+5. **Remediation** — the exact command (from the schema-aware remediation engine, §6c)
+   plus a reference link, or, when it can't be automated, why not
+   *(this section was later removed with the remediation engine — see the status block;
+   current reports carry sections 1–4 and 6 only)*
 6. **Validation** — exact steps/commands to reproduce and independently verify the
-   finding, and to confirm it cleared after the fix
+   finding, and to confirm it cleared
 
 **New module — `k8smatrixwarden/core/finding_context.py`** is the single shared content
 layer every renderer (markdown/html/json/sarif/pdf; terminal/text more lightly) reads
@@ -378,13 +393,134 @@ paths. Test suite: **163/163 passing** (was 137/137 before this pass) — 11 new
 `test_finding_context.py`, 6 new `test_pdf_report.py`, plus new assertions in
 `test_reporting.py` and `test_mcp.py`.
 
+## 6f. Scan × runtime correlation, drift, attack path & interactive dashboard (33 MCP tools, 220 tests)
+
+The strategic bet after the scanner was solid: *scanning alone is table stakes* (Trivy/
+kubescape/kube-bench all do it). The differentiator is **scan × runtime correlation +
+causality** — not "here's a weakness" but "**this** weakness is being **exploited right now**,
+and here's the kill-chain." This pass built the first half of that and rebuilt the dashboard
+around it. (Full narrative + file-by-file map: `HANDOFF.md`.)
+
+- **Correlation engine — `core/correlation.py` (new).** `correlate(findings, alerts)` joins
+  static scan findings to live runtime alerts by **MITRE tactic** (+ namespace when the event
+  names one): `confirmed` (same tactic + same namespace — the weakness is being acted on),
+  `corroborated` (same tactic), `runtime-only` (behaviour the scan never predicted). Pure
+  function of `(findings, alerts)` — no cluster access, no re-scan.
+- **Drift detection — same module.** `detect_drift(pods, events)` flags runtime behaviour that
+  **contradicts a Pod's declared posture** (uid 0 despite `runAsNonRoot`, writes despite
+  `readOnlyRootFilesystem`, a privileged-only op from a non-privileged pod) — the strongest
+  signal, because it means a control the operator *thinks* is enforced is not.
+  Un-attributable events are **skipped, not guessed** (keeps false positives ~0).
+- **Falco feed normalization — `agents/runtime.py`.** `normalize_falco_event` /
+  `normalize_events` bridge nested falcosidekick JSON (`output_fields`, dotted keys,
+  `source: syscall|k8s_audit`) to the flat internal shape the matchers expect. `POST /api/runtime`
+  and the `correlate_runtime`/`detect_drift` MCP tools normalize on ingest.
+- **Attack-path derivation — `core/threat_matrix.py::attack_paths()`.** Chains the threat
+  matrix's **hit** cells (already in kill-chain order) into an exploit path: `chain`, per-tactic
+  `steps`, `entry_points`, `reaches_impact`. Kill-chain-order chaining (ATT&CK-navigator
+  convention), not yet a per-finding causal graph — the upgrade path is documented inline.
+- **Cloud/provider auto-detection — `core/evidence.py::detect_provider()`.** Reads Node
+  `providerID` + managed labels → `{cloud, managed, profile}`, so `run_cis_benchmark(profile="auto")`
+  no longer needs a hand-passed `--profile`.
+- **Timeline / MTTD / MTTR — `core/report_store.py`.** A `_timeline.json` index keyed by
+  `rule_id|kind|name|namespace` tracks `first_seen`/`resolved_at` across saved scans; `timeline()`
+  returns open/resolved counts, oldest/median open days, and the oldest critical.
+- **Interactive SPA dashboard — `web/pages.py` (full rewrite), `web/app.py`.** The old
+  server-rendered dashboard became a vanilla-JS single-page app (zero deps, zero CDN) with
+  seven tabs (Overview, Findings, Threat Matrix, Attack Path, Attack Map, Runtime, Scan) fed by
+  `GET /api/dashboard`, plus `GET /api/timeline` and `POST /api/runtime`.
+- **MCP surface: 25 → 33 tools.** +6 this pass: `detect_cluster_provider`, `intelligent_scan`
+  (one call: parse → detect → scan → matrix → attack path), `build_attack_path`,
+  `correlate_runtime`, `detect_drift`, `deploy_falco` (one-click helm install of Falco +
+  falcosidekick with the webhook pre-wired). `run_cis_benchmark` gained `profile="auto"`.
+- **Attack path embedded in exports** — `core/reporting.py` embeds `attack_path` in the JSON
+  report and renders a "🎯 Kill-chain exploit path" section in markdown.
+- **Read-only invariant preserved.** Every new cluster-facing tool is read-only;
+  remediation/apply is still not exposed via MCP or web
+  (`tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`). `deploy_falco` is an
+  opt-in setup action that shells out to `helm`, not a cluster mutation.
+
+**Tests:** new `tests/test_provider.py`, `tests/test_correlation.py` (incl. 5 Falco-normalization
+tests), `tests/test_report_store.py` (timeline + attack-path-in-reports); `test_mcp.py` and
+`test_web.py` extended for the new tools and the SPA/`/api/runtime` contract. **Suite: 220/220
+passing** (was 163/163 before this pass).
+
+### 6.1 Follow-up hardening pass
+
+- **Shared report store — `core/report_store.py` `default_reports_dir()`.** CLI, MCP, and web
+  now default to one cwd-independent store (`~/.k8smatrixwarden/reports`, or
+  `$K8SMATRIXWARDEN_REPORTS_DIR`) instead of a relative `k8smatrixwarden-reports` that resolved
+  per-process-cwd. Result: a CLI/MCP `--save` scan now appears in the web dashboard's history.
+- **Fault-tolerant live scanning — `core/evidence.py`.** `LiveEvidenceCollector` preflights the
+  API server (unreachable → one clear, actionable `RuntimeError`, not a `urllib3` traceback) and
+  demotes per-resource `403`/`404` to skip-with-warning (`collector.warnings`) rather than
+  aborting the scan. Surfaced as CLI `warning:` lines and a `warnings[]` field on web/MCP
+  responses. Per-request timeouts prevent a hung API server from blocking a scan indefinitely.
+- **Packaging:** the editable install had drifted to a stale sibling checkout (27 tools);
+  re-`pip install -e .` from this repo restores all 33.
+- **Tests:** `tests/test_live_resilience.py` (8) — classifier, skip-with-warning, partial-scan,
+  and clean-unreachable-message. **Suite: 229/229 passing.**
+
+## 6g. Web-interface overhaul, deep-linking, report selection & IST time base
+
+This pass reworked the dashboard from a latest-scan viewer into a navigable, cross-linked
+analysis surface, standardized every timestamp to Indian Standard Time, and gave the whole
+web UI a professional, low-emoji visual treatment. (Files: `web/pages.py`, `web/app.py`,
+`core/reporting.py`, `core/results.py`, new `core/timeutil.py`.)
+
+- **Deep-linking, report ↔ dashboard — `core/reporting.py::finding_anchor()`.** Every finding
+  now has a stable, URL-safe anchor and each report card carries a matching `id`, so any
+  surface can jump straight to a finding via `/report/<scan_id>#<anchor>`. The identical slug
+  is recomputed client-side in the dashboard JS (no need to ship it in the payload), and the
+  report page grew a hash-focus script that scrolls to and briefly highlights the targeted
+  card (and un-hides it if a severity filter had it hidden).
+- **Everything clickable.** Findings-table rows, the Overview "fix first" list, Threat-Matrix
+  cell drill-downs, and every Attack-Path / Attack-Map stage now link to the exact finding in
+  the report. Overview's attack-surface tactics jump to their Attack-Path stage; Attack-Path
+  stages and Attack-Map accordions **list all findings under that tactic**. Threat-Matrix
+  drill-downs were enriched (resource, score, domain, MITRE technique, OWASP/CIS, message).
+- **Report selection — `web/app.py::_dashboard_data(scan_id)`.** `GET /api/dashboard?scan_id=…`
+  renders any saved scan (falling back to the latest on an unknown id); a report selector in
+  the dashboard header switches the whole view. Previously the dashboard could only show the
+  newest scan.
+- **MTTD/MTTR panel removed from Overview.** The finding-age panel was dropped from the
+  Overview tab per the redesign; the underlying `_timeline.json` index and `GET /api/timeline`
+  endpoint are unchanged, so the metrics remain available to API consumers.
+- **IST time base — new `core/timeutil.py`.** `generated_at` and scan ids are now Indian
+  Standard Time (UTC+05:30). Timestamps are stored as ISO-8601 with the explicit `+05:30`
+  offset (kept machine-parseable for `fromisoformat` / the timeline diff math) and rendered
+  for humans as `19 Jul 2026, 01:13 IST` in both reports and the dashboard. `results.py` now
+  sources its default `generated_at`/`_scan_id` date from the IST helpers.
+- **Professional visual pass.** Reduced decorative emojis across the dashboard, page shells,
+  report headings, and server startup output; added a refined font/colour system, a gradient
+  brand mark, smoother tab/animation styling, and an accordion for the Attack Map.
+
+**Backward-compatibility & verification.** The `/api/dashboard` JSON contract is a superset
+of before (added `selected_scan_id`; `timeline` still present), so the existing web tests pass
+unchanged. Smoke-tested end-to-end: IST scan ids/timestamps, report anchors matching the JS
+slug, report-selection + unknown-id fallback, and all five web surfaces (dashboard, matrix,
+report, report-matrix, 404). Extracted the SPA JS and confirmed it renders every tab. **Suite:
+184/184 passing.**
+
+> **Why the test/tool totals dropped vs §6.1 (229 tests / 33 tools).** The remediation engine
+> (`agents/remediation.py`, `core/remediation_engine.py`) and its tests were removed to make
+> the tool unambiguously **detect-and-report only**, taking the MCP surface from 33 → 30 tools
+> (dropping `explain_remediation`) and the suite to 184 tests. `tests/test_mcp.py::
+> test_no_remediation_or_apply_tool_is_exposed` still guards that no write/apply tool exists.
+
 ## 7. Suggested next steps (priority order)
 
-1. Wire the **Trivy** and **kube-bench** adapters (highest coverage-per-effort; unlocks real
-   CVE + full CIS).
-2. Add the **cloud IAM adapter** (EKS/GKE/AKS) to populate the `CloudIAM` bucket live —
-   closes the single highest-leverage gap from the redesign (§2).
-3. Feed the **Runtime Agent** from a live Falco/audit source in-cluster (DaemonSet).
-4. Add **trend/delta** storage (scan history) to power the "↑/↓ vs last scan" reporting the
-   spec describes (§18.3).
-5. Layer the **LLM intent parser** onto `Orchestrator.interpret` for free-form phrasing.
+1. **Run Falco in-cluster for real** (highest leverage). The ingestion side is done —
+   `normalize_events` + `POST /api/runtime` accept native falcosidekick JSON, and `deploy_falco`
+   automates the helm install. The only remaining work is infra: point falcosidekick's webhook
+   at a host-reachable `:8080/api/runtime` so the Runtime tab shows *real* live exploitation
+   instead of pasted samples.
+2. **Resource-name-level correlation.** `correlate()` joins on tactic + namespace; once Falco
+   enrichment gives `k8s.pod.name` reliably, tighten `confirmed` to require the same resource
+   and bump namespace-only matches to `corroborated` (one-line change + a test in
+   `core/correlation.py`).
+3. Wire the **Trivy** and **kube-bench** adapters (real CVE + full node-level CIS).
+4. Add the **cloud IAM adapter** (EKS/GKE/AKS) to populate the `CloudIAM` bucket live.
+5. Render the **kill-chain attack path inline in the HTML/PDF reports** (currently JSON/markdown
+   embed it; HTML/PDF still link to the web matrix).
+6. Layer the **LLM intent parser** onto `Orchestrator.interpret` for free-form phrasing.

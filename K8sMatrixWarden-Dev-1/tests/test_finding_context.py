@@ -1,6 +1,6 @@
 """Finding Context (core/finding_context.py) — the shared report-grade content layer
 every renderer (markdown/html/json/sarif/pdf) sources Summary/Standards/MITRE/Impact/
-Remediation/Validation from."""
+Validation from."""
 import os
 import sys
 
@@ -104,10 +104,3 @@ def test_build_finding_context_falls_back_for_unknown_rule_id():
     assert ctx.summary  # falls back to finding.message
     assert ctx.impact
     assert ctx.validation_steps
-
-
-def test_build_finding_context_includes_remediation():
-    f = _finding(remediation_ref="playbook/pod-security-context")
-    ctx = build_finding_context(f)
-    assert ctx.remediation is not None
-    assert hasattr(ctx.remediation, "automatable")

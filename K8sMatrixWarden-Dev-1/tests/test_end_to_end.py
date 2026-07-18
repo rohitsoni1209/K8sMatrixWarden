@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from k8smatrixwarden.agents.orchestrator import Orchestrator
 from k8smatrixwarden.agents.runtime import RuntimeAgent
-from k8smatrixwarden.agents.remediation import RemediationAgent
 from k8smatrixwarden.bootstrap import build_platform
 from k8smatrixwarden.core.models import ScanRequest, Scope, ScopeLevel, Selector
 
@@ -74,16 +73,3 @@ def test_runtime_agent_detects_events():
     assert "rt-shell-in-container" in ids
     assert "rt-metadata-api" in ids
     assert "rt-new-rolebinding" in ids
-
-
-def test_remediation_requires_confirmation_and_is_dry_run():
-    p, res = _run(selector=Selector(rule_ids=["workload-sa-token-automount"]))
-    agent = RemediationAgent(dry_run=True, confirm_fn=lambda _p: True)
-    plan = agent.plan(res.findings[0])
-    assert plan.snapshot_cmd.startswith("kubectl get")
-    entry = agent.apply(plan, assume_yes=True)
-    assert entry.result == "dry-run"          # never really mutates in dry-run
-
-    declined = RemediationAgent(dry_run=True, confirm_fn=lambda _p: False)
-    e2 = declined.apply(declined.plan(res.findings[0]))
-    assert e2.result == "user-declined"       # confirmation is mandatory

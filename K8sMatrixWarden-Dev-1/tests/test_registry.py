@@ -25,20 +25,6 @@ def test_no_duplicate_rule_ids():
     assert len(ids) == len(set(ids))
 
 
-def test_no_dangling_remediation_refs():
-    # A rule that declares a remediation_ref is promising a fix exists — it must resolve
-    # to something real (either a static playbook or a schema-aware FieldPatch), never
-    # silently to nothing. `remediation_ref=None` (no fix at all) is fine; a ref that
-    # points nowhere is a data-entry bug that would make `_fix_commands`/explain_
-    # remediation silently return no commands while looking like it should have one.
-    from k8smatrixwarden.core.remediation_engine import FIELD_PATCHES
-    from k8smatrixwarden.mcp.datasets import PLAYBOOKS
-    p = build_platform()
-    known = set(PLAYBOOKS.keys()) | set(FIELD_PATCHES.keys())
-    dangling = [(r.id, r.remediation_ref) for r in p.registry.rules.all()
-               if r.remediation_ref and r.remediation_ref not in known]
-    assert dangling == [], f"rules with a remediation_ref that resolves to nothing: {dangling}"
-
 
 def test_every_tactic_has_coverage():
     p = build_platform()

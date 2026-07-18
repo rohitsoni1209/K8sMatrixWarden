@@ -5,8 +5,8 @@ A conversational REPL over the Orchestrator. It goes well beyond fixed prompts:
 
   * understands varied phrasing / synonyms / typos (via the Orchestrator's synonym engine
     plus fuzzy 'did you mean' fallback);
-  * has SESSION MEMORY — after a scan you can ask follow-ups ("show criticals", "how do I
-    fix the rbac issue", "export markdown", "details <rule>");
+  * has SESSION MEMORY — after a scan you can ask follow-ups ("show criticals",
+    "details <rule>", "export markdown");
   * answers informational questions ("what can you do", "list tactics", "explain
     persistence", "what is workload_pod_security");
   * is namespace-aware ("scan production" targets that namespace);
@@ -32,7 +32,7 @@ BANNER = r"""
     • scan production for persistence          • any leaked secrets?
     • is my cluster secure?                    • check RBAC and permissions
     • scan only container escape               • run the CIS benchmark
-    • show me the critical findings            • how do I fix the privileged pod?
+    • show me the critical findings            • details <rule-id>
     • what tactics can you scan for?           • explain lateral movement
 
   Type 'help' for commands, 'exit' to quit.
@@ -50,7 +50,6 @@ HELP = """  Commands & things you can say:
   AFTER A SCAN (follow-ups)
     show criticals / show high / show medium            filter the last results
     summary                                             re-show the last summary
-    how do I fix <x>? / remediation                     show remediation commands
     details <rule-id>                                   deep-dive one finding
     export markdown|json|html|sarif                     save the last report to a file
 
@@ -231,7 +230,7 @@ class ChatSession:
             return f"error: {exc}"
         result = self.orch.run(interp.request, collector, mode_label=self.mode_label)
         self.last_result = result
-        tail = ("\n\n💬 Follow-ups: “show criticals” · “how do I fix it?” · "
+        tail = ("\n\n💬 Follow-ups: “show criticals” · “details <rule-id>” · "
                 "“export markdown” · “summary”")
         return self.platform.reporting.render(result, "terminal") + tail
 
@@ -259,10 +258,6 @@ class ChatSession:
 
         if _any(low, r"\b(top|worst|most severe|biggest)\b"):
             return self._need_scan() or self._top_view()
-
-        if _any(low, r"\bfix|remediat|how (do|to) (i|you) (fix|resolve|patch)|"
-                     r"what should i do"):
-            return self._need_scan() or self._fix_view(raw, low)
 
         m = re.match(r"(?:details?|show|explain|why)\s+([\w\-]+)", low)
         if m and self.last_result and self._find_by_rule(m.group(1)):
@@ -298,8 +293,7 @@ class ChatSession:
             amp = " ⚡" if len(f.tactics) > 1 else ""
             lines.append(f"  {i}. {f.title} — {f.resource}{amp}")
             lines.append(f"     {f.rule_id} · {_mini_mitre(f)} · {f.message}")
-        lines.append("\n💬 “how do I fix these?” · “details "
-                     f"{group[0].rule_id}” · “export markdown”")
+        lines.append(f"\n💬 “details {group[0].rule_id}” · “export markdown”")
         return "\n".join(lines)
 
     def _summary_view(self) -> str:
@@ -314,35 +308,11 @@ class ChatSession:
                          f"(score {round(f.score, 1)})")
         return "\n".join(lines)
 
-    def _fix_view(self, raw: str, low: str) -> str:
-        from ..core.reporting import _display_findings, _fix_commands
-        findings = _display_findings(self.last_result.findings)
-        # optional narrowing: "fix the rbac issue" / "fix the privileged pod"
-        narrowed = [f for f in findings
-                    if any(w in (f.title + " " + f.rule_id + " " + f.owning_shard).lower()
-                           for w in re.findall(r"[a-z]{4,}", low)
-                           if w not in ("how", "fix", "remediate", "should", "resolve",
-                                        "patch", "issue", "issues", "the", "that", "this"))]
-        target = narrowed or findings
-        target = [f for f in target if _fix_commands(f)[1]][:8]
-        if not target:
-            return "No automated remediations are available for those findings."
-        lines = ["🛠️ Remediation (review before applying — nothing runs automatically):", ""]
-        for i, f in enumerate(target, 1):
-            title, cmds = _fix_commands(f)
-            lines.append(f"  {i}. {f.severity.emoji} {f.title} — {f.resource}")
-            lines.append(f"     {title}")
-            for cmd in cmds:
-                lines.append(f"     $ {cmd}")
-            lines.append("")
-        return "\n".join(lines).rstrip()
 
     def _detail_view(self, rule_id: str) -> str:
         f = self._find_by_rule(rule_id)
         if not f:
             return f"No finding with rule '{rule_id}' in the last scan."
-        from ..core.reporting import _fix_commands
-        title, cmds = _fix_commands(f)
         lines = [
             f"{f.severity.emoji} {f.title}   [{f.severity.label}]",
             f"  resource      : {f.resource}",
@@ -353,10 +323,6 @@ class ChatSession:
             f"   score: {round(f.score, 1)}",
             f"  detail        : {f.message}",
         ]
-        if cmds:
-            lines.append(f"  fix ({title}):")
-            for c in cmds:
-                lines.append(f"     $ {c}")
         if f.evidence:
             import json
             lines.append(f"  evidence      : {json.dumps(f.evidence, default=str)}")
@@ -403,10 +369,10 @@ class ChatSession:
             "or by domain (RBAC, network, secrets, images, …)\n"
             "  • run the full CIS Kubernetes Benchmark (130 controls)\n"
             "  • map the attack surface\n"
-            "  • after a scan, filter findings, explain them, and show exact fix commands\n"
+            "  • after a scan, filter findings and explain them in depth\n"
             "  • export reports (markdown / json / html / sarif)\n\n"
             "Try: “scan production for privilege escalation”, “any exposed secrets?”, "
-            "“run the cis benchmark”, then “show criticals” and “how do I fix them?”.\n"
+            "“run the cis benchmark”, then “show criticals” and “details <rule-id>”.\n"
             "Type 'help' for the full command list.")
 
     def _list_tactics(self) -> str:

@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from ..bootstrap import build_platform
+from ..core.report_store import DEFAULT_DIR
 from .app import WebApp
 
 _MAX_BODY = 2 * 1024 * 1024  # 2 MiB cap on POST bodies
@@ -52,14 +53,14 @@ def make_handler(app: WebApp):
 
 
 def serve(host: str = "127.0.0.1", port: int = 8080,
-          reports_dir: str = "k8smatrixwarden-reports",
+          reports_dir: str = DEFAULT_DIR,
           config_path: Optional[str] = None, allow_scan: bool = True,
           open_browser: bool = False) -> None:
     platform = build_platform(config_path)
     app = WebApp(platform, reports_dir=reports_dir, allow_scan=allow_scan)
     httpd = ThreadingHTTPServer((host, port), make_handler(app))
     url = f"http://{host}:{port}/"
-    print(f"🛡️  K8sMatrixWarden dashboard → {url}")
+    print(f"K8sMatrixWarden dashboard -> {url}")
     print(f"    reports dir: {reports_dir}   ·   scanning: "
           f"{'enabled' if allow_scan else 'disabled'}   ·   Ctrl-C to stop")
     if open_browser:
@@ -67,7 +68,7 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n👋 dashboard stopped")
+        print("\ndashboard stopped")
     finally:
         httpd.server_close()
 

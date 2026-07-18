@@ -6,7 +6,7 @@ session — file paths, data shapes, and gotchas are spelled out.
 
 - **Repo root:** `K8sMatrixWarden-Dev-1/`
 - **Package:** `k8smatrixwarden/`
-- **Tests:** `220 passing` (`python3 -m tests.run_tests`)
+- **Tests:** `229 passing` (`python3 -m tests.run_tests`)
 - **MCP tools:** `33` (was 27; +6 this session)
 - **Web dashboard:** interactive SPA, live on `:8080`
 - **Runtime target:** live **Kubernetes Goat** on a local **minikube** cluster
@@ -24,6 +24,50 @@ This session built the first half of that: the correlation engine, drift detecti
 attack-path derivation, cloud auto-detection, a one-call `intelligent_scan`, and a rebuilt
 **interactive dashboard**. It also pointed the whole thing at a real vulnerable cluster
 (Kubernetes Goat) instead of only the bundled mock.
+
+---
+
+## 0.1 Follow-up hardening pass (after this handoff)
+
+Three robustness/packaging fixes landed on top of the work above (tests `220 → 229`):
+
+1. **Shared report store across surfaces.** Every surface (CLI, MCP, web) now defaults to
+   one cwd-independent store — `~/.k8smatrixwarden/reports`, override with
+   `$K8SMATRIXWARDEN_REPORTS_DIR` — via new `core/report_store.default_reports_dir()`. Before,
+   the relative `k8smatrixwarden-reports` default resolved against each process's cwd, so a
+   CLI/MCP `--save` scan never showed up in the web dashboard's history. Now it does.
+2. **Fault-tolerant live scanning.** `core/evidence.py` `LiveEvidenceCollector` now preflights
+   connectivity (fails fast with a clear "Cannot reach the API server … cluster-info … --mock"
+   message instead of a `urllib3` traceback) and treats a per-resource `403`/`404` as a
+   *skip-with-warning* rather than aborting the whole scan. Skipped types surface as
+   `collector.warnings` → CLI `warning:` lines and a `warnings[]` field on web/MCP responses.
+   Tests: `tests/test_live_resilience.py` (8).
+3. **Editable install pointed at a stale copy.** `pip install -e .` was resolving to an older
+   sibling checkout with only 27 MCP tools; re-running it from this repo restores all 33.
+
+---
+
+## 0.2 Remediation removal pass (detect-and-report only)
+
+The **Remediation Agent and its whole subsystem were removed** in a later pass — the tool is
+now strictly detect-and-report, with no write/apply path on any surface (tests `229 → 184`,
+MCP tools `33 → 30`).
+
+- **Deleted:** `agents/remediation.py` (the Agent), `core/remediation_engine.py` (schema-aware
+  command generation / `FIELD_PATCHES` / `generate_remediation`), `tests/test_remediation_engine.py`.
+- **MCP tools dropped (3):** `explain_remediation`, `get_playbook`, `list_playbooks`. The
+  `PLAYBOOKS` dataset was removed from `mcp/datasets.py` (5 datasets now, not 6).
+- **Data model:** `remediation_ref` removed from `Rule` and `Finding` (`core/models.py`) and
+  from every rule across all 10 shards. `ResourceRef.owner_kind/owner_name/labels/annotations`
+  are kept — they're neutral resource-identity metadata, not remediation.
+- **Reports:** the per-finding "Remediation" section and the markdown "Prioritized Remediation
+  Plan" are gone from all formats (terminal/text/markdown/json/sarif/html/pdf). Findings still
+  carry Summary / Standards / MITRE / Impact / Validation via `core/finding_context.py`.
+- **Chat/orchestrator:** the "how do I fix" intent and the `remediate` orchestrator intent were
+  removed; a fix request now falls through to the normal did-you-mean handling.
+- **Safety framing flipped:** it used to be "remediation exists but needs interactive
+  confirmation"; it is now "no remediation path exists at all." `test_no_remediation_or_apply_tool_is_exposed`
+  still guards the MCP surface.
 
 ---
 
@@ -185,7 +229,7 @@ python3 -m k8smatrixwarden scan --live --context minikube --save -o json
 ### 1.10 Tests
 - New: `tests/test_provider.py`, `tests/test_correlation.py`, `tests/test_report_store.py` (timeline + attack-path)
 - Updated: `tests/test_mcp.py` (tool-registry: +deploy_falco), `tests/test_web.py` (SPA contract + `/api/runtime`).
-- All **220 pass**.
+- All **229 pass** (includes the follow-up `tests/test_live_resilience.py`).
 
 ---
 
@@ -386,10 +430,14 @@ detection + kill-chain visualization. The tool answers "this weakness is being e
 - ✅ UX polish (spring easing, hover feedback, focus rings, semantic animations)
 - ✅ Live Kubernetes Goat demo (9.8/10 Critical, 358 findings, real exploitation patterns)
 
-**Test coverage:** 220 passing tests (added 7 new test files/test groups)
+**Test coverage:** 184 passing tests (this session added 7 test files/groups and the
+follow-up added `test_live_resilience.py`; the remediation removal pass then dropped the
+remediation-specific tests — see §0.2).
 
-**MCP tools:** 33 tools (was 27, +6: detect_cluster_provider, intelligent_scan,
-build_attack_path, correlate_runtime, detect_drift, deploy_falco)
+**MCP tools:** 30 tools. This session brought it to 33 (was 27, +6:
+detect_cluster_provider, intelligent_scan, build_attack_path, correlate_runtime,
+detect_drift, deploy_falco); the remediation removal pass (§0.2) then dropped 3
+(explain_remediation, get_playbook, list_playbooks), leaving 30.
 
 **Ready for next contributor:** all concrete file paths, data shapes, ceilings/tradeoffs
 are documented inline. P1 and P2 items are clear next steps (resource-level correlation,
@@ -406,9 +454,9 @@ CIS panel, SIEM integrations, auth).
 - **One engine, many surfaces.** CLI, chat, web, MCP all compile to a `ScanRequest` and run
   through the same `Platform` (`bootstrap.build_platform`). Never re-implement scanning in a
   surface — call the engine.
-- **Read-only everywhere the LLM/web can reach.** Remediation/apply is deliberately NOT
-  exposed via MCP or web (§9.1 — every fix needs interactive confirmation). Keep it that way;
-  `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed` enforces it.
+- **Detect-and-report only — read-only everywhere.** The tool has no remediation/apply path
+  on any surface (see §0.2); scanning is get/list/watch only and no output mutates the cluster.
+  Keep it that way; `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed` enforces it.
 - **Domain shards (vertical) × MITRE tactics (horizontal) are orthogonal.** A rule lives in
   one shard, is tagged with N tactics, and resolves through one registry index. This is the
   whole design; adding a shard = drop a file in `shards/`, no engine change.

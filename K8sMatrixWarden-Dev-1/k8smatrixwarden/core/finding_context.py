@@ -4,11 +4,10 @@ Finding Context — the single source of "report-grade" content for a finding.
 Every professional scanner report (Nessus, Qualys, Prisma Cloud, Trivy...) presents a
 finding as more than a one-line message: a plain-English summary, which named standard or
 benchmark it's drawn from (with a reference link), the MITRE ATT&CK mapping (with a
-reference link), the real-world impact if left unaddressed, the exact remediation, and
-how to independently verify/reproduce it. This module is where all of that content is
-authored ONCE and shared by every report renderer (markdown, html, json, sarif, pdf,
-terminal) — so no format can drift from another about what a finding means or how to fix
-it.
+reference link), the real-world impact if left unaddressed, and how to independently
+verify/reproduce it. This module is where all of that content is authored ONCE and shared
+by every report renderer (markdown, html, json, sarif, pdf, terminal) — so no format can
+drift from another about what a finding means.
 
 `FINDING_CONTEXT` holds hand-written summary/impact/validation content for every rule in
 the registry (56, at the time of writing). A rule that somehow isn't in the KB yet (e.g. a
@@ -88,13 +87,12 @@ class MitreRef:
 @dataclass
 class FindingContext:
     """Everything a report renderer needs to write a full, professional finding
-    section, beyond what's already on the Finding/RemediationResult objects."""
+    section, beyond what's already on the Finding object."""
     summary: str
     impact: str
     validation_steps: list = field(default_factory=list)
     standards: list = field(default_factory=list)     # list[StandardRef]
     mitre: list = field(default_factory=list)          # list[MitreRef]
-    remediation: object = None                         # RemediationResult, see below
 
 
 _CIS_TITLES: Optional[dict] = None
@@ -175,7 +173,6 @@ def _fallback_validation(finding: Finding) -> list[str]:
 
 def build_finding_context(finding: Finding) -> FindingContext:
     """The single entry point every report renderer calls for a finding's full context."""
-    from .remediation_engine import generate_remediation
     kb = FINDING_CONTEXT.get(finding.rule_id, {})
     summary = kb.get("summary") or finding.message
     impact = kb.get("impact") or _fallback_impact(finding)
@@ -184,7 +181,6 @@ def build_finding_context(finding: Finding) -> FindingContext:
     return FindingContext(
         summary=summary, impact=impact, validation_steps=validation,
         standards=standards_for(finding), mitre=mitre_for(finding),
-        remediation=generate_remediation(finding),
     )
 
 
@@ -192,8 +188,7 @@ def build_finding_context(finding: Finding) -> FindingContext:
 # The knowledge base — summary / impact / validation for every rule.
 #
 # `validation` entries are templates: {name}/{namespace}/{kind} are filled in from the
-# actual finding's resource at render time (same convention already used by
-# mcp/datasets.py::PLAYBOOKS and core/remediation_engine.py).
+# actual finding's resource at render time.
 # =================================================================================== #
 FINDING_CONTEXT: dict[str, dict] = {
 

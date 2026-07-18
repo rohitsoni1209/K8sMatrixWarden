@@ -3,20 +3,17 @@ K8s Security MCP Server (§8/§10).
 
 Exposes the full read-only capability surface of k8smatrixwarden as MCP tools, so any
 MCP-compatible AI agent (Claude, Cursor, VS Code, Windsurf, ...) can do everything the
-CLI can do short of applying a fix: scan, audit, browse the rule/knowledge datasets,
-explain a hypothetical remediation, evaluate a runtime event stream, and list/export
-previously-saved reports in any format — the same engine the CLI and chat use.
+CLI can do: scan, audit, browse the rule/knowledge datasets, evaluate a runtime event
+stream, and list/export previously-saved reports in any format — the same engine the CLI
+and chat use.
 
-Deliberately NOT exposed: remediation / apply. §9.1 is explicit — "every remediation
-action requires explicit user confirmation. No exceptions. No bypass. No auto-mode." An
-MCP tool call has no interactive confirmation step, so wiring the Remediation Agent's
-write path in here would violate that safety control. Everything below is read-only —
-scanning (§4.4), the knowledge datasets, and report rendering/export never mutate the
-cluster or delete anything; `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`
-enforces this stays true.
+Read-only by design: this tool does not do remediation/apply at all — it detects and
+reports, it never mutates the cluster or deletes anything. Scanning (§4.4), the knowledge
+datasets, and report rendering/export are all side-effect-free;
+`tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed` enforces this stays true.
 
-27 tools, four layers:
-  1. Knowledge   — browse/query the rule registry, taxonomy, and the 6 MCP datasets
+30 tools, four layers:
+  1. Knowledge   — browse/query the rule registry, taxonomy, and the 5 MCP datasets
   2. Scan/audit  — scan / CIS benchmark / runtime detections + event eval / threat matrix
   3. Reports     — persist a scan and list/export it later in any of the 6 formats
   4. Platform    — validate the install, generate least-privilege RBAC
@@ -34,6 +31,7 @@ from typing import Any, Optional
 
 from ..bootstrap import build_platform
 from ..core.evidence import detect_provider
+from ..core.report_store import DEFAULT_DIR as _DEFAULT_REPORTS_DIR
 from ..core.models import ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity
 from . import datasets
 
@@ -121,34 +119,6 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         trufflehog, cosign). These are the tools k8smatrixwarden integrates as normalizing
         adapters (§22) — this dataset is how to run them directly."""
         return dict(datasets.TOOL_COMMANDS)
-
-    def get_playbook(ref: str) -> dict:
-        """Look up ONE remediation playbook by its ref string (a rule's
-        `remediation_ref`, e.g. 'playbook/downgrade-binding') — returns {title,
-        commands}. Only covers playbooks with a fixed, unambiguous target kind (a
-        ClusterRoleBinding, NetworkPolicy, Namespace, ...); Pod-template fixes
-        (securityContext, host namespaces, ...) are resource/owner-dependent and are
-        NOT here — use explain_remediation or a real run_scan finding for those
-        instead. Call list_playbooks() to see every ref, including which kind each is."""
-        return datasets.PLAYBOOKS.get(ref, {})
-
-    def list_playbooks() -> dict:
-        """List every remediation playbook, both kinds: 'static' ones (a fixed command
-        template for an unambiguous target kind — get_playbook(ref) returns their full
-        command) and 'schema-aware' ones (a Pod-template field fix whose actual command
-        depends on the resource's owning controller — resolved per-finding by
-        explain_remediation or run_scan, never a single fixed string here)."""
-        from ..core.remediation_engine import FIELD_PATCHES
-        out = {ref: {"title": pb.get("title"), "kind": "static",
-                    "commands": pb.get("commands", [])}
-              for ref, pb in datasets.PLAYBOOKS.items()}
-        out.update({ref: {"title": fp.title, "kind": "schema-aware",
-                          "note": "resolved per-resource (owner-aware, schema-validated) "
-                                  "— call explain_remediation to see the concrete "
-                                  "command for a specific resource, or read it off a "
-                                  "real finding's `remediation` field from run_scan"}
-                   for ref, fp in FIELD_PATCHES.items()})
-        return out
 
     def lookup_cve(cve_id: str) -> dict:
         """Look up ONE CVE by id (e.g. 'CVE-2024-9486') in the bundled Kubernetes CVE
@@ -398,7 +368,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                 severity_min: Optional[str] = None, mock: bool = True,
                 fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
                 context: Optional[str] = None, output_format: str = "json",
-                save: bool = False, reports_dir: str = "k8smatrixwarden-reports",
+                save: bool = False, reports_dir: str = _DEFAULT_REPORTS_DIR,
                 max_findings: Optional[int] = None) -> dict:
         """Run a k8smatrixwarden security scan (read-only) — mirrors `k8smatrixwarden scan`.
 
@@ -408,7 +378,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         mock: True (default) scans the bundled insecure mock cluster. False scans a real
           cluster and requires the 'kubernetes' extra + a reachable kubeconfig/context.
         output_format: 'json' (default) returns structured findings + risk score +
-          per-finding remediation. Any of 'markdown'|'html'|'sarif'|'text'|'terminal'
+          per-finding context. Any of 'markdown'|'html'|'sarif'|'text'|'terminal'
           instead returns {scan_id, format, content, risk, total_findings} where
           `content` is the fully rendered report string — e.g. ask for 'markdown' to get
           a shareable report, or 'sarif' for a CI/GitHub-Code-Scanning-ready result.
@@ -471,6 +441,10 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             doc["findings"] = doc["findings"][:max_findings]
             doc["findings_truncated"] = True
         doc["saved"] = save
+        # Resource types skipped during live collection (RBAC/absent API group), so the
+        # caller knows coverage was partial rather than assuming a clean, complete scan.
+        if getattr(collector, "warnings", None):
+            doc["warnings"] = list(collector.warnings)
         return doc
 
     def interpret_query(text: str) -> dict:
@@ -544,6 +518,8 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             "notes": interp.notes,
             "cluster": detect_provider(nodes),
         })
+        if getattr(collector, "warnings", None):
+            doc["warnings"] = list(collector.warnings)
         if include_attack_path:
             doc["attack_path"] = attack_paths(_build(result, platform.registry.rules))
         return doc
@@ -604,7 +580,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                           severity_min: Optional[str] = None, mock: bool = True,
                           fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
                           context: Optional[str] = None,
-                          reports_dir: str = "k8smatrixwarden-reports") -> dict:
+                          reports_dir: str = _DEFAULT_REPORTS_DIR) -> dict:
         """Correlate a batch of runtime events against a scan's static findings — the
         "which weakness is being exploited RIGHT NOW" view. Evaluates `events` (same
         Falco/audit shape as evaluate_runtime_events) into runtime alerts, then joins them
@@ -718,38 +694,6 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         from ..agents.runtime import RuntimeAgent
         return RuntimeAgent().catalog()
 
-    def explain_remediation(rule_id: str, resource_kind: str, resource_name: str,
-                            namespace: Optional[str] = None,
-                            owner_kind: Optional[str] = None,
-                            owner_name: Optional[str] = None,
-                            labels: Optional[dict] = None,
-                            annotations: Optional[dict] = None) -> dict:
-        """Get the full schema-aware, resource-aware remediation for a HYPOTHETICAL
-        finding, without running a scan — useful when you already know the rule and the
-        resource (e.g. from a finding you saw earlier, or a resource you're describing
-        by hand) and just want the correctly-targeted fix. Given a rule_id (see
-        list_rules) and the affected resource's kind/name/namespace, plus its owning
-        controller (owner_kind/owner_name — e.g. a Pod owned by a DaemonSet) and
-        labels/annotations if known (for Helm/ArgoCD/Flux detection), returns the same
-        RemediationResult shape a real finding gets: root cause, risk, whether it's
-        safely automatable, the exact validated kubectl command (only if it is),
-        alternative YAML, validation/rollback commands, and warnings (e.g. system-
-        workload or GitOps-managed). If owner_kind/owner_name are omitted for a Pod,
-        it's treated as standalone — which correctly makes most security-context fixes
-        NOT automatable (Pod specs are immutable after creation); this is intentional,
-        not a bug — see core/remediation_engine.py."""
-        from ..core.models import ResourceRef
-        from ..core.remediation_engine import generate_remediation
-
-        rule = platform.registry.rules.get(rule_id)
-        if rule is None:
-            return {"error": f"unknown rule id {rule_id!r} — see list_rules()"}
-        res = ResourceRef(kind=resource_kind, name=resource_name, namespace=namespace,
-                          owner_kind=owner_kind, owner_name=owner_name,
-                          labels=labels or {}, annotations=annotations or {})
-        finding = rule.finding(res, f"(hypothetical) {rule.title}")
-        return generate_remediation(finding).as_dict()
-
     def build_threat_matrix(scope_level: str = "cluster", namespace: Optional[str] = None,
                             name: Optional[str] = None, kind: Optional[str] = None,
                             image: Optional[str] = None,
@@ -763,7 +707,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                             scan_id: Optional[str] = None, coverage: bool = False,
                             mock: bool = True, fixture: Optional[str] = None,
                             kubeconfig: Optional[str] = None, context: Optional[str] = None,
-                            reports_dir: str = "k8smatrixwarden-reports") -> dict:
+                            reports_dir: str = _DEFAULT_REPORTS_DIR) -> dict:
         """Project findings onto the Kubernetes Threat Matrix (the 9-tactic
         Microsoft/Redguard matrix, MITRE ATT&CK for Containers, §12) and return the full
         structure: a `summary` (tactics/techniques hit, coverage %) plus `columns` — one
@@ -827,7 +771,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                           scan_id: Optional[str] = None, mock: bool = True,
                           fixture: Optional[str] = None, kubeconfig: Optional[str] = None,
                           context: Optional[str] = None,
-                          reports_dir: str = "k8smatrixwarden-reports") -> dict:
+                          reports_dir: str = _DEFAULT_REPORTS_DIR) -> dict:
         """Chain a scan's threat-matrix HIT cells into a kill-chain exploit path — the
         tactics an attacker can actually string together in THIS cluster, Initial Access
         -> ... -> Impact. Returns `chain` (the tactic sequence), `steps` (per tactic: the
@@ -867,7 +811,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
     # ================================================================== #
     # LAYER 3 — Reports: persist + list + export in any format (§16.4)
     # ================================================================== #
-    def list_reports(reports_dir: str = "k8smatrixwarden-reports",
+    def list_reports(reports_dir: str = _DEFAULT_REPORTS_DIR,
                      limit: Optional[int] = None) -> list[dict]:
         """List previously saved scan reports (from a run_scan call with save=True) —
         mirrors `k8smatrixwarden report list`. Each entry has the scan_id (needed for
@@ -881,7 +825,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                for r in store.list(limit=limit)]
 
     def download_report(scan_id: Optional[str] = None, format: str = "markdown",
-                        reports_dir: str = "k8smatrixwarden-reports") -> dict:
+                        reports_dir: str = _DEFAULT_REPORTS_DIR) -> dict:
         """Re-render a previously saved scan report in ANY format, without re-scanning —
         mirrors `k8smatrixwarden report download`. This is how to get the same scan as a
         markdown write-up for a PR, a SARIF file for CI, and an HTML page for a
@@ -939,8 +883,6 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         "list_kubectl_commands": list_kubectl_commands,
         "get_tool_commands": get_tool_commands,
         "list_tool_commands": list_tool_commands,
-        "get_playbook": get_playbook,
-        "list_playbooks": list_playbooks,
         "lookup_cve": lookup_cve,
         "list_cves": list_cves,
         "get_compliance_ruleset": get_compliance_ruleset,
@@ -961,7 +903,6 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         "detect_drift": detect_drift,
         "deploy_falco": deploy_falco,
         "list_runtime_detections": list_runtime_detections,
-        "explain_remediation": explain_remediation,
         "build_threat_matrix": build_threat_matrix,
         "build_attack_path": build_attack_path,
         # 3. reports

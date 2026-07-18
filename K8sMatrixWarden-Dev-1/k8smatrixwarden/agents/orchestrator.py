@@ -22,7 +22,7 @@ from ..core.models import (ScanMode, ScanRequest, Scope, ScopeLevel, Selector, S
 from ..core.results import ScanResult
 from .scanner import ScannerAgent
 
-INTENTS = ["scan", "audit", "map", "monitor", "investigate", "remediate", "report",
+INTENTS = ["scan", "audit", "map", "monitor", "investigate", "report",
            "download"]
 
 # Synonym maps: regex fragment (word-boundary-wrapped at match time) -> canonical value.

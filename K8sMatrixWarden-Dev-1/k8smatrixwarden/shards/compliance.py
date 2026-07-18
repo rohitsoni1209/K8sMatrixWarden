@@ -44,8 +44,7 @@ class ComplianceShard(DomainShard):
                  mitre=[M(T.PERSISTENCE, "T1610", "Deploy Container")],
                  owasp="K04", cis=["5.2.1"],
                  nsa_cisa=["Pod Security", "Policy Enforcement"],
-                 evidence_needs=["Namespace"],
-                 remediation_ref="playbook/psa-enforce-restricted"),
+                 evidence_needs=["Namespace"]),
         ]
 
 

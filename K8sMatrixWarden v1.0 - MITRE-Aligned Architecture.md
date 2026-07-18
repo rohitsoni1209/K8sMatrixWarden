@@ -2,11 +2,11 @@
   <img src="https://kubernetes.io/images/kubernetes-horizontal-color.png" width="300"/>
 </p>
 
-<h1 align="center">🛡️ K8sMatrixWarden</h1>
+<h1 align="center">K8sMatrixWarden</h1>
 
 <p align="center">
   <strong>AI-Powered Kubernetes Security Platform</strong><br/>
-  <em>MITRE ATT&CK-Aligned · Domain-Sharded Scanning · Runtime Protection · Intelligent Remediation</em>
+  <em>MITRE ATT&CK-Aligned · Domain-Sharded Scanning · Runtime Correlation · Detect-and-Report</em>
 </p>
 
 <p align="center">
@@ -19,9 +19,9 @@
 
 ---
 
-## 🔭 Overview
+## Overview
 
-> **K8sMatrixWarden v1.0** is a Kubernetes-native, MITRE ATT&CK-aligned security platform. Its macro-architecture is five collaborating components — **Orchestrator · Scanner · Runtime · Remediation · MCP Server**. The Scanner Agent runs **Domain-Sharded Execution over a Cross-Cutting Rule / Technique Registry**: every check is a **Rule** tagged with the MITRE tactic and technique it detects, so a scan can be sliced by resource *or* by adversary behavior through one uniform engine.
+> **K8sMatrixWarden v1.0** is a Kubernetes-native, MITRE ATT&CK-aligned security platform. Its macro-architecture is four collaborating components — **Orchestrator · Scanner · Runtime · MCP Server**. The Scanner Agent runs **Domain-Sharded Execution over a Cross-Cutting Rule / Technique Registry**: every check is a **Rule** tagged with the MITRE tactic and technique it detects, so a scan can be sliced by resource *or* by adversary behavior through one uniform engine. Every surface is **detect-and-report only** — read-only against the cluster, with no apply or mutate path.
 
 | Pillar | What it means |
 |---|---|
@@ -36,7 +36,7 @@
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 <details>
 <summary><strong>Click to expand full table of contents</strong></summary>
@@ -51,11 +51,11 @@
 | 6 | [Rule Registry & MITRE Mapping Engine](#6-rule-registry--mitre-mapping-engine) | The cross-cutting index that ties it together |
 | 7 | [Scan Workflow & Selectors](#7-scan-workflow--selectors) | Scan by scope, tactic, technique, alias, framework |
 | 8 | [Runtime Agent](#8-runtime-agent) | Real-time threat detection & monitoring |
-| 9 | [Remediation Agent](#9-remediation-agent) | Auto-fix engine with rollback |
+| 9 | [Detect-and-Report Guarantee](#9-detect-and-report-guarantee) | Read-only by design across every surface |
 | 10 | [K8s Security MCP Server](#10-k8s-security-mcp-server) | Knowledge layer — datasets, taxonomy & commands |
 | 11 | [Kubernetes Attack Surface Map](#11-kubernetes-attack-surface-map) | 5-layer attack surface breakdown |
 | 12 | [MITRE ATT&CK for Kubernetes](#12-mitre-attck-for-kubernetes) | Corrected 9-tactic threat matrix & mapping |
-| 13 | [OWASP Kubernetes Top 10 (2025)](#13-owasp-kubernetes-top-10-2025) | Complete coverage with detection & remediation |
+| 13 | [OWASP Kubernetes Top 10 (2025)](#13-owasp-kubernetes-top-10-2025) | Complete coverage with detection & guidance |
 | 14 | [Kubernetes Goat — Vulnerability Scenarios](#14-kubernetes-goat--vulnerability-scenarios) | All 22 scenarios mapped |
 | 15 | [Real-World CVEs & Attack Patterns](#15-real-world-cves--attack-patterns) | 15+ CVEs and 12 attack writeups |
 | 16 | [Scanner Configuration Spec](#16-scanner-configuration-spec) | Registry-aware scan configuration |
@@ -78,26 +78,26 @@
 
 ### What
 
-**K8sMatrixWarden** is an AI-powered, Kubernetes-native security platform that continuously scans, monitors, and secures Kubernetes clusters. It uses a **multi-agent architecture** where specialized agents collaborate to detect vulnerabilities, map attack surfaces, enforce compliance, and auto-remediate security issues.
+**K8sMatrixWarden** is an AI-powered, Kubernetes-native security platform that continuously scans and monitors Kubernetes clusters. It uses a **multi-agent architecture** where specialized agents collaborate to detect vulnerabilities, map attack surfaces, correlate static findings with live runtime behavior, and enforce compliance. It is **detect-and-report only** — read-only on every surface, so it never mutates the cluster.
 
 The Scanner Agent is organized around the **MITRE ATT&CK threat model for Kubernetes**: every check is a **Rule** tagged with the tactic and technique it detects, so users can scan by resource *or* by adversary behavior ("scan for Persistence", "scan only Container Escape") through one uniform engine.
 
 ### Why
 
-Kubernetes clusters are complex, dynamic, and present a massive attack surface. Misconfigurations are the #1 cause of K8s breaches. Manual security reviews don't scale. Existing tools scan but don't remediate, and they report findings without connecting them to how an attacker actually operates. This tool closes the loop and speaks the attacker's language: **Detect → Analyze (map to ATT&CK) → Fix → Verify**.
+Kubernetes clusters are complex, dynamic, and present a broad attack surface. Misconfigurations are a leading cause of K8s breaches, and manual security reviews are difficult to scale. K8sMatrixWarden speaks the attacker's language — it connects every finding to how an adversary actually operates and, uniquely, correlates static configuration findings with live runtime behavior: **Detect → Analyze (map to ATT&CK) → Correlate (join to runtime + derive the kill-chain) → Report**.
 
 ### How
 
 ```
 ┌──────────────┐     ┌─────────────────┐     ┌────────────────┐     ┌──────────────┐
 │              │     │                 │     │                │     │              │
-│   DETECT     │────▶│    ANALYZE      │────▶│   REMEDIATE    │────▶│   VERIFY     │
-│              │     │                 │     │  (with user    │     │              │
-│  Rules run   │     │  Map to ATT&CK, │     │   approval)    │     │  Re-scan to  │
-│  by shard,   │     │  OWASP, CIS.    │     │                │     │  confirm fix │
-│  resolved by │     │  Score risk +   │     │  Apply patches,│     │              │
-│  tactic/tech │     │  attack-path.   │     │  generate      │     │  Score       │
-│  or resource │     │  Prioritize.    │     │  policies      │     │  improved?   │
+│   DETECT     │────▶│    ANALYZE      │────▶│   CORRELATE    │────▶│   REPORT     │
+│              │     │                 │     │                │     │              │
+│  Rules run   │     │  Map to ATT&CK, │     │  Join findings │     │  Deep-linked │
+│  by shard,   │     │  OWASP, CIS.    │     │  to live       │     │  findings +  │
+│  resolved by │     │  Score risk +   │     │  runtime;derive│     │  Validation  │
+│  tactic/tech │     │  attack-path.   │     │  the kill-chain│     │  steps, 7    │
+│  or resource │     │  Prioritize.    │     │  attack path.  │     │  formats.    │
 │              │     │                 │     │                │     │              │
 └──────────────┘     └─────────────────┘     └────────────────┘     └──────────────┘
 ```
@@ -106,14 +106,15 @@ Kubernetes clusters are complex, dynamic, and present a massive attack surface. 
 
 | Capability | Description |
 |---|---|
-| 🎯 **ATT&CK-Aligned Scanning** | Every finding is a Rule tagged with MITRE tactic + technique; scan by adversary behavior, not just by resource |
-| 🗺️ **Attack Surface Mapping** | Enumerates every external entry point, container escape vector, privilege escalation path, and lateral movement route |
-| 🔍 **Domain-Sharded Deep Scanning** | 10 domain shards covering control plane, workloads, RBAC, network, images, secrets, compliance, attack surface, admission control, cloud IAM |
-| 🧩 **Cross-Cutting Rule Registry** | One registry indexes every rule by tactic, technique, OWASP, CIS & NSA tags — slice a scan any way |
-| 🛡️ **Runtime Threat Detection** | Real-time syscall monitoring (Falco/Tetragon), behavioral baselines, drift detection, K8s audit analysis |
-| 🔧 **Intelligent Remediation** | AI-generated fixes with exact `kubectl` commands shown before execution, rollback on failure, full audit trail |
-| 📊 **Compliance Enforcement** | Continuous CIS Benchmark, Pod Security Standards, NSA/CISA hardening checks with drift alerting |
-| 🔌 **Plugin Extensibility** | New scanners, techniques, frameworks and enterprise rules added additively via the plugin + tag model |
+| **ATT&CK-Aligned Scanning** | Every finding is a Rule tagged with MITRE tactic + technique; scan by adversary behavior, not just by resource |
+| **Attack Surface Mapping** | Enumerates every external entry point, container escape vector, privilege escalation path, and lateral movement route |
+| **Domain-Sharded Deep Scanning** | 10 domain shards covering control plane, workloads, RBAC, network, images, secrets, compliance, attack surface, admission control, cloud IAM |
+| **Cross-Cutting Rule Registry** | One registry indexes every rule by tactic, technique, OWASP, CIS & NSA tags — slice a scan any way |
+| **Runtime Threat Detection** | Real-time syscall monitoring (Falco/Tetragon), behavioral baselines, drift detection, K8s audit analysis |
+| **Scan × Runtime Correlation** | Joins static findings to live runtime events by MITRE tactic — *confirmed / corroborated / runtime-only* — and derives the kill-chain attack path |
+| **Compliance Enforcement** | Continuous CIS Benchmark, Pod Security Standards, NSA/CISA hardening checks with drift alerting |
+| **Detect-and-Report Only** | Read-only by design across every surface (CLI, MCP, web); scanning uses get/list/watch only, with no write or apply path anywhere |
+| **Plugin Extensibility** | New scanners, techniques, frameworks and enterprise rules added additively via the plugin + tag model |
 
 ---
 
@@ -140,7 +141,7 @@ Kubernetes clusters are complex, dynamic, and present a massive attack surface. 
 
 | Gap | How K8sMatrixWarden Solves It |
 |---|---|
-| **Scan-only, no remediation** | Auto-remediation engine with human-in-the-loop approval |
+| **Findings never correlated with live activity** | Scan × runtime correlation joins static findings to live Falco/audit events by MITRE tactic — *confirmed / corroborated / runtime-only* — and derives the kill-chain attack path |
 | **Point-in-time scans** — no continuous monitoring | Runtime Agent provides 24/7 syscall + audit event monitoring |
 | **Siloed tools** for images, RBAC, network, compliance | Single platform with 10 integrated domain shards |
 | **No threat context** — findings lack attack-chain mapping | Every rule carries MITRE ATT&CK + OWASP K8s Top 10 tags natively |
@@ -157,40 +158,39 @@ Kubernetes clusters are complex, dynamic, and present a massive attack surface. 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│   👤 Security Engineer   ┌───────┐ ┌──────┐ ┌───────┐                             │
-│                          │  CLI  │ │ Chat │ │ Web   │                             │
-│                          └───┬───┘ └──┬───┘ └───┬───┘                             │
-│                              └────────┼─────────┘                                 │
+│   Security Engineer      ┌───────┐ ┌──────┐ ┌───────┐ ┌────────────┐              │
+│                          │  CLI  │ │ Chat │ │ Web   │ │ MCP client │              │
+│                          └───┬───┘ └──┬───┘ └───┬───┘ └─────┬──────┘              │
+│                              └────────┼─────────┴───────────┘                     │
 │                                       ▼                                           │
 │   ┌────────────────────────────────────────────────────────────┐                 │
-│   │                  🧠 ORCHESTRATOR AGENT                       │                 │
+│   │                     ORCHESTRATOR AGENT                       │                 │
 │   │   Intent Classifier · Scope Extraction · Selector Resolution │                 │
 │   │   Response Aggregator · Risk Scorer · Confirmation Controller │                 │
-│   └────────┬───────────────────┬───────────────────┬───────────┘                 │
-│            ▼                   ▼                   ▼                               │
-│   ┌────────────────┐ ┌────────────────┐ ┌──────────────────┐                      │
-│   │  🔍 SCANNER     │ │  🛡️ RUNTIME    │ │  🔧 REMEDIATION   │                      │
-│   │  AGENT          │ │  AGENT         │ │  AGENT           │                      │
-│   │                 │ │ (DaemonSet)    │ │                  │                      │
-│   │ Registry Layer: │ │ Falco/Tetragon │ │ Auto-Fix Engine  │                      │
-│   │ • Scanner Reg.  │ │ Audit Analyzer │ │ Policy Generator │                      │
-│   │ • Rule Registry │ │ Drift Detector │ │ Rollback Ctrl    │                      │
-│   │ • MITRE Mapping │ │ Baseline Engine│ │ Audit Logger     │                      │
-│   │ 10 Domain Shards│ │ (same registry │ │                  │                      │
-│   │ Execution Layer │ │  pattern)      │ │                  │                      │
-│   └────────┬───────┘ └───────┬────────┘ └────────┬─────────┘                      │
-│            └─────────────────┼───────────────────┘                                │
-│                              ▼                                                     │
+│   └───────────────────┬───────────────────────┬────────────────┘                 │
+│                       ▼                       ▼                                    │
+│           ┌────────────────────┐   ┌────────────────────┐                         │
+│           │   SCANNER AGENT     │   │   RUNTIME AGENT     │                         │
+│           │                     │   │   (DaemonSet)       │                         │
+│           │ Registry Layer:     │   │ Falco / Tetragon    │                         │
+│           │ • Scanner Registry  │   │ Audit Analyzer      │                         │
+│           │ • Rule Registry     │   │ Drift Detector      │                         │
+│           │ • MITRE Mapping     │   │ Baseline Engine     │                         │
+│           │ 10 Domain Shards    │   │ (same registry      │                         │
+│           │ Execution Layer     │   │  pattern)           │                         │
+│           └─────────┬──────────┘   └──────────┬─────────┘                         │
+│                     └───────────────┬─────────┘                                   │
+│                                     ▼                                             │
 │   ┌──────────────────────────────────────────────────────────────────┐            │
-│   │                 📦 K8s SECURITY MCP SERVER                        │            │
-│   │  kubectl cmds · scan-tool cmds · remediation playbooks ·          │            │
-│   │  CVE KB · compliance rules · 🆕 MITRE/OWASP/CIS taxonomy files    │            │
+│   │                    K8s SECURITY MCP SERVER                         │            │
+│   │  kubectl cmds · scan-tool cmds · CVE KB · compliance rules ·       │            │
+│   │  MITRE / OWASP / CIS taxonomy files                                │            │
 │   └────────────────────────────────┬─────────────────────────────────┘            │
-│                                    ▼                                               │
+│                                    ▼  (read-only: get / list / watch)             │
 │   ┌──────────────────────────────────────────────────────────────────┐            │
-│   │                 ☸️ TARGET KUBERNETES CLUSTER                      │            │
-│   │  Control Plane · Worker Nodes · Pods/Workloads · Network/RBAC/    │            │
-│   │  Secrets · Admission Webhooks · Cloud IAM bindings                │            │
+│   │                    TARGET KUBERNETES CLUSTER                       │            │
+│   │  Control Plane · Worker Nodes · Pods/Workloads · Network/RBAC/     │            │
+│   │  Secrets · Admission Webhooks · Cloud IAM bindings                 │            │
 │   └──────────────────────────────────────────────────────────────────┘            │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -199,10 +199,10 @@ Kubernetes clusters are complex, dynamic, and present a massive attack surface. 
 
 | Agent | Purpose | Runs As | Replicas |
 |---|---|---|---|
-| **🧠 Orchestrator** | Classifies intent, extracts scope, resolves selector to rules, routes, aggregates, manages confirmations | Deployment | 1 |
-| **🔍 Scanner** | Registry-driven scanning across 10 domain shards; resolves any scan to a rule set | Deployment (HPA) | 1–3 |
-| **🛡️ Runtime** | Real-time monitoring — syscall, audit events, drift, behavioral anomalies (same rule/registry pattern) | DaemonSet | 1 per node |
-| **🔧 Remediation** | Executes fixes after user approval — patches, policies, rollbacks | Deployment | 1 |
+| **Orchestrator** | Classifies intent, extracts scope, resolves selector to rules, routes, aggregates, manages confirmations | Deployment | 1 |
+| **Scanner** | Registry-driven scanning across 10 domain shards; resolves any scan to a rule set | Deployment (HPA) | 1–3 |
+| **Runtime** | Real-time monitoring — syscall, audit events, drift, behavioral anomalies (same rule/registry pattern) | DaemonSet | 1 per node |
+| **MCP Server** | Serves the knowledge datasets + taxonomy and exposes every capability to MCP clients; read-only | StatefulSet | 1 |
 
 ### 3.3 The Core Idea — Two Orthogonal Axes
 
@@ -241,7 +241,7 @@ The Scanner Agent is built on a deliberate separation the rest of this document 
 ### 3.4 Scanner Agent — Internal Architecture
 
 ```
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  🔍 SCANNER AGENT  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  SCANNER AGENT  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
 │                                                                                  │
 │  ① REGISTRY LAYER  (built once at startup)                                       │
 │  ┌──────────────────┐  ┌────────────────────┐  ┌───────────────────────────┐    │
@@ -260,7 +260,7 @@ The Scanner Agent is built on a deliberate separation the rest of this document 
 │                                ▼                                                  │
 │  ② EXECUTION LAYER                                                                │
 │  ┌────────────────────┐  fetch ONCE, scope-constrained  ┌────────────────────┐   │
-│  │ Evidence Collector │◄───────────────────────────────▶│ ☸️ K8s API / MCP /  │   │
+│  │ Evidence Collector │◄───────────────────────────────▶│ K8s API / MCP /     │   │
 │  │ union of needs →   │  deduped across shards           │ cloud IAM API      │   │
 │  │ one shared snapshot│                                  └────────────────────┘   │
 │  └─────────┬──────────┘                                                           │
@@ -305,13 +305,12 @@ flowchart LR
 
     P0(("0<br/>K8sMatrixWarden")):::proc
 
-    SE -->|"scan / audit / map / remediate request"| P0
-    P0 -->|"report · threat matrix · fix commands (for approval)"| SE
-    P0 -->|"read-only resource queries"| K8S
+    SE -->|"scan / audit / map / correlate request"| P0
+    P0 -->|"report · threat matrix · kill-chain attack path"| SE
+    P0 -->|"read-only resource queries (get / list / watch)"| K8S
     K8S -->|"pods · RBAC · netpol · webhooks · audit events"| P0
     P0 -->|"scoped IAM describe (read-only)"| IAM
     IAM -->|"role / binding scopes"| P0
-    P0 -->|"approved kubectl patch / apply"| K8S
 
     classDef ext fill:#ffe3ef,stroke:#a3366b,stroke-width:1px,color:#111
     classDef proc fill:#cfe8ff,stroke:#2266aa,stroke-width:2px,color:#111
@@ -319,10 +318,10 @@ flowchart LR
 
 #### 3.5.2 Level 1 — System Decomposition
 
-The five macro-processes (Orchestrator, Scanner, Runtime, Remediation, MCP Knowledge) and
-the four data stores they share. Note the two write flows out of the system are the
-Remediation Agent's confirmed patches and the two agents' audit records — everything else is
-read-only.
+The four macro-processes (Orchestrator, Scanner, Runtime, MCP Knowledge) and the four data
+stores they share. Every flow that crosses the cluster boundary is a **read** — the only
+writes are to the platform's own internal stores (the report store and the audit log). The
+system never mutates the target cluster.
 
 ```mermaid
 flowchart TB
@@ -333,8 +332,7 @@ flowchart TB
     P1(["1.0 Orchestrator<br/>intent · scope · selector"]):::proc
     P2(["2.0 Scanner Agent"]):::proc
     P3(["3.0 Runtime Agent"]):::proc
-    P4(["4.0 Remediation Agent"]):::proc
-    P5(["5.0 MCP Knowledge"]):::proc
+    P5(["4.0 MCP Knowledge"]):::proc
 
     D1[("D1 Rule Registry + Taxonomy")]:::store
     D2[("D2 Evidence Snapshot")]:::store
@@ -345,8 +343,7 @@ flowchart TB
     P1 -->|"confirmation prompt · report"| SE
     P1 -->|"resolved ScanRequest"| P2
     P1 -->|"monitor request"| P3
-    P1 -->|"approved fix + finding"| P4
-    P5 -->|"rule tags · kubectl · playbooks · CVEs"| P1
+    P5 -->|"rule tags · kubectl · CVEs"| P1
     P5 -->|"technique taxonomy"| P2
 
     P2 <-->|"resolve selector → rule_ids"| D1
@@ -357,15 +354,13 @@ flowchart TB
     IAM -->|"role scopes"| P2
     P2 -->|"findings · risk · threat matrix"| D3
     D3 -->|"saved scan"| P1
-    D3 -->|"saved scan"| P4
 
     P3 -->|"subscribe: audit + syscall events"| K8S
     K8S -->|"event stream"| P3
-    P3 -->|"runtime alerts"| P1
+    P3 -->|"runtime alerts · correlation · drift"| P1
 
-    P4 -->|"snapshot → patch → health-check (confirmed)"| K8S
-    P4 -->|"action record"| D4
     P2 -->|"scan record"| D4
+    P3 -->|"runtime record"| D4
 
     classDef ext fill:#ffe3ef,stroke:#a3366b,stroke-width:1px,color:#111
     classDef proc fill:#cfe8ff,stroke:#2266aa,stroke-width:2px,color:#111
@@ -423,11 +418,11 @@ flowchart TB
 | 3 | **Taxonomy is Metadata** | MITRE/OWASP/CIS are cross-cutting tags on rules, never the execution boundary |
 | 4 | **Registry-Driven** | Any scan resolves to a rule set via one index; no per-request-type code paths |
 | 5 | **MCP-Driven** | Agents query the MCP Server's datasets & taxonomy rather than hardcoding commands |
-| 6 | **Human-in-the-Loop** | All destructive actions require explicit user confirmation |
-| 7 | **Least Privilege** | Read-only by default; write scoped to Remediation Agent; **per-plugin scoped RBAC** below that |
+| 6 | **Confirm-before-run** | The resolved rule set is shown and confirmed before any scan executes; the platform never mutates the cluster |
+| 7 | **Least Privilege** | Read-only everywhere (get/list/watch only); **per-plugin scoped RBAC** minted from each shard's declared verbs — no write path exists |
 | 8 | **Cloud-Agnostic** | Works on any K8s distribution — EKS, AKS, GKE, bare-metal, k3s, kind, minikube |
 | 9 | **Extensible** | Plugins register rules; frameworks are tags; external tools are adapters |
-| 10 | **Idempotent** | Same scan twice → same result; fixes safe to re-apply |
+| 10 | **Idempotent** | Same scan twice → same result; read-only, so repeating a scan has no side effects |
 
 ---
 
@@ -440,10 +435,10 @@ The Orchestrator is the **single entry point**. It never scans or fixes directly
 ```mermaid
 flowchart TB
     SE["Security Engineer"]:::ext
-    DR["Downstream Agents<br/>(Scanner · Runtime · Remediation)"]:::ext
+    DR["Downstream Agents<br/>(Scanner · Runtime)"]:::ext
     D1[("D1 Rule Registry term index")]:::store
 
-    A1(["1.1 Classify Intent<br/>SCAN·AUDIT·MAP·MONITOR·<br/>INVESTIGATE·REMEDIATE·REPORT·DOWNLOAD"]):::proc
+    A1(["1.1 Classify Intent<br/>SCAN·AUDIT·MAP·MONITOR·<br/>INVESTIGATE·CORRELATE·REPORT·DOWNLOAD"]):::proc
     A2(["1.2 Extract Scope<br/>cluster→namespace→…→image"]):::proc
     A3(["1.3 Resolve Selector<br/>tactic·technique·module·rule·alias·framework"]):::proc
     A4(["1.4 Build ScanRequest"]):::proc
@@ -473,7 +468,7 @@ flowchart TB
 | `MAP` | Map the cluster's complete attack surface | Scanner (Attack Surface shard) |
 | `MONITOR` | Enable/check real-time runtime monitoring | Runtime |
 | `INVESTIGATE` | Deep-dive a specific finding or activity | Scanner + Runtime |
-| `REMEDIATE` | Fix an identified vulnerability | Scanner (analyze) → Remediation (fix) |
+| `CORRELATE` | Join static findings to live runtime events + derive the kill-chain attack path | Scanner + Runtime |
 | `REPORT` | Generate a report (MD/JSON/PDF/SARIF/HTML) | Scanner → Orchestrator (compile) |
 | `DOWNLOAD` | Download a generated report | Orchestrator → Report Store |
 
@@ -503,17 +498,16 @@ If `selector` is omitted, every rule whose scope matches `scope` runs (classic "
 
 ### 4.4 Safety Controls
 
-> **⚠️ These rules are non-negotiable and cannot be overridden.**
+> **These guarantees are enforced by design and cannot be overridden.**
 
 | Rule | Enforcement |
 |---|---|
-| No auto-remediation without confirmation | Orchestrator blocks Remediation Agent until user confirms |
-| Show exact changes before applying | Remediation must output the exact `kubectl patch` / YAML diff first |
+| Detect-and-report only | No surface (CLI, MCP, web) exposes a write, apply, or remediate path — enforced by a standing test (`tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`) |
+| Read-only access | Scanner and Runtime use read-only roles (get/list/watch); per-plugin scoped (see §20) |
 | Confirm resolved rule set before scanning | For tactic/alias scans, show the resolved rule list before executing (`[5]` above) |
-| Rollback on failure | Remediation snapshots state before change; auto-rollback if health check fails |
-| Audit trail for every action | Every scan, finding, and remediation logged with timestamp, user, agent ID |
-| Read-only by default | Scanner/Runtime use read-only roles; per-plugin scoped (see §20) |
-| Scoped write access | Only Remediation uses `k8s-security-remediator` — and only when triggered |
+| Fail-closed on unreadable evidence | A resource type the identity can't read is skipped-and-warned, never silently marked clean |
+| Audit trail for every action | Every scan, finding, and runtime correlation is logged with timestamp (IST, UTC+05:30), user, and agent ID |
+| Path-traversal-guarded reports | Saved-report lookups on every surface are traversal-guarded |
 
 ---
 
@@ -537,7 +531,6 @@ mitre:
 owasp: K01
 cis: ["5.2.1"]
 nsa_cisa: ["Pod Security"]
-remediation_ref: playbook/pod-security-context
 evidence_needs: [Pod]
 ```
 
@@ -547,13 +540,13 @@ At startup each shard registers its rules; the MITRE Mapping Engine indexes ever
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                🔍 SCANNER AGENT — 10 DOMAIN SHARDS                   │
+│                SCANNER AGENT — 10 DOMAIN SHARDS                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ① Cluster & Control Plane   ② Workload & Pod Security               │
 │  ③ RBAC & Identity           ④ Network Security                     │
 │  ⑤ Image & Supply Chain      ⑥ Secrets                              │
 │  ⑦ CIS Benchmark & Compliance ⑧ Attack Surface Mapper               │
-│  ⑨ Admission Control  🆕      ⑩ Cloud IAM & Workload Identity  🆕    │
+│  ⑨ Admission Control       ⑩ Cloud IAM & Workload Identity     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -597,7 +590,7 @@ Each shard's key rules are below. Severity uses 🔴 CRITICAL · 🟠 HIGH · �
 | `workload-no-apparmor` | Missing AppArmor | 🟡 | Defense Evasion | annotations |
 | `workload-sa-token-automount` | SA token auto-mounted | 🟡 | Credential Access | `automountServiceAccountToken` |
 | `workload-latest-tag` | Mutable `:latest` tag | 🟡 | Initial Access (supply) | `containers[].image` |
-| `workload-sshd-present` 🆕 | `sshd` in image/running | 🟠 | Execution (SSH in container) | image + runtime |
+| `workload-sshd-present` | `sshd` in image/running | 🟠 | Execution (SSH in container) | image + runtime |
 
 ### 5.5 Shard ③ — RBAC & Identity
 
@@ -612,8 +605,8 @@ Each shard's key rules are below. Severity uses 🔴 CRITICAL · 🟠 HIGH · �
 | `rbac-bind-escalate-verbs` | `bind`/`escalate` verbs | 🔴 | Priv Esc |
 | `rbac-unused-bindings` | Bindings with no subjects | 🟢 | — |
 | `rbac-cross-namespace` | Binding grants outside its ns | 🟠 | Lateral Movement |
-| `rbac-can-delete-events` 🆕 | Who can `delete events` | 🟠 | Defense Evasion (Delete K8s Events) |
-| `rbac-coredns-configmap-write` 🆕 | Who can write coredns ConfigMap | 🟠 | Lateral Movement (CoreDNS Poisoning) |
+| `rbac-can-delete-events` | Who can `delete events` | 🟠 | Defense Evasion (Delete K8s Events) |
+| `rbac-coredns-configmap-write` | Who can write coredns ConfigMap | 🟠 | Lateral Movement (CoreDNS Poisoning) |
 
 ### 5.6 Shard ④ — Network Security
 
@@ -628,10 +621,10 @@ Each shard's key rules are below. Severity uses 🔴 CRITICAL · 🟠 HIGH · �
 | `net-ingress-no-tls` | Unencrypted HTTP ingress | 🟠 | Initial Access |
 | `net-dashboard-exposed` | Dashboard reachable externally | 🔴 | Discovery (Dashboard) |
 | `net-metadata-api-reachable` | Pods can curl 169.254.169.254 | 🟠 | Credential Access (Managed Identity) |
-| `net-imdsv2-not-enforced` 🆕 | IMDSv1 allowed / identity scope broad | 🟠 | Credential Access |
+| `net-imdsv2-not-enforced` | IMDSv1 allowed / identity scope broad | 🟠 | Credential Access |
 | `net-externalip-usage` | `externalIPs` (CVE-2020-8554) | 🟡 | Initial Access |
 | `net-no-mtls` | Unencrypted inter-service traffic | 🟡 | Lateral Movement |
-| `net-cni-anti-spoofing` 🆕 | CNI lacks L2 anti-ARP-spoofing | 🟡 | Lateral Movement (ARP/IP spoof) |
+| `net-cni-anti-spoofing` | CNI lacks L2 anti-ARP-spoofing | 🟡 | Lateral Movement (ARP/IP spoof) |
 
 ### 5.7 Shard ⑤ — Image & Supply Chain
 
@@ -643,11 +636,11 @@ Each shard's key rules are below. Severity uses 🔴 CRITICAL · 🟠 HIGH · �
 | `img-registry-auth` | Missing/misconfigured pull secrets | 🟠 | Initial Access (Private Registry) | kubectl |
 | `img-secrets-in-layers` | Keys/passwords baked into layers | 🔴 | Credential Access | TruffleHog/Trivy |
 | `img-not-signed` | No cosign/notary signature | 🟡 | Compromised Image | Cosign |
-| `img-no-attestation` 🆕 | No SLSA/provenance attestation | 🟡 | Compromised Image | cosign verify-attestation |
+| `img-no-attestation` | No SLSA/provenance attestation | 🟡 | Compromised Image | cosign verify-attestation |
 | `img-no-sbom` | No SBOM | 🟢 | Supply Chain | Syft |
 | `img-base-outdated` | Outdated base image CVEs | 🟠 | Supply Chain | Trivy |
 | `img-typosquat` | Name near a popular image (`nignx`) | 🟠 | Initial Access | name analysis |
-| `img-kubeconfig-embedded` 🆕 | kubeconfig baked into image | 🔴 | Initial Access (Kubeconfig File) | layer grep |
+| `img-kubeconfig-embedded` | kubeconfig baked into image | 🔴 | Initial Access (Kubeconfig File) | layer grep |
 
 ### 5.8 Shard ⑥ — Secrets
 
@@ -659,11 +652,11 @@ Each shard's key rules are below. Severity uses 🔴 CRITICAL · 🟠 HIGH · �
 | `sec-secret-broad-rbac` | Secret get/list to broad audience | 🟠 | Credential Access |
 | `sec-secret-not-rotated` | Older than rotation threshold | 🟡 | — |
 | `sec-no-external-store` | No Vault/ASM/ESO | 🟡 | — |
-| `sec-mounted-cloud-creds` 🆕 | `.aws/credentials`, `azure.json`, GCP SA JSON mounted | 🟠 | Credential Access (Mount Service Principal) |
+| `sec-mounted-cloud-creds` | `.aws/credentials`, `azure.json`, GCP SA JSON mounted | 🟠 | Credential Access (Mount Service Principal) |
 
 ### 5.9 Shard ⑦ — CIS Benchmark & Compliance
 
-> **📌 Note:** the CIS Kubernetes Benchmark v1.8 has **130 controls**. The authoritative source is kube-bench's `cis-1.8` config; the verified section breakdown is below.
+> **Note:** the CIS Kubernetes Benchmark v1.8 has **130 controls**. The authoritative source is kube-bench's `cis-1.8` config; the verified section breakdown is below.
 
 | Standard | Tool | Coverage |
 |---|---|---|
@@ -712,7 +705,7 @@ k8smatrixwarden cis --fail-on-fail                       # CI: exit 1 on any FAI
 
 The full catalog lives in code as data (`k8smatrixwarden/frameworks/cis_catalog.py`), so adding CIS v1.9/1.10 or a managed-provider variant is a new catalog file, not an engine change.
 
-#### 5.9.2 Mitigating the node-access limitation — how NEEDS_NODE shrank from 69 → 31
+#### 5.9.2 Recovering control-plane flags from the API — how NEEDS_NODE shrinks from 69 → 31
 
 A naïve "API-only" scanner would mark all 69 non-policy control-plane/node controls as
 un-checkable (`NEEDS_NODE`). That is pessimistic: most of them are **process flags**, not
@@ -748,13 +741,12 @@ yields a full node-inclusive 130/130 verdict.
 | Container Escape Vectors | Break-out configurations | "5: 2 privileged, 1 hostPath, 1 docker.sock, 1 SYS_ADMIN" |
 | Privilege Escalation Paths | RBAC chains to cluster-admin | "4 paths: default-SA→pod-creator→admin-SA→cluster-admin" |
 | Lateral Movement Routes | Pod/namespace movement | "6: 4 ns w/o NetworkPolicy, metadata API open, no mTLS" |
-| SA Fan-Out 🆕 | Same SA reused across N pods/ns | "payment-sa mounted in 12 pods across 3 namespaces" |
+| SA Fan-Out | Same SA reused across N pods/ns | "payment-sa mounted in 12 pods across 3 namespaces" |
 | Data Exfiltration Vectors | Data-leak paths | "3: no egress policy, secrets in env, ConfigMap creds" |
 | MITRE Coverage | Techniques the cluster is exposed to | "26 / 40 techniques applicable" |
 | Risk Score | Composite 0–10 | "Cluster Risk: 7.8 / 10 (HIGH)" |
 
-### 5.11 Shard ⑨ — Admission Control 🆕
-
+### 5.11 Shard ⑨ — Admission Control
 Closes the Persistence / Credential Access "malicious admission controller" and Execution "sidecar injection" gaps.
 
 | Rule | Detects | Severity | Tactic |
@@ -766,8 +758,7 @@ Closes the Persistence / Credential Access "malicious admission controller" and 
 | `cronjob-enumerate` | Enumerate all CronJobs | 🟡 | Persistence (CronJob) |
 | `cronjob-suspicious` | Suspicious schedule/image/command | 🟠 | Persistence (CronJob) |
 
-### 5.12 Shard ⑩ — Cloud IAM & Workload Identity 🆕
-
+### 5.12 Shard ⑩ — Cloud IAM & Workload Identity
 Covers the Initial Access / Privilege Escalation / Lateral Movement "cloud credentials & access cloud resources" surface — a high-leverage area that touches 3 tactics.
 
 | Rule | Detects | Severity | Tactic |
@@ -789,7 +780,7 @@ Covers the Initial Access / Privilege Escalation / Lateral Movement "cloud crede
 | Component | Responsibility |
 |---|---|
 | **Scanner Registry** | Catalog of domain-shard plugins: name, version, resource types needed, RBAC verbs required (feeds least-privilege RoleBinding generation) |
-| **Rule / Technique Registry** | Catalog of every rule: `id`, `title`, `owning_shard`, `resource_scope`, `severity`, `detection_method`, `mitre[]`, `owasp`, `cis[]`, `nsa_cisa[]`, `remediation_ref`, `evidence_needs` |
+| **Rule / Technique Registry** | Catalog of every rule: `id`, `title`, `owning_shard`, `resource_scope`, `severity`, `detection_method`, `mitre[]`, `owasp`, `cis[]`, `nsa_cisa[]`, `evidence_needs` |
 | **MITRE Mapping Engine** | In-memory index over the Rule Registry specialized for taxonomy lookups: `tactic → [rule_id]`, `technique → [rule_id]`, `owasp/cis → [rule_id]`, `alias → [rule_id]`. Owns the versioned taxonomy files and validates every rule's tags against them |
 | **Evidence Collector** | Shared, scope-aware fetch/cache; lists only the resource types the resolved rules need, once per scan session |
 | **Detection Engine** | Executes the resolved rule set (native / OPA-Rego / external-tool adapter) via a common interface |
@@ -914,8 +905,8 @@ The Runtime Agent provides **continuous, real-time** monitoring as a **DaemonSet
 | Kernel module load | `insmod`/`modprobe` in container | 🔴 | Priv Esc |
 | Container escape indicators | cgroup `release_agent`, `nsenter`, `chroot` | 🔴 | Priv Esc (Container Escape) |
 | Crypto miner signatures | xmrig/minerd/cpuminer | 🟠 | Impact (Resource Hijacking) |
-| Log clear / truncation 🆕 | Writes/truncation on container log paths | 🟠 | Defense Evasion (Clear Logs) |
-| sshd spawn 🆕 | `sshd` process / port 22 listen | 🟠 | Execution (SSH in container) |
+| Log clear / truncation | Writes/truncation on container log paths | 🟠 | Defense Evasion (Clear Logs) |
+| sshd spawn | `sshd` process / port 22 listen | 🟠 | Execution (SSH in container) |
 
 ### 8.2 Kubernetes Audit Event Analysis
 
@@ -929,9 +920,9 @@ The Runtime Agent provides **continuous, real-time** monitoring as a **DaemonSet
 | `exec` into kube-system | Attacker in sensitive namespace | 🔴 | Execution |
 | Pod created `privileged:true` | Container-escape prep | 🔴 | Priv Esc |
 | SA token from unexpected IP | Stolen token usage | 🟠 | Credential Access |
-| `delete events` verb 🆕 | Covering tracks | 🟠 | Defense Evasion (Delete K8s Events) |
-| Source IP anomaly 🆕 | API calls from proxy/Tor/unexpected geo | 🟠 | Defense Evasion (Connect from Proxy) |
-| Mass delete spike 🆕 | Bulk delete of PV/PVC/StatefulSet | 🔴 | Impact (Data Destruction) |
+| `delete events` verb | Covering tracks | 🟠 | Defense Evasion (Delete K8s Events) |
+| Source IP anomaly | API calls from proxy/Tor/unexpected geo | 🟠 | Defense Evasion (Connect from Proxy) |
+| Mass delete spike | Bulk delete of PV/PVC/StatefulSet | 🔴 | Impact (Data Destruction) |
 
 ### 8.3 Container Drift & Behavioral Baseline
 
@@ -939,61 +930,59 @@ Drift detection: 48h training → anomaly detection (unexpected processes, new c
 
 ---
 
-## 9. Remediation Agent
+## 9. Detect-and-Report Guarantee
 
-### 9.1 Core Rule
+### 9.1 Core Principle
 
-> **⚠️ Every remediation action requires explicit user confirmation. No exceptions. No bypass. No auto-mode.**
+> **K8sMatrixWarden is detect-and-report only.** No surface — CLI, MCP, or web — exposes a
+> write, apply, or remediate path. Every capability is derived from a read-only snapshot of
+> the cluster (`get` / `list` / `watch`), and this contract is enforced by a standing test
+> (`tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`) that fails the build the
+> moment a write-capable tool is introduced.
 
-### 9.2 Fix Categories
+This is a deliberate design choice. A security scanner that also holds cluster-write
+credentials is itself a high-value target and a blast-radius risk. By keeping the platform
+strictly read-only, the credential it runs under can never mutate the cluster, and the tool
+can be run against production with a clean, auditable, minimal-privilege identity (§20).
 
-| Category | Example Fix |
+### 9.2 Every Finding Carries What's Needed to Fix It
+
+Read-only does not mean context-free. Every finding, in every output format, is generated
+from one shared content layer (`core/finding_context.py`) so no format can disagree with
+another about what a finding means. Each finding carries:
+
+| Section | Purpose |
 |---|---|
-| **Pod Security** | `kubectl patch deploy <n> -p '{"spec":{"template":{"spec":{"securityContext":{"runAsNonRoot":true}}}}}'` |
-| **RBAC** | `kubectl patch sa default -n <ns> -p '{"automountServiceAccountToken":false}'` |
-| **Network Policy** | `kubectl apply -f default-deny-ingress.yaml` |
-| **Secrets** | Rotate, migrate env→volume, enable etcd encryption |
-| **Images** | `kubectl set image deploy/<n> <c>=<img>@sha256:<digest>` |
-| **Compliance** | `kubectl label ns <ns> pod-security.kubernetes.io/enforce=restricted` |
-| **Admission** 🆕 | Remove/scope malicious webhook, set `failurePolicy: Fail` |
-| **Cloud IAM** 🆕 | Recommend scoped IRSA/WI policy (advisory — cloud-side change) |
+| **Summary** | What the finding is, in plain English |
+| **Standards & Benchmark Mapping** | The OWASP K8s Top 10, CIS, and NSA/CISA controls it maps to, each with a reference link |
+| **MITRE ATT&CK Mapping** | The tactic + technique it exposes, with a reference link per technique |
+| **Impact** | The real-world consequence if left unaddressed |
+| **Validation** | The exact `kubectl` commands to reproduce and verify the finding against the live cluster |
 
-### 9.3 Rollback Lifecycle
+Because the Validation section carries reproduction commands, a report doubles as a cited,
+verifiable audit record — an engineer can confirm each finding and apply the corresponding
+hardening themselves, with full context, outside the tool's trust boundary.
 
-The confirm → apply → health-check → rollback flow, as a DFD. A patch that applies but then
-fails its health check (rollout never becomes Ready) is **rolled back** — "applied but broken"
-is treated as a failure, not a success. Implemented in `agents/remediation.py::_execute`.
+### 9.3 Read-Only Data Flow
+
+Every flow the platform runs terminates in a report, a threat matrix, a kill-chain attack
+path, or a runtime correlation — never a cluster mutation.
 
 ```mermaid
-flowchart TB
-    SE["Security Engineer"]:::ext
+flowchart LR
+    SE["Security Engineer<br/>/ MCP client"]:::ext
     K8S["Kubernetes Cluster"]:::ext
-    DS[("/snapshots (D-snap)")]:::store
-    D4[("D4 Audit Log")]:::store
+    D3[("D3 Report Store")]:::store
 
-    F1(["1 Snapshot<br/>kubectl get -o yaml"]):::proc
-    F2(["2 Show diff<br/>exact change"]):::proc
-    F3{"3 Confirm?"}
-    F4(["4 Apply<br/>kubectl patch/apply"]):::proc
-    F5{"5 Health-check<br/>rollout Ready?"}
-    F6(["6 Rollback<br/>rollout undo / apply snapshot"]):::proc
-    F7(["7 Audit record"]):::proc
+    R1(["Scan / Correlate<br/>(read-only)"]):::proc
+    R2(["Findings + Context<br/>Summary·Standards·MITRE·Impact·Validation"]):::proc
+    R3(["Report · Threat Matrix · Attack Path"]):::proc
 
-    K8S -->|"current manifest"| F1
-    F1 -->|"snapshot yaml"| DS
-    F1 --> F2
-    F2 -->|"diff"| SE
-    SE -->|"Y / N"| F3
-    F3 -->|"N — abort"| F7
-    F3 -->|"Y"| F4
-    F4 -->|"patch"| K8S
-    F4 --> F5
-    F5 -->|"Ready ✓ = applied"| F7
-    F5 -->|"not Ready ✗"| F6
-    DS -->|"snapshot"| F6
-    F6 -->|"restore"| K8S
-    F6 --> F7
-    F7 -->|"timestamp · user · finding · fix · result"| D4
+    K8S -->|"get / list / watch"| R1
+    R1 --> R2
+    R2 --> R3
+    R3 -->|"saved scan"| D3
+    R3 -->|"report + Validation commands"| SE
 
     classDef ext fill:#ffe3ef,stroke:#a3366b,stroke-width:1px,color:#111
     classDef proc fill:#cfe8ff,stroke:#2266aa,stroke-width:2px,color:#111
@@ -1004,21 +993,20 @@ flowchart TB
 
 ## 10. K8s Security MCP Server
 
-The knowledge layer. All agents query it for commands, scan logic, fix procedures, and now **taxonomy**. It has **6 datasets**:
+The knowledge layer. All agents query it for commands, scan-tool invocations, CVE lookups, and **taxonomy**. It has **5 datasets**:
 
 | # | Dataset | Contents | Used By |
 |---|---------|----------|---------|
-| 📘 1 | **kubectl Security Commands** | 60+ inspection commands | Scanner |
-| 📗 2 | **Scanning Tool Commands** | Trivy, kube-bench, kubeaudit, kubesec, kubescape, popeye | Scanner |
-| 📙 3 | **Remediation Playbooks** | patch templates, YAML fixes, policy templates | Remediation |
-| 📕 4 | **CVE Knowledge Base** | 200+ K8s CVEs with detection & fix versions | Scanner + Orchestrator |
-| 📒 5 | **Compliance Rule Sets** | CIS rules, PSS, NSA/CISA controls | Scanner |
-| 🆕 📓 6 | **Taxonomy Files** | ATT&CK-for-Containers IDs, OWASP K8s Top 10, CIS, NSA, redguard aliases | MITRE Mapping Engine |
+| 1 | **kubectl Security Commands** | Named inspection one-liners for privileged pods, RBAC, webhooks, and more | Scanner |
+| 2 | **Scanning Tool Commands** | Example invocations for Trivy, kube-bench, kubescape, cosign, and other external tools | Scanner |
+| 3 | **CVE Knowledge Base** | Curated K8s CVEs with severity, affected range, and detection notes | Scanner + Orchestrator |
+| 4 | **Compliance Rule Sets** | CIS, PSS, and NSA/CISA control metadata | Scanner |
+| 5 | **Taxonomy Files** | ATT&CK-for-Containers IDs, OWASP K8s Top 10, CIS, NSA, redguard aliases | MITRE Mapping Engine |
 
-Dataset 6 is what the Mapping Engine validates rule tags against, and what lets the whole platform pin/upgrade a taxonomy version without a code change.
+Dataset 5 is what the Mapping Engine validates rule tags against, and what lets the whole platform pin/upgrade a taxonomy version without a code change.
 
 <details>
-<summary><strong>📘 Dataset 1 — kubectl Security Commands (sample)</strong></summary>
+<summary><strong>Dataset 1 — kubectl Security Commands (sample)</strong></summary>
 
 ```bash
 kubectl get pods -A -o json | jq '.items[] | select(.spec.securityContext.privileged==true) | .metadata.name'
@@ -1057,7 +1045,7 @@ LAYER 5 — IMAGES & SUPPLY     "Are images and dependencies trustworthy?"
 
 ## 12. MITRE ATT&CK for Kubernetes
 
-> **📌 Note:** The Kubernetes Threat Matrix (Microsoft original, extended by Redguard) has **9 tactics** (there is no "Collection" column in the K8s-specific matrix — that belongs to the general Enterprise ATT&CK matrix). The machine-readable mapping uses **MITRE ATT&CK for Containers** technique IDs (`T16xx`); Redguard names are display aliases only.
+> **Note:** The Kubernetes Threat Matrix (Microsoft original, extended by Redguard) has **9 tactics** (there is no "Collection" column in the K8s-specific matrix — that belongs to the general Enterprise ATT&CK matrix). The machine-readable mapping uses **MITRE ATT&CK for Containers** technique IDs (`T16xx`); Redguard names are display aliases only.
 
 ### 12.1 The 9 Tactics & Techniques (verified from the live matrix)
 
@@ -1224,59 +1212,58 @@ scanner:
 
 ### Workflow 1 — Full Cluster Scan (no selector)
 ```
-👤 "Run a full security scan"
-🧠 ScanRequest{ scope: cluster }  → registry resolves ALL scope-matching rules
-🔍 rules run across 10 shards, one shared evidence fetch
-📊 🔴 19 CRITICAL · 🟠 44 HIGH · 🟡 22 MEDIUM · Score 31/100 (CRITICAL)
-   MITRE: 28/40 techniques applicable · Auto-remediate CRITICAL? (Y/N)
+USER  "Run a full security scan"
+ORCH  ScanRequest{ scope: cluster }  → registry resolves ALL scope-matching rules
+SCAN  rules run across 10 shards, one shared evidence fetch
+RPT   CRITICAL 19 · HIGH 44 · MEDIUM 22 · Score 31/100 (CRITICAL)
+      MITRE: 28/40 techniques applicable · findings ranked by attack-path-aware risk
 ```
 
-### Workflow 2 — Scan by Tactic 🆕
+### Workflow 2 — Scan by Tactic
 ```
-👤 "Scan production for Persistence"
-🧠 ScanRequest{ scope:{ns:production}, selector:[{tactic:Persistence}] }
-🔍 resolve → { hostpath-writable, hostpath-root, cronjob-suspicious,
-              admission-malicious-webhook, runtime-backdoor-container }  (5 rules, 2 shards + runtime)
-   [5] "This resolves to 5 Persistence checks. Proceed?" → Y
-📊 2 findings: writable hostPath in batch-worker (also enables PrivEsc+Lateral → attack-path bonus),
-   1 suspicious CronJob. Fix? (Y/N)
+USER  "Scan production for Persistence"
+ORCH  ScanRequest{ scope:{ns:production}, selector:[{tactic:Persistence}] }
+SCAN  resolve → { hostpath-writable, hostpath-root, cronjob-suspicious,
+      admission-malicious-webhook, runtime-backdoor-container }  (5 rules, 2 shards + runtime)
+      [5] "This resolves to 5 Persistence checks. Proceed?" → Y
+RPT   2 findings: writable hostPath in batch-worker (also enables PrivEsc+Lateral →
+      attack-path bonus), 1 suspicious CronJob. Each carries Validation commands to verify.
 ```
 
-### Workflow 3 — Scan by Technique / Alias 🆕
+### Workflow 3 — Scan by Technique / Alias
 ```
-👤 "Scan only for Container Escape"
-🧠 selector:[{technique:"Container Escape"}] → alias expands to 4 rules
-📊 3 escape vectors: 2 privileged, 1 docker.sock. Ranked by blast radius.
+USER  "Scan only for Container Escape"
+ORCH  selector:[{technique:"Container Escape"}] → alias expands to 4 rules
+RPT   3 escape vectors: 2 privileged, 1 docker.sock. Ranked by blast radius.
 ```
 
 ### Workflow 4 — Attack Surface Mapping
 ```
-👤 "Map the attack surface"
-🧠 Intent=MAP → shard ⑧
-📊 Entry points 8 · Escape vectors 5 · PrivEsc paths 4 · Lateral routes 6 · Risk 7.8/10
+USER  "Map the attack surface"
+ORCH  Intent=MAP → shard ⑧
+RPT   Entry points 8 · Escape vectors 5 · PrivEsc paths 4 · Lateral routes 6 · Risk 7.8/10
 ```
 
-### Workflow 5 — Runtime Threat Response
+### Workflow 5 — Scan × Runtime Correlation
 ```
-🛡️ Falco: shell spawned in web-app (prod) → curl 169.254.169.254
-🧠 auto-routes to Scanner (investigate) + Runtime (details)
-📊 CRITICAL: shell + metadata API = credential theft
-   MITRE: Execution → bash | Credential Access → Managed Identity
-   Execute emergency response (kill pod, block IMDS, rotate token)? (Y/N) → Y
-🔧 ✅ pod killed ✅ NetworkPolicy applied ✅ token rotated ✅ audit logged
+RUNTIME  Falco: shell spawned in web-app (prod) → curl 169.254.169.254
+ORCH     correlate the runtime alert against the latest scan's findings by MITRE tactic + namespace
+RPT      CONFIRMED: shell + metadata API access = credential theft in progress
+         MITRE: Execution → bash | Credential Access → Managed Identity
+         Ties to scan finding net-metadata-api-reachable (same tactic + namespace);
+         drift check flags uid-0 despite runAsNonRoot. Report links each to its card.
 ```
 
 ### Workflow 6 — Compliance Audit (full CIS Benchmark Engine)
 ```
-👤 "Run CIS benchmark audit"
-🧠 Intent=AUDIT → CIS Benchmark Engine evaluates all 130 controls (§5.9.1–5.9.2)
-📊 CIS Kubernetes Benchmark v1.8 — 130 controls  (profile: self-managed)
-   ✅ PASS 14  ❌ FAIL 51  🔶 MANUAL 34  ➖ NA 0  ⚙️ NEEDS_NODE 31
-   Automated pass rate 22% · auto-evaluated coverage 50%
-   §1 Control Plane: ❌22 (profiling on, AlwaysAllow authz, weak admission set, …)
-   §5 Policies: ❌18  (privileged pods, wildcard RBAC, no NetworkPolicies, …)
-   Supply `--kube-bench-json` to resolve the 31 remaining node file controls.
-   Auto-fix the FAILed controls? (Y/N)
+USER  "Run CIS benchmark audit"
+ORCH  Intent=AUDIT → CIS Benchmark Engine evaluates all 130 controls (§5.9.1–5.9.2)
+RPT   CIS Kubernetes Benchmark v1.8 — 130 controls  (profile: self-managed)
+      PASS 14  FAIL 51  MANUAL 34  NA 0  NEEDS_NODE 31
+      Automated pass rate 22% · auto-evaluated coverage 50%
+      §1 Control Plane: FAIL 22 (profiling on, AlwaysAllow authz, weak admission set, …)
+      §5 Policies:      FAIL 18 (privileged pods, wildcard RBAC, no NetworkPolicies, …)
+      Supply `--kube-bench-json` to resolve the 31 remaining node file controls.
 ```
 > Control-plane/kubelet **process-flag** controls are recovered from the API (static-pod
 > specs + kubelet config), so only the 31 true **file-permission** controls remain
@@ -1285,9 +1272,9 @@ scanner:
 
 ### Workflow 7 — Download Report
 ```
-👤 "Download the latest report as markdown"
-🧠 Intent=DOWNLOAD, format=markdown → Report Store
-✅ k8s-security-report-20260715.md (85 KB) — CLI/API/kubectl cp/Web UI
+USER  "Download the latest report as markdown"
+ORCH  Intent=DOWNLOAD, format=markdown → Report Store
+RPT   k8smatrixwarden-report-scan-20260715.md — CLI / API / web dashboard
 ```
 
 ---
@@ -1312,7 +1299,7 @@ Risk Score = Σ (severity × exploitability × blast_radius × path_multiplier) 
 | 2.1–4.0 | 🟢 Good | Address medium findings |
 | 4.1–6.0 | 🟡 Fair | Prioritize high findings |
 | 6.1–8.0 | 🟠 Poor | Immediate action on critical |
-| 8.1–10.0 | 🔴 Critical | Emergency remediation |
+| 8.1–10.0 | 🔴 Critical | Emergency response |
 
 ### 18.2 Report Formats
 
@@ -1362,17 +1349,17 @@ Namespace: k8s-security-tool
 │ orchestrator-agent (1)   │  │ scanner-agent (1–3, HPA)  │
 └──────────────────────────┘  └──────────────────────────┘
 ┌──────────────────────────┐  ┌──────────────────────────┐
-│ remediation-agent (1)    │  │ k8s-security-mcp (STS 1)  │
+│ k8s-security-mcp (STS 1)  │  │ security-dashboard (1)    │
 └──────────────────────────┘  └──────────────────────────┘
-┌──────────────────────────┐  ┌──────────────────────────┐
-│ security-dashboard (1)    │  │ report-store (STS + PVC) │
-└──────────────────────────┘  └──────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ report-store (STS + PVC)                                  │
+└──────────────────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────────────────┐
 │ runtime-agent (DaemonSet — 1/node) — Falco + Tetragon    │
 └──────────────────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────────────────┐
 │ security-data (PVC): scan history · CVE KB · taxonomy ·   │
-│ compliance trends · remediation audit · baselines ·       │
+│ compliance trends · runtime baselines ·                   │
 │ custom rule plugins · generated reports                   │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -1384,7 +1371,6 @@ Namespace: k8s-security-tool
 | orchestrator-agent | 100m | 500m | 128Mi | 512Mi |
 | scanner-agent | 200m | 1000m | 256Mi | 1Gi |
 | runtime-agent (per node) | 100m | 500m | 128Mi | 512Mi |
-| remediation-agent | 100m | 500m | 128Mi | 256Mi |
 | mcp-server | 200m | 1000m | 512Mi | 2Gi |
 | security-dashboard | 50m | 200m | 64Mi | 256Mi |
 | report-store | 100m | 500m | 256Mi | 1Gi |
@@ -1393,7 +1379,7 @@ Namespace: k8s-security-tool
 
 ## 20. RBAC Configuration
 
-K8sMatrixWarden uses a two-tier model (read-only vs. remediator) **and** adds **per-plugin scoped RoleBindings** minted by the Plugin Loader from each shard's declared verbs — so a compromised/buggy shard is blast-radius-limited to what it declared, not to everything the Scanner can read.
+K8sMatrixWarden is **read-only everywhere** — there is no write tier, because there is no apply path. On top of a single baseline read-only role, the Plugin Loader mints **per-plugin scoped RoleBindings** from each shard's declared verbs, so a compromised or buggy shard is blast-radius-limited to exactly what it declared, not to everything the Scanner can read. Every verb in every tier is `get` / `list` / `watch`.
 
 ```yaml
 # ── Tier 1: baseline read-only (Scanner + Runtime) ──
@@ -1411,23 +1397,13 @@ rules:
       resources: [mutatingwebhookconfigurations, validatingwebhookconfigurations], verbs: [get, list, watch] }  # ⑨ Admission
 
 ---
-# ── Tier 2: write (Remediation Agent ONLY, only when triggered) ──
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata: { name: k8s-security-remediator }
-rules:
-  - { apiGroups: [""], resources: [pods, services, secrets, configmaps, serviceaccounts], verbs: [get, list, watch, update, patch, delete] }
-  - { apiGroups: [apps], resources: [deployments, daemonsets, statefulsets], verbs: [get, list, watch, update, patch] }
-  - { apiGroups: [networking.k8s.io], resources: [networkpolicies], verbs: [get, list, watch, create, update, patch, delete] }
-  - { apiGroups: [rbac.authorization.k8s.io], resources: [roles, rolebindings], verbs: [get, list, watch, create, update, patch, delete] }
-  - { apiGroups: [admissionregistration.k8s.io],
-      resources: [mutatingwebhookconfigurations, validatingwebhookconfigurations], verbs: [get, list, watch, update, patch, delete] }
-
----
-# ── Tier 3 (NEW): per-plugin scoped role, generated from the shard manifest ──
+# ── Tier 2: per-plugin scoped role, generated from the shard manifest ──
+# Each shard gets only the verbs its rules actually declared needing — all read-only.
 # Example: cloud_iam shard needs NO extra K8s verbs but a scoped cloud IAM read credential
 #          (mounted via IRSA/Workload Identity, describe-only) — declared in its plugin manifest.
 ```
+
+Generate the exact, ready-to-apply manifest with `k8smatrixwarden roles --bind` — one Namespace + ServiceAccount + one scoped ClusterRole/ClusterRoleBinding per shard, every rule `get` / `list` / `watch` only.
 
 ---
 
@@ -1481,7 +1457,7 @@ Integrated as **normalizing adapters** — their output is mapped into the inter
 | Security Posture | [Kubescape](https://github.com/kubescape/kubescape) | Shard ⑦ (emits MITRE/NSA/CIS IDs natively) |
 | Runtime Monitoring | [Falco](https://github.com/falcosecurity/falco) | Runtime Agent (adapter) |
 | eBPF Enforcement | [Cilium Tetragon](https://github.com/cilium/tetragon) | Runtime Agent |
-| Policy Engine | [Kyverno](https://github.com/kyverno/kyverno) / [OPA Gatekeeper](https://github.com/open-policy-agent/gatekeeper) | Shard ⑦⑨ + Remediation |
+| Policy Engine | [Kyverno](https://github.com/kyverno/kyverno) / [OPA Gatekeeper](https://github.com/open-policy-agent/gatekeeper) | Shard ⑦ ⑨ (admission posture) |
 | Secret Detection | [TruffleHog](https://github.com/trufflesecurity/trufflehog) | Shard ⑤ + ⑥ |
 | Image Signing | [Cosign](https://github.com/sigstore/cosign) | Shard ⑤ |
 | SBOM | [Syft](https://github.com/anchore/syft) | Shard ⑤ |
@@ -1507,7 +1483,7 @@ Alerts now carry the finding's full tag set (MITRE tactic + technique, OWASP, CI
 │  Pod:      payment-api (namespace: production)           │
 │  OWASP:    K01   MITRE: T1610 Deploy Container (PrivEsc) │
 │  Rule:     workload-privileged-container                 │
-│  [Fix Now] [Investigate] [Suppress] [View Report]        │
+│  [Investigate] [Suppress] [View Report]                  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -1524,13 +1500,13 @@ Alerts now carry the finding's full tag set (MITRE tactic + technique, OWASP, CI
 
 ### Phase 2 — Full Shard Coverage (Weeks 5–8)
 - Shards ① Control Plane · ④ Network · ⑤ Image (Trivy) · ⑦ Compliance (kube-bench) · ⑧ Attack Surface 🔲
-- Shards ⑨ Admission Control · ⑩ Cloud IAM 🆕 🔲
+- Shards ⑨ Admission Control · ⑩ Cloud IAM 🔲
 - External Tool Adapters (Trivy, kube-bench, kubescape) 🔲
 - MCP Datasets 2, 4, 5 · MITRE/OWASP tagging complete 🔲
 
-### Phase 3 — Runtime & Remediation (Weeks 9–12)
+### Phase 3 — Runtime & Correlation (Weeks 9–12)
 - Runtime Agent (Falco, audit analysis, drift, baseline) — registry-pattern rules 🔲
-- Remediation Agent (confirm + rollback) · MCP Dataset 3 🔲
+- Scan × runtime correlation + drift detection · kill-chain attack path 🔲
 - Attack-path-aware Risk Scoring · Report download (all formats, tag filters) 🔲
 - Security Dashboard 🔲
 

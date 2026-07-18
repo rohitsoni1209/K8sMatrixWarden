@@ -110,6 +110,11 @@ class EvidenceCollector:
 
     def __init__(self) -> None:
         self._cache: dict[str, list[dict]] = {}
+        #: Non-fatal problems hit while collecting (e.g. a resource type the scanner's
+        #: RBAC can't read, or an API group absent on this cluster). The scan proceeds
+        #: with whatever it could read; surfaces make partial coverage visible instead of
+        #: silently under-reporting. Empty on the mock backend.
+        self.warnings: list[str] = []
 
     def collect(self, needs: set[str], scope: Scope) -> Evidence:
         for kind in needs:
@@ -138,11 +143,64 @@ class MockEvidenceCollector(EvidenceCollector):
         return list(items)
 
 
+def _api_exception_type() -> tuple:
+    """The kubernetes client's ApiException, or an empty tuple if the package is absent
+    (isinstance(x, ()) is always False, so callers stay safe either way)."""
+    try:
+        from kubernetes.client.exceptions import ApiException  # type: ignore
+        return (ApiException,)
+    except Exception:
+        return ()
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """True when `exc` is a transport/reachability failure — the cluster is down, the
+    endpoint is wrong, DNS fails, the connection is refused, or a request times out —
+    as opposed to an HTTP response like 403/404. A connection failure means nothing on
+    the cluster is scannable (fatal, one clean message); an HTTP error affects only one
+    resource type (skip it, keep scanning)."""
+    api_exc = _api_exception_type()
+    if api_exc and isinstance(exc, api_exc):
+        # status 0/None => the client never received an HTTP response = transport failure.
+        return not getattr(exc, "status", None)
+    try:
+        import urllib3
+        if isinstance(exc, urllib3.exceptions.HTTPError):
+            return True
+    except Exception:
+        pass
+    return isinstance(exc, (ConnectionError, TimeoutError, OSError))
+
+
+def _short_api_error(exc: BaseException) -> str:
+    """A one-line, human reason for skipping a resource type (used in scan warnings)."""
+    for api_exc in _api_exception_type():
+        if isinstance(exc, api_exc):
+            status = getattr(exc, "status", None)
+            if status == 403:
+                return "HTTP 403 Forbidden — scanner ServiceAccount lacks read RBAC for it"
+            if status == 404:
+                return "HTTP 404 — API group/resource not present on this cluster"
+            reason = (getattr(exc, "reason", "") or "").strip()
+            return f"HTTP {status} {reason}".strip()
+    first = (str(exc).splitlines() or [""])[0][:120]
+    return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
+
+
 class LiveEvidenceCollector(EvidenceCollector):
     """
     Reads the live cluster as raw camelCase JSON via the optional `kubernetes` client.
     Imported lazily so the tool runs without the dependency.
+
+    Resilient by design: a connection failure (cluster down / wrong endpoint) fails fast
+    with one clear, actionable message instead of a urllib3 traceback, and a per-resource
+    HTTP error (RBAC-forbidden secret, absent API group) is recorded as a warning and
+    skipped rather than aborting the whole scan.
     """
+
+    #: Per-request cap (seconds) so an unreachable/slow API server can't hang a scan.
+    _REQUEST_TIMEOUT = 15
+    _PREFLIGHT_TIMEOUT = 6
 
     def __init__(self, kubeconfig: Optional[str] = None, context: Optional[str] = None):
         super().__init__()
@@ -172,15 +230,54 @@ class LiveEvidenceCollector(EvidenceCollector):
                 config.load_incluster_config()
         self._client = client
         self._api = client.ApiClient()
+        self._context = context
+        self._preflight()
+
+    def _unreachable(self, exc: BaseException) -> RuntimeError:
+        """A clear, actionable error for 'the API server can't be reached' — the common
+        live-scan failure (cluster stopped, wrong endpoint) — instead of a raw traceback."""
+        ctx = self._context or "(current-context)"
+        detail = (str(exc).splitlines() or [""])[0][:200] or type(exc).__name__
+        hint_ctx = self._context or "<name>"
+        return RuntimeError(
+            f"Cannot reach the Kubernetes API server for context {ctx!r}.\n"
+            f"  → {type(exc).__name__}: {detail}\n"
+            f"The cluster may be stopped, or the context may point at the wrong endpoint.\n"
+            f"Verify it is running:  kubectl --context {hint_ctx} cluster-info\n"
+            f"Or scan the bundled sample cluster instead:  add --mock")
+
+    def _preflight(self) -> None:
+        """Probe the API server once up front so an unreachable cluster fails fast with a
+        clear message. Only a *connection* failure is fatal here — a 401/403/etc on
+        /version (some clusters gate it) is fine; real resource fetches handle their own
+        auth per type."""
+        try:
+            self._api.call_api("/version", "GET", auth_settings=["BearerToken"],
+                               _preload_content=False,
+                               _request_timeout=self._PREFLIGHT_TIMEOUT)
+        except Exception as exc:
+            if _is_connection_error(exc):
+                raise self._unreachable(exc) from exc
 
     def _get_json(self, path: str) -> list[dict]:
-        """Call the REST path with raw JSON preserved (camelCase)."""
+        """Call the REST path and parse the raw JSON body ourselves (camelCase preserved).
+
+        `_preload_content=False` returns the underlying HTTP response without the client
+        trying to deserialize it into a typed model, so this stays compatible across
+        kubernetes-client versions — the older `response_type=` kwarg was removed in v33+
+        (renamed to `response_types_map`), which otherwise breaks live scanning on a
+        modern client even though pyproject only requires `kubernetes>=28`.
+        """
         resp = self._api.call_api(
             path, "GET", auth_settings=["BearerToken"],
-            response_type="object", _preload_content=True,
+            _preload_content=False, _request_timeout=self._REQUEST_TIMEOUT,
         )
-        data = resp[0] if isinstance(resp, tuple) else resp
-        return (data or {}).get("items", []) if isinstance(data, dict) else []
+        raw = resp[0] if isinstance(resp, tuple) else resp
+        body = getattr(raw, "data", raw)
+        if isinstance(body, (bytes, bytearray)):
+            body = body.decode("utf-8")
+        data = json.loads(body) if body else {}
+        return data.get("items", []) if isinstance(data, dict) else []
 
     _PATHS = {
         "pods": "/api/v1/pods",
@@ -215,7 +312,17 @@ class LiveEvidenceCollector(EvidenceCollector):
         path = self._PATHS.get(bucket)
         if not path:
             return []   # synthetic buckets (cloudiam) unavailable without an adapter
-        items = self._get_json(path)
+        try:
+            items = self._get_json(path)
+        except Exception as exc:
+            if _is_connection_error(exc):
+                # The cluster went unreachable mid-scan — nothing more is scannable.
+                raise self._unreachable(exc) from exc
+            # RBAC-forbidden, missing API group, or a transient error for THIS resource
+            # type only: skip it, record why, and keep scanning everything else. Honest
+            # partial coverage beats aborting the whole scan over one resource type.
+            self.warnings.append(f"{kind}: skipped ({_short_api_error(exc)})")
+            return []
         for it in items:
             it.setdefault("kind", kind)
         return items
