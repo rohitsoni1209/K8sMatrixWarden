@@ -53,6 +53,14 @@ class ScanResult:
     generated_at: str = field(default_factory=ist_timestamp)
     tool_version: str = "1.0"
     mode: str = "mock"
+    #: Non-fatal collection problems (resource types the scanner's RBAC could not read,
+    #: API groups absent on this cluster). Carried on the result — not just printed once —
+    #: so every surface can show that coverage was partial.
+    warnings: list[str] = field(default_factory=list)
+    #: False when the collector could not read the cluster at all. Such a result has zero
+    #: findings because nothing was inspected, NOT because the cluster is clean, and every
+    #: surface must say so instead of rendering a passing score.
+    evidence_ok: bool = True
 
     def __post_init__(self):
         if not self.scan_id:
@@ -78,6 +86,8 @@ class ScanResult:
             "generated_at": self.generated_at,
             "tool_version": self.tool_version,
             "mode": self.mode,
+            "warnings": list(self.warnings),
+            "evidence_ok": self.evidence_ok,
             "scope": self.request.scope.describe(),
             "selector": self.request.selector.describe(),
             "resolved_rules": self.resolved_rule_ids,
@@ -118,11 +128,13 @@ class ScanResult:
             cluster_name=d.get("cluster", "target-cluster"),
             generated_at=d.get("generated_at", ""),
             tool_version=str(d.get("tool_version", "1.0")),
-            mode=d.get("mode", "mock"))
+            mode=d.get("mode", "mock"),
+            warnings=list(d.get("warnings", []) or []),
+            evidence_ok=bool(d.get("evidence_ok", True)))
 
 
 _RATING_EMOJI = {"Excellent": "🟢", "Good": "🟢", "Fair": "🟡", "Poor": "🟠",
-                 "Critical": "🔴"}
+                 "Critical": "🔴", "Unknown": "⚠️"}
 
 
 @dataclass

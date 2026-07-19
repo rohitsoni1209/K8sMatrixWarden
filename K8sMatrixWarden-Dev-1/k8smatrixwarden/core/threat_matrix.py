@@ -233,6 +233,18 @@ class ThreatMatrix:
         return sum(1 for col in self.columns if col.hit_count)
 
     @property
+    def tactics_covered(self) -> int:
+        """Tactics with at least one technique the platform has a rule for. Independent of
+        any scan — this is what the standalone /matrix coverage page reports on."""
+        return sum(1 for col in self.columns
+                   if any(c.covered for c in col.cells))
+
+    @property
+    def rule_count(self) -> int:
+        """Distinct rules contributing coverage anywhere on the matrix."""
+        return len({rid for col in self.columns for c in col.cells for rid in c.rule_ids})
+
+    @property
     def finding_count(self) -> int:
         """DISTINCT findings mapped onto the matrix. A multi-tactic finding appears in one
         cell per tactic it enables, so summing column counts would over-count it — dedupe
@@ -253,6 +265,8 @@ class ThreatMatrix:
             "reference": REDGUARD_MATRIX_URL,
             "tactics_total": len(self.columns),
             "tactics_hit": self.tactics_hit,
+            "tactics_covered": self.tactics_covered,
+            "rule_count": self.rule_count,
             "techniques_total": self.techniques_total,
             "techniques_covered": self.techniques_covered,
             "techniques_hit": self.techniques_hit,

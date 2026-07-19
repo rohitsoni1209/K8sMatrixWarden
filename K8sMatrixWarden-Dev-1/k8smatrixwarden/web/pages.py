@@ -10,7 +10,7 @@ server-rendered (they reuse the ReportingEngine / threat-matrix grid directly).
 """
 from __future__ import annotations
 
-from ..core.reporting import _HTML_CSS, _esc
+from ..core.reporting import _HTML_CSS, _esc, THEME_BUTTON, THEME_JS
 from ..core.results import ScanResult
 from ..core.threat_matrix import ThreatMatrix
 from ..core.threat_matrix_render import render_html_grid
@@ -36,6 +36,7 @@ _DASH_CSS = """
 .pill{display:inline-block;font-size:.73rem;font-weight:700;padding:.15rem .6rem;border-radius:20px;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
 .pill.Critical{background:var(--crit)}.pill.Poor{background:var(--high)}
 .pill.Fair{background:var(--med)}.pill.Good,.pill.Excellent{background:var(--low)}
+.pill.Unknown{background:var(--info,#6c757d)}
 """
 
 # The dashboard app's own styling — professional, dense, interactive.
@@ -184,14 +185,35 @@ button.btn.ghost:hover{background:var(--bg);border-color:var(--accent);box-shado
 .scanform .kc-or{font-size:.72rem;color:var(--muted);text-align:center;margin:.1rem 0}
 #kubeconfigfilename{font-size:.74rem;color:var(--muted)}
 #scanmsg{font-size:.84rem;margin-top:.8rem;color:var(--muted);font-weight:500}
+.scanerr,.scanwarn{margin-top:.6rem;border-radius:0 10px 10px 0;padding:.7rem .85rem;
+ background:var(--card);border:1px solid var(--bd)}
+.scanerr{border-left:4px solid var(--crit)}.scanwarn{border-left:4px solid var(--high)}
+.scanerr pre{margin:.4rem 0 0;white-space:pre-wrap;font-family:var(--mono);font-size:.78rem;
+ color:var(--fg)}
+.scanwarn ul{margin:.35rem 0 0;padding-left:1.1rem;font-size:.79rem}
+/* scan-health banners — an unread cluster must never read as a clean one */
+.healthbar{border-radius:12px;padding:.9rem 1.05rem;margin:1.1rem 0;background:var(--card);
+ border:1px solid var(--bd)}
+.healthbar.bad{border:1.5px solid var(--crit);border-left:5px solid var(--crit)}
+.healthbar.partial{border-left:5px solid var(--high)}
+.healthbar .hb-t{font-weight:800;font-size:.95rem}
+.healthbar.bad .hb-t{color:var(--crit)}.healthbar.partial .hb-t{color:var(--high)}
+.healthbar .hb-l{margin:.45rem 0 .35rem;padding-left:1.15rem;font-size:.8rem;color:var(--muted)}
+.healthbar .hb-f{font-size:.82rem;color:var(--fg)}
+.healthnote{border-left:4px solid var(--crit);background:var(--bg);border:1px solid var(--bd);
+ border-radius:0 8px 8px 0;padding:.55rem .75rem;margin:0 0 .9rem;font-size:.83rem;
+ font-weight:600;color:var(--crit)}
+.kpi.unk .n{color:var(--info)}
 """
 
 
 def layout(title: str, body: str, *, extra_css: str = "") -> str:
+    # THEME_JS runs last so it can label any .themebtn the body rendered.
     return (f"<!doctype html><html><head><meta charset='utf-8'>"
             f"<meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{_esc(title)}</title><style>{_HTML_CSS}{_DASH_CSS}{extra_css}</style></head>"
-            f"<body><div class='wrap'>{body}</div></body></html>")
+            f"<body><div class='wrap'>{body}</div>"
+            f"<script>{THEME_JS}</script></body></html>")
 
 
 def _topbar(active: str = "") -> str:
@@ -203,6 +225,7 @@ def _topbar(active: str = "") -> str:
             + nav("/", "Dashboard", "home")
             + nav("/matrix", "Coverage Matrix", "matrix")
             + nav("/api/reports", "API", "api")
+            + THEME_BUTTON
             + "</div>")
 
 
@@ -215,16 +238,27 @@ def dashboard_page(has_scan: bool = False) -> str:
 
 def matrix_page(tm: ThreatMatrix, *, result: ScanResult = None,
                 title_note: str = "") -> str:
+    # No scan overlaid => the standalone coverage page. Render coverage stats rather than
+    # hit stats, which would all be a structural (and misleading) zero there.
+    coverage_only = result is None
     crumb = ("<div class='crumbs'><a href='/'>Dashboard</a> › "
              + (f"<a href='/report/{_esc(tm.scan_id)}'>{_esc(tm.scan_id)}</a> › matrix"
-                if result is not None else "coverage matrix") + "</div>")
-    head = (f"<h1 style='font-size:1.3rem;margin:.2rem 0'>Kubernetes Threat Matrix</h1>"
+                if not coverage_only else "coverage matrix") + "</div>")
+    title = ("Detection Coverage — Kubernetes Threat Matrix" if coverage_only
+             else "Kubernetes Threat Matrix")
+    head = (f"<h1 style='font-size:1.3rem;margin:.2rem 0'>{title}</h1>"
             f"<div class='sub'>{_esc(title_note or ('scan ' + tm.scan_id))} · "
-            f"scope <code>{_esc(tm.scope)}</code> · "
-            f"<a href='{tm.summary()['reference']}' target='_blank' rel='noopener'>"
-            f"Redguard Kubernetes Threat Matrix ↗</a></div>")
+            + ("" if coverage_only else f"scope <code>{_esc(tm.scope)}</code> · ")
+            + f"<a href='{tm.summary()['reference']}' target='_blank' rel='noopener'>"
+            f"Redguard Kubernetes Threat Matrix ↗</a></div>"
+            + ("<div class='fm' style='margin:.5rem 0 1rem'>This page shows what "
+               "K8sMatrixWarden <b>can detect</b> — no scan is overlaid, so there are no "
+               "findings or severities here by design. To see a cluster's exposure, open "
+               "a scan's own matrix from the "
+               "<a href='/'>dashboard</a>.</div>" if coverage_only else ""))
     return layout("K8sMatrixWarden · Threat Matrix",
-                  _topbar("matrix") + crumb + head + render_html_grid(tm))
+                  _topbar("matrix") + crumb + head
+                  + render_html_grid(tm, coverage_only=coverage_only))
 
 
 def error_page(status: int, message: str) -> str:
@@ -267,6 +301,13 @@ function findLink(f){
     <span class='fl-s'>score ${(f.score||0).toFixed(0)}</span>
     <span class='fl-go'>&rsaquo;</span></a>`;
 }
+const OWASP_HOME='https://owasp.org/www-project-kubernetes-top-ten/';
+function owaspLink(code){          // K03 -> its own owasp.org page, not the landing page
+  if(!code) return '';
+  const u=((D&&D.owasp_urls)||{})[code]||OWASP_HOME;
+  return ` · <a href='${esc(u)}' target='_blank' rel='noopener'
+    onclick='event.stopPropagation()' title='OWASP Kubernetes Top 10 — ${esc(code)}'>OWASP ${esc(code)}</a>`;
+}
 function tacticFindings(tactic){
   return D.findings.filter(f=>(f.mitre||[]).some(m=>m.tactic===tactic))
     .sort((a,b)=>SEV.indexOf(a.severity)-SEV.indexOf(b.severity)||b.score-a.score);
@@ -288,9 +329,34 @@ function emptyView(){
     <div class='fm'>No saved scans yet — the dashboard lights up once you save one.</div>
     ${scanForm()}</div>`;
 }
+/* ---- scan health -------------------------------------------------------
+   A scan that could not read the cluster has zero findings because nothing was
+   inspected. Every surface that shows a score, a count or a matrix has to say so, or
+   the dashboard reads as "all clear". `healthBanner()` sits above the tabs (so it is
+   visible on every one) and `healthNote()` repeats it inside the individual views. */
+const scanOk = () => !D || !D.scan || D.scan.evidence_ok !== false;
+const scanWarnings = () => (D && D.scan && D.scan.warnings) || [];
+function healthBanner(){
+  const w=scanWarnings(); if(!w.length) return '';
+  const bad=!scanOk();
+  return `<div class='healthbar ${bad?'bad':'partial'}'>
+    <div class='hb-t'>${bad?'&#128721; Scan incomplete — this cluster was not read'
+                          :'&#9888; Partial coverage — some resource types were unreadable'}</div>
+    <ul class='hb-l'>${w.slice(0,12).map(x=>`<li>${esc(x)}</li>`).join('')}
+      ${w.length>12?`<li>… ${w.length-12} more</li>`:''}</ul>
+    <div class='hb-f'>${bad?'Findings, scores and the threat matrix below are NOT evidence of a secure cluster. Fix the access problem above and re-scan.'
+                          :'Findings on the resource types listed above are missing from this scan.'}</div>
+  </div>`;
+}
+function healthNote(){
+  if(scanOk()) return '';
+  return `<div class='healthnote'>&#128721; Not a result — this scan could not read the
+    cluster, so nothing below was actually observed.</div>`;
+}
 function render(){
   $('#app').innerHTML = `
     ${reportBar()}
+    ${healthBanner()}
     ${hero()}
     <div class='tabs'>
       ${tab('overview','Overview')}${tab('findings','Findings ('+D.scan.total+')')}
@@ -334,8 +400,19 @@ function hero(){
     :d>0?`<div class='s up'>&uarr; ${d.toFixed(1)} vs previous</div>`:`<div class='s fm'>no change</div>`);
   const hp=(s.counts.CRITICAL||0)+(s.counts.HIGH||0);
   const cov=D.threat_matrix.summary.coverage_pct;
+  const meta=`<div class='fm'>scan <code>${esc(s.scan_id)}</code> · ${esc(s.scope)} · mode <code>${esc(s.mode)}</code> · ${fmtTime(s.generated_at)}</div>`;
+  // Cluster never read: show "—" rather than a 0.0 risk / Excellent rating that a reader
+  // would take as a passing grade for a cluster nothing was collected from.
+  if(!scanOk()){
+    return `${meta}<div class='kpis'>
+      <div class='kpi unk'><div class='n'>—</div><div class='l'>Risk score /10</div><div class='s fm'>not measurable</div></div>
+      <div class='kpi unk'><div class='n'>Unknown</div><div class='l'>Overall rating</div><div class='s fm'>cluster not read</div></div>
+      <div class='kpi unk'><div class='n'>—</div><div class='l'>High+ findings</div><div class='s fm'>nothing inspected</div></div>
+      <div class='kpi unk'><div class='n'>${cov}%</div><div class='l'>Detection coverage</div><div class='s fm'>rules available, not applied</div></div>
+    </div>`;
+  }
   const rk=s.cluster_risk>=7?'crit':s.cluster_risk>=4?'warn':'good';
-  return `<div class='fm'>scan <code>${esc(s.scan_id)}</code> · ${esc(s.scope)} · mode <code>${esc(s.mode)}</code> · ${fmtTime(s.generated_at)}</div>
+  return `${meta}
   <div class='kpis'>
     <div class='kpi ${rk}'><div class='n'>${s.cluster_risk.toFixed(1)}</div><div class='l'>Risk score /10</div>${delta}</div>
     <div class='kpi ${rk}'><div class='n'>${esc(s.rating)}</div><div class='l'>Overall rating</div><div class='s fm'>${s.total} findings</div></div>
@@ -344,7 +421,8 @@ function hero(){
   </div>`;
 }
 function overview(){
-  return `<div class='grid2'>
+  return `${healthNote()}
+  <div class='grid2'>
     <div class='panel'><h2>Fix first — blocks production</h2>${priorityList()}</div>
     <div class='panel'><h2>Risk by domain</h2>${domainBars()}</div>
     <div class='panel'><h2>Attack surface</h2>${surfaceStrip()}</div>
@@ -414,7 +492,7 @@ function runtimeReadiness(){
 function findingsView(){
   const chips=SEV.slice(0,4).map(s=>`<span class='chip' data-sev='${s}' onclick='toggleSev("${s}")'>${s}</span>`).join('');
   const tacs=[...new Set(D.findings.flatMap(f=>f.mitre.map(m=>m.tactic)))].sort();
-  return `<div class='panel'>
+  return `<div class='panel'>${healthNote()}
     <div class='fm' style='margin-bottom:.5rem'>Select a finding to open its full write-up in the report.</div>
     <div class='ctl'>
       <input type='search' id='fsearch' placeholder='Search title, rule, resource…' oninput='fText=this.value.toLowerCase();renderFindings()'>
@@ -455,7 +533,7 @@ function renderFindings(){
 /* ---- matrix ---- */
 function matrixView(){
   const cols=D.threat_matrix.columns;
-  let html="<div class='panel'><div class='fm'>Select a coloured cell to see its findings — each finding links straight to its card in the report. Green = a rule exists, dashed grey = no rule yet (coverage gap).</div><div class='mx'>";
+  let html="<div class='panel'>"+healthNote()+"<div class='fm'>Select a coloured cell to see its findings — each finding links straight to its card in the report. Green = a rule exists, dashed grey = no rule yet (coverage gap).</div><div class='mx'>";
   html+=cols.map(c=>{
     let col=`<div class='mxcol'><div class='mxh'>${esc(c.tactic)}</div>`;
     col+=c.cells.map(cell=>{const st=cell.state;const sev=cell.max_severity||'';
@@ -469,7 +547,7 @@ function matrixView(){
 function cellFindings(ruleIds,tech,tid){
   const fs=D.findings.filter(f=>ruleIds.includes(f.rule_id));
   const cards=fs.slice(0,40).map(f=>{
-    const std=[]; if(f.owasp)std.push(f.owasp); (f.cis||[]).slice(0,2).forEach(c=>std.push('CIS '+c));
+    const std=[]; (f.cis||[]).slice(0,2).forEach(c=>std.push('CIS '+c));
     const mit=(f.mitre||[]).map(m=>`${esc(m.technique_id||m.tactic)}`).slice(0,3).join(', ');
     return `<a class='findlink' href='${reportUrl(f)}' target='_blank' rel='noopener' title='Open in report'
         style='flex-wrap:wrap'>
@@ -478,7 +556,7 @@ function cellFindings(ruleIds,tech,tid){
       <span class='fl-go'>&rsaquo;</span>
       <div class='fm' style='flex-basis:100%;margin-top:.3rem'>
         <code>${esc(res(f))}</code> · score ${(f.score||0).toFixed(0)} · ${esc(f.owning_shard)}
-        ${mit?` · MITRE ${esc(mit)}`:''}${std.length?` · ${esc(std.join(' · '))}`:''}</div>
+        ${mit?` · MITRE ${esc(mit)}`:''}${owaspLink(f.owasp)}${std.length?` · ${esc(std.join(' · '))}`:''}</div>
       <div class='fm' style='flex-basis:100%;margin-top:.2rem'>${esc(f.message||'')}</div>
     </a>`}).join('');
   $('#cellout').innerHTML=`<div style='margin-top:.8rem;border-top:1px solid var(--bd);padding-top:.7rem'>
@@ -488,7 +566,9 @@ function cellFindings(ruleIds,tech,tid){
 /* ---- attack path ---- */
 function attackView(){
   const a=D.attack_path;
-  if(!a.steps||!a.steps.length) return "<div class='panel'><div class='fm'>No attack path — no findings mapped to tactics.</div></div>";
+  if(!a.steps||!a.steps.length) return `<div class='panel'>${healthNote()}<div class='fm'>${
+    scanOk()?'No attack path — no findings mapped to tactics.'
+            :'No attack path can be derived: the cluster was never read.'}</div></div>`;
   const steps=a.steps.map((s,i)=>`${i?`<div class='arrow'>&rarr;</div>`:''}
     <div class='step' id='atk-${slug(s.tactic)}' onclick='selectAttackStage("${esc(s.tactic)}")'
         style='border-left-color:var(--${(s.worst_severity||'CRITICAL').toLowerCase()})'>
@@ -497,7 +577,7 @@ function attackView(){
       <div class='cnt'>${tacticFindings(s.tactic).length} finding(s) &middot; click to list</div>
     </div>`).join('');
   const rc=a.reaches_impact?"<span class='reach y'>reaches Impact — full kill-chain</span>":"<span class='reach n'>stops before Impact</span>";
-  return `<div class='panel'><h2>Kill-chain exploit path</h2>
+  return `<div class='panel'><h2>Kill-chain exploit path</h2>${healthNote()}
     <div class='fm'>${a.tactic_count} tactics chained · ${rc}. Select any stage to list every finding an attacker could use there.</div>
     <div class='flow'>${steps}</div>
     <div class='fm' style='margin-top:.6rem'>Entry points: ${(a.entry_points||[]).map(e=>esc(e.technique_name)).join(', ')||'—'}</div>
@@ -517,7 +597,8 @@ function selectAttackStage(tactic){
 /* ---- attack map (kill-chain with vulnerable resources) ---- */
 function attackMapView(){
   const a=D.attack_path;
-  if(!a.steps||!a.steps.length) return "<div class='panel'><div class='fm'>No attack path.</div></div>";
+  if(!a.steps||!a.steps.length) return `<div class='panel'>${healthNote()}<div class='fm'>${
+    scanOk()?'No attack path.':'No attack map can be derived: the cluster was never read.'}</div></div>`;
   const stages=a.steps.map((s,i)=>{
     const fs=tacticFindings(s.tactic);
     const resources={};fs.forEach(f=>{const k=f.resource.kind;if(!resources[k])resources[k]=new Set();
@@ -534,7 +615,7 @@ function attackMapView(){
         <div style='margin:.4rem 0 .6rem'><b class='fm'>Exposed resources</b>${rRows||"<div class='fm'>none</div>"}</div>
         <div><b class='fm'>Findings at this stage</b>${fs.map(findLink).join('')||"<div class='fm'>none</div>"}</div>
       </div></div>`}).join('');
-  return `<div class='panel'><h2>Attack Map — kill-chain with vulnerable resources</h2>
+  return `<div class='panel'><h2>Attack Map — kill-chain with vulnerable resources</h2>${healthNote()}
     <div class='fm'>Which Kubernetes resources are exposed at each stage of the attack path. Select a stage to expand its resources and findings — each finding links to its card in the report.</div>
     ${stages}</div>`;
 }
@@ -613,12 +694,25 @@ function scanForm(){
     <div><label>Selector (optional)</label><select id='sel'>${selectorOptions()}</select></div>
     <div><label>Cluster</label><select id='mock' onchange='toggleLive()'><option value='0'>live (--live)</option><option value='1'>bundled mock</option></select></div>
     <div><label>Context (live only)</label><input id='ctx' placeholder='e.g. kind-kind / current-context'></div>
-    <div class='kc'><label>Kubeconfig (optional, live only)</label>
+    ${kubeconfigField()}
+    <button class='btn' id='run' onclick='runScan()'>Scan &amp; save</button></div><div id='scanmsg'></div>`;
+}
+/* The server refuses a request-body kubeconfig unless it is bound to loopback (loading one
+   executes its credential plugin as the server's user). Don't offer a control that would
+   always be rejected — explain instead. */
+function kubeconfigField(){
+  if(D && D.allow_client_kubeconfig===false){
+    return `<div class='kc'><label>Kubeconfig</label>
+      <div class='fm'>Not accepted — this server is not bound to localhost, and loading a
+      kubeconfig would run its credential plugin here. Scan from the CLI on the server
+      (<code>k8smatrixwarden scan --live</code>), or restart with
+      <code>--allow-remote-kubeconfig</code> behind your own authentication.</div></div>`;
+  }
+  return `<div class='kc'><label>Kubeconfig (optional, live only)</label>
       <input id='kubeconfig' placeholder='type a path, e.g. C:\\Users\\me\\.kube\\config' oninput='onKubeconfigPath()'>
       <div class='kc-or'>— or select a file from your system —</div>
       <input type='file' id='kubeconfigfile' onchange='pickKubeconfig(this)'>
-      <span id='kubeconfigfilename' class='fm'></span></div>
-    <button class='btn' id='run' onclick='runScan()'>Scan &amp; save</button></div><div id='scanmsg'></div>`;
+      <span id='kubeconfigfilename' class='fm'></span></div>`;
 }
 /* A browser can't reveal a picked file's real path, so read its contents and send them by
    value; the server writes a short-lived temp kubeconfig. Path box and file picker are
@@ -662,14 +756,25 @@ async function runScan(){
   }
   if(!mock){
     body.context=$('#ctx').value||null;
+    // the kubeconfig inputs are absent when the server won't accept one — see kubeconfigField()
+    const kcPath=($('#kubeconfig')||{}).value||'';
     if(KUBECONFIG_CONTENT){body.kubeconfig_content=KUBECONFIG_CONTENT;}
-    else if($('#kubeconfig').value.trim()){body.kubeconfig=$('#kubeconfig').value.trim();}
+    else if(kcPath.trim()){body.kubeconfig=kcPath.trim();}
   }
   try{const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
-    if(!r.ok||d.error){msg.textContent='Error: '+(d.error||('HTTP '+r.status));btn.disabled=false;return;}
-    msg.innerHTML='Saved “'+esc(d.display_name||d.scan_id)+'” — '+d.rating+' ('+d.risk+'/10), '+d.total_findings+' findings. Reloading…';
-    setTimeout(()=>location.reload(),800);
+    if(!r.ok||d.error){
+      // A live-scan failure (unreachable cluster, credential plugin that cannot get a
+      // token) is multi-line and actionable — show it verbatim rather than truncating it
+      // into a single unhelpful line.
+      msg.innerHTML=`<div class='scanerr'><b>Scan failed</b><pre>${esc(d.error||('HTTP '+r.status))}</pre></div>`;
+      btn.disabled=false;return;}
+    const warn=(d.warnings&&d.warnings.length)
+      ? `<div class='scanwarn'><b>${d.evidence_ok===false?'Scan incomplete — cluster not read'
+          :'Partial coverage'}</b><ul>${d.warnings.slice(0,10).map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`
+      : '';
+    msg.innerHTML='Saved “'+esc(d.display_name||d.scan_id)+'” — '+esc(d.rating)+' ('+d.risk+'/10), '+d.total_findings+' findings. Reloading…'+warn;
+    setTimeout(()=>location.reload(),warn?2600:800);
   }catch(e){msg.textContent='Error: '+e;btn.disabled=false;}
 }
 const res=f=>{const r=f.resource||{};return r.kind+'/'+r.name+(r.namespace?' ('+r.namespace+')':'')};

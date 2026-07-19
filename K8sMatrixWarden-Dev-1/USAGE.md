@@ -385,11 +385,24 @@ k8smatrixwarden matrix --scan-id scan-… -o markdown --output-file matrix.md   
 
 The same matrix is embedded in the markdown/JSON/HTML scan reports, shown as a heatmap on the web dashboard (§4.8), and available over MCP via `build_threat_matrix`.
 
+**Coverage matrix vs. scan matrix.** The two are different questions and the web UI now reports different numbers for each:
+
+| Page | Question it answers | Headline stats |
+|---|---|---|
+| `/matrix` (or `matrix --coverage`) | *What can K8sMatrixWarden detect?* | techniques with a detection rule (e.g. `30/56`), matrix coverage %, tactics with coverage, rules mapped to the matrix. Each column reads `5/6 with a rule`. |
+| `/report/<scan_id>/matrix` | *What did this cluster expose?* | tactics implicated, techniques triggered, matrix coverage %, findings mapped. Cells are painted by worst finding severity. |
+
+The coverage page has no scan overlaid, so every hit-derived number there is structurally zero. It used to display `0/9 tactics implicated · 0 findings mapped`, which read as a broken counter rather than an answer; it now reports the coverage axis instead, and states plainly that no scan is overlaid.
+
 ### 4.8 `k8smatrixwarden web` — Security Dashboard
 
 Launch the **Security Dashboard**, a zero-dependency (stdlib `http.server` back end + a vanilla-JS single-page app, no framework/build step/CDN). The shell fetches `GET /api/dashboard` once and renders everything client-side across **seven tabs**: Overview, Findings, Threat Matrix, Attack Path, Attack Map, Runtime, and Scan.
 
 A **report selector** at the top switches the entire dashboard to any saved scan (not just the latest), and **every finding is click-through** — in the Findings table, the Threat Matrix cell drill-downs, the Overview "fix first" list, and each Attack Path / Attack Map stage — opening straight to that finding's card in the full report (`/report/<scan_id>#<finding>`). The interface uses a clean, professional (low-emoji) visual style, and **all timestamps are shown in IST** (e.g. `19 Jul 2026, 01:13 IST`).
+
+**Light / dark mode.** Every page (dashboard, coverage matrix, per-scan HTML report) carries a **theme button in the top bar**. It flips the page between light and dark, and the choice is remembered in `localStorage` across pages and sessions. With nothing chosen yet, the page follows your OS preference (`prefers-color-scheme`). All colours come from CSS variables, so the toggle re-themes the entire surface — heatmap, charts, tables — with no page reload.
+
+**Full-width layout.** The dashboard and the HTML report use the width of the browser window (up to 1720px) rather than a narrow centred column, so the 9-column threat matrix, findings tables and the attack map get real room. Layouts still collapse cleanly on narrow/mobile viewports.
 
 ```bash
 k8smatrixwarden web                              # serve on http://127.0.0.1:8080
@@ -405,18 +418,46 @@ k8smatrixwarden web --reports-dir ./my-reports   # where to read/write saved sca
 | `--reports-dir DIR` | `~/.k8smatrixwarden/reports` (shared; or `$K8SMATRIXWARDEN_REPORTS_DIR`) | directory the dashboard lists scans from and saves new ones to — the same shared store the CLI and MCP `run_scan` write to, so their saved scans appear here too |
 | `--no-scan` | off | serve existing reports read-only; disable the in-browser *Run a scan* button and `POST /api/scan` |
 | `--open` | off | open your default browser at the dashboard URL on startup |
+| `--allow-remote-kubeconfig` | off | accept a kubeconfig in the request body even on a non-loopback bind — **only behind your own authentication**, see *Binding beyond localhost* below |
 
 **The seven tabs:**
 
 | Tab | What you see |
 |---|---|
-| **Overview** | KPIs (risk / rating / high+ count / MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose **exposed tactics are clickable → jump to that stage in Attack Path**, a risk-trend sparkline, and runtime readiness (which tactics have detections armed). |
+| **Overview** | A **scan-health banner** first if the scan could not fully read the cluster (see *Scan health*, below), then KPIs (risk / rating / high+ count / MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose **exposed tactics are clickable → jump to that stage in Attack Path**, a risk-trend sparkline, and runtime readiness (which tactics have detections armed). |
 | **Findings** | Live search + severity chips (CRITICAL/HIGH/MEDIUM/LOW) + tactic filter + sortable columns across every finding. **Each row is clickable and opens that finding in the report.** |
 | **Threat Matrix** | The 9×N interactive Kubernetes Threat Matrix heatmap; select a coloured cell to expand its findings inline — with enriched detail (resource, score, domain, MITRE technique, OWASP/CIS, message) and a **link per finding to its report card**. |
 | **Attack Path** | The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. **Select any stage to list every finding under that tactic**, each linking to the report. |
 | **Attack Map** | The kill-chain **with the vulnerable resources** (Pods/Deployments/…) grouped per tactic — an accordion; **expand a stage** to see its exposed resources and the findings at that stage (each linking to the report). |
 | **Runtime** | Paste Falco events (or load a sample) → **correlate** them against the scan's findings + **detect drift**, rendered as confirmed/corroborated/runtime-only cards and drift findings. |
 | **Scan** | A run-a-scan form and the saved-scan history table (each row can be opened in the dashboard, or as a report/matrix/JSON). The form takes an optional **Scan name**, a scope selector (with a namespace box that enables when you pick *namespace* scope), a **Selector dropdown** populated from the live registry vocabulary (tactics/modules/frameworks/aliases — so it never offers a term that doesn't exist), mock/live, and — for live scans — either a typed **kubeconfig path** *or* a **file picker to select the kubeconfig from your system** (whichever is convenient; the picked file's contents are read in-browser and materialised server-side into a short-lived temp file). Every scan run here is saved and titled `<name> + date + time`. |
+
+**Scan health — an unread cluster is never shown as a clean one.** A scan that could not read the cluster produces zero findings *because nothing was inspected*, which would otherwise score as `Excellent`. The dashboard refuses to render that:
+
+* the scan's rating becomes **`Unknown`** and the risk / high+ KPIs show **`—`**, not `0.0`;
+* a red **"Scan incomplete — this cluster was not read"** banner sits above the tabs (so it is visible on every one) and lists each resource type that could not be read;
+* Overview, Findings, Threat Matrix, Attack Path and Attack Map each repeat a short *"Not a result"* note, so no single view can be screenshotted out of context;
+* the same story appears in the saved report in **every** format (HTML, markdown, text, terminal, PDF, JSON) and in `POST /api/scan`'s response (`evidence_ok`, `warnings[]`).
+
+A *partially* readable cluster (some resource types forbidden, the rest fine) keeps its real rating but gets an amber **"Partial coverage"** banner naming the missing types — the findings are real, they are just not complete.
+
+**Binding beyond localhost — the dashboard has no authentication.** It binds `127.0.0.1` by default and is meant to stay there. Two things change the moment you pass `--host 0.0.0.0`:
+
+1. **Anyone who can reach the port can read every saved report** (and start scans, unless you pass `--no-scan`). There is no login. Put it behind your own reverse proxy / SSO if it must be reachable.
+2. **A kubeconfig in the request body is arbitrary code.** Loading a kubeconfig *executes its credential plugin* — `aws eks get-token`, `gke-gcloud-auth-plugin`, `kubelogin` — as the user running the server. That is simply how cloud auth works, and the `kubernetes` client does the same. On loopback the only possible caller is you, so the *Scan* tab's kubeconfig path box and file picker are just a convenience. On a routable address it would be **remote code execution**.
+
+So on a non-loopback bind the server **refuses a kubeconfig supplied in the request** — both `kubeconfig` (a path) and `kubeconfig_content` (an upload), since either one names a config whose plugin would run here. `POST /api/scan` returns `403` with an explanation, and the dashboard's *Scan* tab replaces the kubeconfig inputs with that explanation rather than offering a control that always fails. Everything else keeps working: mock scans, and live scans against the **server's own** kubeconfig/context.
+
+Your options, in order of preference:
+
+```bash
+k8smatrixwarden web                                  # default: 127.0.0.1, kubeconfig upload allowed
+k8smatrixwarden scan --live --kubeconfig ~/.kube/config   # scan from the CLI on the server itself
+k8smatrixwarden web --host 0.0.0.0 --no-scan         # remote, read-only report browser
+k8smatrixwarden web --host 0.0.0.0 --allow-remote-kubeconfig   # ONLY behind your own auth
+```
+
+Startup prints a warning naming which of these is in effect.
 
 **HTTP API** — the same dashboard is a small read-mostly JSON API, scriptable with `curl`:
 
@@ -844,12 +885,13 @@ Always run `k8smatrixwarden doctor --config my-config.json` after editing — it
 Every scan report has the same shape, regardless of output format:
 
 - **Generated time & scan id** — in **Indian Standard Time (IST, UTC+05:30)**. `generated_at` is written as an ISO-8601 timestamp with the `+05:30` offset (e.g. `2026-07-19T01:13:00+05:30`) and shown in reports/dashboard as `19 Jul 2026, 01:13 IST`. The scan id encodes the (optional) **name, date, and time** in IST: `<name>-YYYYMMDD-HHMMSS-<hash>` when you pass `--name`/`scan_name` (e.g. `prod-nightly-20260719-011300-a1b2`), or `scan-YYYYMMDD-HHMMSS-<hash>` when unnamed. The report's human display name is `<name> + date + time` (falling back to the id when unnamed).
-- **Risk score** — `0–10`, plus a rating (`Excellent → Critical`) and a `0–100` security score.
+- **Risk score** — `0–10`, plus a rating (`Excellent → Critical`) and a `0–100` security score. A scan whose evidence collection failed is rated **`Unknown`** and carries a *Scan incomplete* banner instead — see §13.2.
+- **Scan warnings** — present only when coverage was partial or absent (`warnings[]` + `evidence_ok` in the JSON).
 - **Severity counts** — 🔴 CRITICAL · 🟠 HIGH · 🟡 MEDIUM · 🟢 LOW.
 - **Findings**, each with:
   - the **rule id** that fired and which **shard** owns it
   - the **resource** affected (kind/name/namespace)
-  - its **MITRE ATT&CK** tactic + technique, **OWASP** category, and **CIS** control (when applicable)
+  - its **MITRE ATT&CK** tactic + technique, **OWASP** category, and **CIS** control (when applicable). Every reference is a **direct deep link**: a MITRE technique goes to `attack.mitre.org/techniques/T1610/` (sub-techniques use MITRE's own `T1552/007/` slash form), and an **OWASP Kubernetes Top 10 ID goes to that category's own page** — `K03` → `…/2025/en/src/K03-Secrets-Management-Failures.html`, not the project landing page. This holds in the markdown, HTML and PDF reports and in the dashboard's threat-matrix drill-down.
   - a plain-English **message**
   - report-grade context (impact, standards mapping, and validation steps to reproduce/verify)
 
@@ -864,6 +906,7 @@ Findings that touch *multiple* MITRE tactics (e.g. a writable hostPath mount, wh
 | 4.1 – 6.0 | 🟡 Fair |
 | 6.1 – 8.0 | 🟠 Poor |
 | 8.1 – 10.0 | 🔴 Critical |
+| *(n/a)* | ⚠️ **Unknown** — the scan could not read the cluster, so no rating is possible. Not a passing grade; see §14 *"Live scan reports 0 findings"*. |
 
 ### 13.3 CIS Benchmark statuses
 
@@ -899,8 +942,34 @@ The error names the exact file and context it tried. Run `kubectl config get-con
 **"`--live` says *Cannot reach the Kubernetes API server*"**
 The context is valid but the cluster isn't answering (it's stopped, or the endpoint is wrong). The tool preflights connectivity and fails fast with a clear message instead of a raw connection traceback — it even prints the `kubectl … cluster-info` command to verify, and reminds you that `--mock` scans the bundled sample cluster. Start the cluster (e.g. minikube/docker-desktop/kind) and retry. This is surfaced the same way everywhere: the CLI exits non-zero with the message, and the web `POST /api/scan` returns a clean `400 {"error": …}` (never a 500 stack trace).
 
+**"The dashboard's kubeconfig picker is gone / `POST /api/scan` returns 403 about credential plugins"**
+The server is not bound to localhost, so it refuses a kubeconfig from the request body — loading one would execute its credential plugin as the server's user. See *Binding beyond localhost* in §4.8 for why and what to do instead.
+
+**"`--live` says *Kubernetes API authentication failed* / *the AWS profile is not configured*"**
+Your kubeconfig authenticates through a **credential plugin** and that plugin could not produce a token — almost always because the cloud profile it names is not configured on *this* machine. This is **not AWS-specific**: the detection re-runs whatever `exec` command the kubeconfig declares, so `aws eks get-token` (EKS), `gke-gcloud-auth-plugin` (GKE) and `kubelogin` (AKS) all surface their own real error. Older kubeconfigs that use the pre-`exec` `auth-provider` mechanism (`gcp` / `azure` / `oidc`) fail the same way and are named too, with the command that fixes them. The error quotes the plugin's own output verbatim, e.g.:
+
+```
+error: Kubernetes API authentication failed for context 'arn:aws:eks:…:cluster/prod' — the
+kubeconfig loaded, but no valid credentials could be obtained.
+  → aws --region us-east-1 eks get-token --cluster-name prod --profile prod-admin failed
+    (exit 253): The config profile (prod-admin) could not be found
+The kubeconfig's credential plugin could not issue a token. Check the cloud profile it depends on:
+  * AWS / EKS   — the AWS profile named in the kubeconfig is not configured on this machine.
+                  Verify: aws configure list-profiles  ·  AWS_PROFILE=<name> aws sts get-caller-identity
+  * GCP / GKE   — gcloud auth login, and install gke-gcloud-auth-plugin.
+  * Azure / AKS — az login (kubelogin).
+Refusing to save a scan of a cluster that could not be read — an empty result would look like a clean cluster.
+```
+
+Configure the profile (`aws configure --profile <name>`, `gcloud auth login`, `az login`) and re-run. The CLI exits non-zero, and the dashboard's *Run a scan* form shows the full message instead of saving anything.
+
+> **Why this is fatal rather than a warning.** The Python `kubernetes` client only *logs* an exec-plugin failure and then continues with **no credentials at all**, so every API request comes back `401`. Before this was fixed, each resource type was skipped as a warning, the scan collected nothing, and a cluster nobody had read was reported as **0 findings / Excellent**. K8sMatrixWarden now runs the credential plugin itself to recover the real reason, and treats a `401` — at preflight or mid-scan — as fatal.
+
+**"My live scan finished but shows 0 findings and rating `Unknown`"**
+That is the safety net above, in its non-fatal form: the cluster answered, but **every** resource type was refused (typically `403` across the board from an identity with no read RBAC). Rather than score an empty result as `Excellent`, the scan is marked `evidence_ok: false`, rated `Unknown`, and every surface — report, dashboard Overview/Threat Matrix/Attack Path/Attack Map, PDF, JSON — carries a *"Scan incomplete — this cluster was not read"* banner listing what was unreadable. Fix the RBAC (§9.3) and re-scan. Zero findings is only ever a *good* result when `evidence_ok` is true.
+
 **"Live scan gets `Forbidden`/403 errors"**
-The identity you're scanning with can't read some resource types. **This no longer aborts the scan** — each inaccessible resource type (RBAC-forbidden, or an API group absent on that cluster) is *skipped and recorded as a warning*, and the scan completes with everything else. The skipped types are reported back: on the CLI as `warning: <Kind>: skipped (…)` lines, and via `run_scan`/`intelligent_scan` (MCP) and `POST /api/scan` (web) in a `warnings[]` field — so partial coverage is visible, never silently under-reported. To get full coverage, scan with an identity that has broad read access, or generate and apply the tool's own least-privilege manifest: `k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json && kubectl apply -f k8smatrixwarden-rbac.json` (§9.3), then scan as that ServiceAccount.
+The identity you're scanning with can't read some resource types. **This no longer aborts the scan** — each inaccessible resource type (RBAC-forbidden, or an API group absent on that cluster) is *skipped and recorded as a warning*, and the scan completes with everything else. The skipped types are reported back everywhere: on the CLI as `warning: <Kind>: skipped (…)` lines, via `run_scan`/`intelligent_scan` (MCP) and `POST /api/scan` (web) in a `warnings[]` field, **and on the saved result itself** (`warnings[]` + `evidence_ok` in the JSON report) so every later re-render — report, dashboard, PDF — still shows an amber *"Partial coverage"* banner naming the missing types. Partial coverage is visible, never silently under-reported. If *every* type is refused, the scan is rated `Unknown` instead (see above). To get full coverage, scan with an identity that has broad read access, or generate and apply the tool's own least-privilege manifest: `k8smatrixwarden roles --bind --output-file k8smatrixwarden-rbac.json && kubectl apply -f k8smatrixwarden-rbac.json` (§9.3), then scan as that ServiceAccount.
 
 **"CIS report shows a lot of `NEEDS_NODE`"**
 That's expected and correct on a fresh run — those controls need on-node file reads that the Kubernetes API cannot provide. Run `kube-bench` on your nodes and pass `--kube-bench-json` (§9). If you're on a managed cluster, also pass `--profile eks|gke|aks` to correctly exclude the provider-owned control plane instead of marking it un-checkable.

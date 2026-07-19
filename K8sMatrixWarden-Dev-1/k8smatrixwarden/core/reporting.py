@@ -115,6 +115,12 @@ class ReportingEngine:
         console.print(Panel(summary, title=f"🛡️  K8s Security Report · {result.scan_id}",
                             border_style=_rich_border(r.rating), expand=True))
 
+        warns = scan_warning_lines(result)
+        if warns:
+            console.print(Panel("\n".join(f"• {w}" for w in warns),
+                                title="⚠️  Scan warnings", border_style="dark_orange",
+                                expand=True))
+
         findings = _display_findings(result.findings)
         if not findings:
             console.print("[green]✅ No findings for this scan.[/green]")
@@ -163,6 +169,11 @@ class ReportingEngine:
             f"  {_risk_gauge(r.cluster_risk)}",
             "  " + "─" * 60,
         ]
+        warns = scan_warning_lines(result)
+        if warns:
+            out += [f"  ⚠️  SCAN WARNINGS ({len(warns)})"]
+            out += [f"     - {w}" for w in warns]
+            out += ["  " + "─" * 60]
         for sev in _SEV_DISPLAY:
             n = c[sev.label]
             out.append(f"  {sev.emoji} {sev.label:<9} {n:>3}   "
@@ -238,6 +249,7 @@ class ReportingEngine:
             f"{_status_badges(result)}",
             "",
             f"> {_verdict(r.rating)}",
+            *_warning_md(result),
             "",
         ]
 
@@ -327,7 +339,8 @@ class ReportingEngine:
             md += ["### OWASP Kubernetes Top 10 (2025)", "",
                    "| ID | Category | Findings |", "|:--|:--|--:|"]
             for code in sorted(owasp):
-                md.append(f"| `{code}` | {_owasp_names().get(code, '—')} | {owasp[code]} |")
+                md.append(f"| [`{code}`]({owasp_url(code)}) | "
+                          f"{_owasp_names().get(code, '—')} | {owasp[code]} |")
             md.append("")
         md += ["[↑ top](#top)", "", "---", ""]
 
@@ -592,8 +605,9 @@ class ReportingEngine:
                        + "</section>")
 
         return _HTML_TMPL.format(
-            css=_HTML_CSS, js=_HTML_JS, scan=_esc(result.scan_id),
-            matrix=matrix_html,
+            css=_HTML_CSS, js=_HTML_JS + THEME_JS, scan=_esc(result.scan_id),
+            matrix=matrix_html, themebtn=THEME_BUTTON,
+            warnings=warning_banner_html(result),
             cluster=_esc(result.cluster_name), rating=r.rating,
             risk=r.cluster_risk, sec=r.security_score,
             rating_emoji=r.rating_emoji, rating_class=r.rating.lower(),
@@ -694,20 +708,10 @@ def _finding_card(f: Finding, i: int) -> list[str]:
 
 
 # -- OWASP names (lazy cached) ------------------------------------------ #
-_OWASP: Optional[dict] = None
-
-
-def _owasp_names() -> dict:
-    global _OWASP
-    if _OWASP is None:
-        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "taxonomy", "owasp_k8s_top10.json")
-        try:
-            with open(path, encoding="utf-8") as fh:
-                _OWASP = json.load(fh).get("categories", {})
-        except Exception:
-            _OWASP = {}
-    return _OWASP
+# The OWASP category names and their direct per-ID owasp.org links live in
+# finding_context (one loader, one taxonomy file) — re-exported here because the pdf
+# renderer and the markdown summary both import them from this module.
+from .finding_context import _owasp_names, owasp_url  # noqa: E402
 
 
 def _owasp_label(code: Optional[str]) -> str:
@@ -787,7 +791,52 @@ def _verdict(rating: str) -> str:
                 "be addressed promptly.",
         "Critical": "Critical risk. The cluster has severe, likely-exploitable exposures "
                     "requiring immediate action.",
+        "Unknown": UNSCANNED_VERDICT,
     }.get(rating, "")
+
+
+#: Shown wherever a rating would be, when the collector could not read the cluster.
+UNSCANNED_VERDICT = (
+    "Posture is UNKNOWN — the scan could not read this cluster, so it inspected nothing. "
+    "The zero findings below mean 'nothing was looked at', not 'nothing is wrong'. "
+    "Fix the access problem listed under Scan warnings and re-run.")
+
+
+def warning_banner_html(result: ScanResult) -> str:
+    """The scan-incomplete / partial-coverage banner. Shared by the HTML report and the
+    web dashboard's per-scan pages so both tell the same story."""
+    warns = scan_warning_lines(result)
+    if not warns:
+        return ""
+    cls = "danger" if not result.evidence_ok else "warn"
+    head = ("🛑 Scan incomplete — this cluster was not read"
+            if not result.evidence_ok else "⚠️ Partial coverage")
+    items = "".join(f"<li>{_esc(w)}</li>" for w in warns)
+    return (f"<div class='callout {cls}'><strong>{head}</strong>"
+            f"<ul class='warnlist'>{items}</ul></div>")
+
+
+def _warning_md(result: ScanResult) -> list[str]:
+    warns = scan_warning_lines(result)
+    if not warns:
+        return []
+    head = ("🛑 **Scan incomplete**" if not result.evidence_ok
+            else "⚠️ **Partial coverage**")
+    return ["", f"> {head}", *[f"> - {w}" for w in warns]]
+
+
+def scan_warning_lines(result: ScanResult) -> list[str]:
+    """Human lines describing why a scan's coverage is partial or absent, or [] when the
+    scan read the cluster cleanly. Single source for every renderer and the dashboard."""
+    out: list[str] = []
+    if not result.evidence_ok:
+        out.append("This scan could not read the cluster — no resource type could be "
+                   "collected. Results are NOT evidence of a secure cluster.")
+    elif result.warnings:
+        out.append("This scan ran with partial coverage — some resource types could not "
+                   "be read, so findings on them are missing.")
+    out += list(result.warnings)
+    return out
 
 
 def _status_badges(result: ScanResult) -> str:
@@ -873,12 +922,27 @@ def _esc(s) -> str:
 _HTML_CSS = """
 :root{--bg:#ffffff;--fg:#1f2328;--muted:#57606a;--card:#f6f8fa;--bd:#d0d7de;
  --crit:#cf222e;--high:#bc4c00;--med:#9a6700;--low:#1a7f37;--accent:#0969da}
+/* Dark palette, applied by the OS preference OR by the in-page theme toggle. The
+   explicit data-theme attribute is listed after the media query so a user's click always
+   beats the OS default, in both directions. */
 @media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;
  --card:#161b22;--bd:#30363d;--crit:#f85149;--high:#f0883e;--med:#d29922;--low:#3fb950;
  --accent:#58a6ff}}
+:root[data-theme=light]{--bg:#ffffff;--fg:#1f2328;--muted:#57606a;--card:#f6f8fa;
+ --bd:#d0d7de;--crit:#cf222e;--high:#bc4c00;--med:#9a6700;--low:#1a7f37;--accent:#0969da}
+:root[data-theme=dark]{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--card:#161b22;
+ --bd:#30363d;--crit:#f85149;--high:#f0883e;--med:#d29922;--low:#3fb950;--accent:#58a6ff}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;
  background:var(--bg);color:var(--fg);line-height:1.5}
-.wrap{max-width:1000px;margin:0 auto;padding:2rem 1.25rem}
+/* Use the viewport instead of a narrow column: the matrix grid, findings tables and
+   attack map are all wide, dense surfaces that were being squeezed by a 1000px cap. */
+.wrap{max-width:1720px;margin:0 auto;padding:1.5rem 2rem}
+@media(max-width:820px){.wrap{padding:1rem .9rem}}
+.themebtn{background:var(--card);color:var(--fg);border:1.5px solid var(--bd);
+ border-radius:20px;padding:.4rem .85rem;font:inherit;font-size:.82rem;font-weight:600;
+ cursor:pointer;line-height:1.2}
+.themebtn:hover{border-color:var(--accent);color:var(--accent)}
+.themebar{display:flex;justify-content:flex-end;margin-bottom:-1.6rem}
 h1{font-size:1.6rem;margin:.2rem 0}.sub{color:var(--muted);font-size:.9rem}
 .hero{border:1px solid var(--bd);border-radius:14px;padding:1.25rem;background:var(--card);
  margin:1rem 0}
@@ -887,6 +951,7 @@ h1{font-size:1.6rem;margin:.2rem 0}.sub{color:var(--muted);font-size:.9rem}
 .gauge .pin{position:absolute;top:-4px;width:4px;height:20px;background:var(--fg);border-radius:2px}
 .score{font-size:2rem;font-weight:700}.score.critical,.score.poor{color:var(--crit)}
 .score.fair{color:var(--med)}.score.good,.score.excellent{color:var(--low)}
+.score.unknown{color:var(--muted)}
 .sev{display:inline-block;padding:.15rem .55rem;margin:.15rem .3rem .15rem 0;border-radius:20px;
  font-size:.85rem;border:1px solid var(--bd);background:var(--bg)}
 .filters{margin:1rem 0}.filters button{background:var(--card);color:var(--fg);border:1px solid var(--bd);
@@ -926,6 +991,8 @@ table.ctx-table a{color:var(--accent)}
 .muted{color:var(--muted);font-size:.85rem}
 .callout{margin:.6rem 0;padding:.6rem .75rem;border-radius:0 8px 8px 0;font-size:.85rem}
 .callout.warn{background:var(--bg);border:1px solid var(--bd);border-left:3px solid var(--high)}
+.callout.danger{background:var(--bg);border:1px solid var(--crit);border-left:5px solid var(--crit)}
+.callout.danger strong{color:var(--crit)}
 .refs{margin-top:.5rem;font-size:.78rem;color:var(--muted)}
 .refs a{color:var(--accent)}
 ul.warnlist{margin:.4rem 0 0;padding-left:1.1rem;font-size:.82rem;color:var(--muted)}
@@ -954,10 +1021,40 @@ window.addEventListener('load',focusHash);
 window.addEventListener('hashchange',focusHash);
 """
 
+# Light/dark toggle. Every colour in every surface already comes from a CSS variable, so
+# flipping `data-theme` on <html> re-themes the whole page — no per-element work. The
+# choice is remembered in localStorage; with nothing stored the OS preference still wins.
+THEME_BUTTON = ("<button class='themebtn' type='button' onclick='toggleTheme()' "
+                "title='Switch between light and dark'>◐ Theme</button>")
+
+THEME_JS = """
+(function(){
+ var root=document.documentElement, KEY='k8smw-theme';
+ function osDark(){return window.matchMedia
+   && window.matchMedia('(prefers-color-scheme:dark)').matches;}
+ function label(){
+  var d=root.getAttribute('data-theme')||(osDark()?'dark':'light');
+  document.querySelectorAll('.themebtn').forEach(function(b){
+   b.textContent=(d==='dark'?'☀ Light':'☾ Dark');});
+ }
+ try{var s=localStorage.getItem(KEY); if(s) root.setAttribute('data-theme',s);}catch(e){}
+ window.toggleTheme=function(){
+  var d=root.getAttribute('data-theme')||(osDark()?'dark':'light');
+  d=(d==='dark')?'light':'dark';
+  root.setAttribute('data-theme',d);
+  try{localStorage.setItem(KEY,d);}catch(e){}
+  label();
+ };
+ if(document.readyState==='loading')
+   document.addEventListener('DOMContentLoaded',label); else label();
+})();
+"""
+
 _HTML_TMPL = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>K8s Security Report · {scan}</title><style>{css}</style></head>
 <body><div class="wrap">
+<div class="themebar">{themebtn}</div>
 <h1>K8s Security Report</h1>
 <div class="sub">{cluster} · scan <code>{scan}</code> · {generated} · mode {mode}</div>
 <div class="hero">
@@ -969,6 +1066,7 @@ _HTML_TMPL = """<!doctype html><html><head><meta charset="utf-8">
  <p>{verdict}</p>
  <div>{chips}</div>
 </div>
+{warnings}
 {matrix}
 <h2>Findings</h2>
 <div class="filters">{filters}</div>

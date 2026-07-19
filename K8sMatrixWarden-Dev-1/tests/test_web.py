@@ -156,3 +156,100 @@ def test_path_traversal_scan_id_is_rejected():
         assert r.status == 404
         j = app.route("GET", f"/api/report/{evil}", query="format=json")
         assert j.status == 404
+
+
+def test_coverage_matrix_reports_coverage_not_zeroed_hit_counts():
+    """The standalone /matrix page has no scan overlaid, so hit-derived numbers are
+    structurally 0. It must report the coverage axis instead of showing "0/9 tactics
+    implicated · 0 findings mapped", which reads as a broken counter."""
+    app = _app()
+    html = app.route("GET", "/matrix").text
+    assert "techniques with a detection rule" in html
+    assert "tactics with coverage" in html
+    assert "rules mapped to the matrix" in html
+    assert "with a rule" in html                    # per-column counter
+    for hit_stat in ("tactics implicated", "techniques triggered", "findings mapped"):
+        assert hit_stat not in html, hit_stat
+    # a scan's own matrix keeps the hit axis
+    app.route("POST", "/api/scan", body=b'{"mock": true}')
+    scan_id = app.store.list()[0].scan_id
+    scan_html = app.route("GET", f"/report/{scan_id}/matrix").text
+    assert "tactics implicated" in scan_html and "findings mapped" in scan_html
+
+
+def test_dashboard_pages_offer_a_theme_toggle():
+    app = _app()
+    for path in ("/", "/matrix"):
+        html = app.route("GET", path).text
+        assert "themebtn" in html and "toggleTheme" in html, path
+        assert "data-theme=dark" in html and "data-theme=light" in html, path
+
+
+def test_dashboard_payload_carries_scan_health_and_owasp_links():
+    app = _app()
+    app.route("POST", "/api/scan", body=b'{"mock": true}')
+    import json as _json
+    d = _json.loads(app.route("GET", "/api/dashboard").text)
+    assert d["scan"]["evidence_ok"] is True
+    assert d["scan"]["warnings"] == []
+    assert d["owasp_urls"]["K01"].endswith("K01-Insecure-Workload-Configurations.html")
+
+
+# --------------------------------------------------------------------------- #
+# Client-supplied kubeconfig is code execution — gate it on the bind address
+#
+# Loading a kubeconfig runs its credential plugin (aws/gcloud/kubelogin) as the server's
+# user. On loopback the only caller is the operator. On a routable bind it is RCE, so the
+# request-body kubeconfig is refused unless explicitly re-enabled.
+# --------------------------------------------------------------------------- #
+def _remote_app():
+    return WebApp(build_platform(), reports_dir=tempfile.mkdtemp(),
+                  allow_client_kubeconfig=False)
+
+
+def test_is_loopback_is_conservative_about_bind_addresses():
+    from k8smatrixwarden.web.server import is_loopback
+    for local in ("127.0.0.1", "localhost", "::1", "127.0.0.53", "[::1]"):
+        assert is_loopback(local), local
+    # "" and 0.0.0.0 bind every interface; a hostname is unknowable here — all remote.
+    for remote in ("0.0.0.0", "", "::", "10.0.0.5", "192.168.1.20", "example.com", None):
+        assert not is_loopback(remote), remote
+
+
+def test_remote_bind_refuses_a_kubeconfig_from_the_request_body():
+    app = _remote_app()
+    for payload in (b'{"mock": false, "kubeconfig": "/etc/passwd"}',
+                    b'{"mock": false, "kubeconfig_content": "apiVersion: v1"}'):
+        r = app.route("POST", "/api/scan", body=payload)
+        assert r.status == 403, payload
+        assert "credential plugin" in r.text
+        assert "--allow-remote-kubeconfig" in r.text
+
+
+def test_remote_bind_still_allows_scans_without_a_kubeconfig():
+    # the gate is on the kubeconfig, not on scanning — a mock scan still works
+    app = _remote_app()
+    r = app.route("POST", "/api/scan", body=b'{"mock": true}')
+    assert r.status == 200 and "scan_id" in r.text
+
+
+def test_loopback_bind_still_accepts_a_kubeconfig():
+    app = _app()                      # allow_client_kubeconfig defaults True
+    seen = {}
+
+    def fake_collector(mock=True, fixture=None, kubeconfig=None, context=None):
+        seen["kubeconfig"] = kubeconfig
+        raise RuntimeError("stop here — we only care that it got through the gate")
+
+    app.p.make_collector = fake_collector
+    r = app.route("POST", "/api/scan", body=b'{"mock": false, "kubeconfig": "/tmp/kc"}')
+    assert r.status == 400                      # the RuntimeError above, not the gate
+    assert seen["kubeconfig"] == "/tmp/kc"
+
+
+def test_dashboard_payload_tells_the_form_whether_kubeconfigs_are_accepted():
+    import json as _json
+    assert _json.loads(_remote_app().route("GET", "/api/dashboard").text)[
+        "allow_client_kubeconfig"] is False
+    assert _json.loads(_app().route("GET", "/api/dashboard").text)[
+        "allow_client_kubeconfig"] is True

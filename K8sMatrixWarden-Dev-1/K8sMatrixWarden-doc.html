@@ -1202,19 +1202,20 @@ matrix, corrected here.</em></p>
 
 <section id="owasp">
 <h2><span class="h2-title">OWASP Kubernetes Top 10 (2025)</span></h2>
+<p class="lede">Each ID links straight to its own page on owasp.org. The same direct links appear on every finding in the markdown, HTML and PDF reports and in the dashboard's threat-matrix drill-down &mdash; never a generic pointer at the project landing page.</p>
 <div class="table-scroll"><table>
 <thead><tr><th>ID</th><th>Risk</th><th>Primary shard(s)</th></tr></thead>
 <tbody>
-<tr><td><code>K01</code></td><td>Insecure Workload Configurations</td><td>workload_pod_security</td></tr>
-<tr><td><code>K02</code></td><td>Overly Permissive Authorization</td><td>rbac_identity</td></tr>
-<tr><td><code>K03</code></td><td>Secrets Management Failures</td><td>secrets</td></tr>
-<tr><td><code>K04</code></td><td>Lack of Cluster-Level Policy Enforcement</td><td>admission_control, compliance</td></tr>
-<tr><td><code>K05</code></td><td>Missing Network Segmentation</td><td>network_security</td></tr>
-<tr><td><code>K06</code></td><td>Overly Exposed Components</td><td>network_security, cluster_control_plane</td></tr>
-<tr><td><code>K07</code></td><td>Misconfigured &amp; Vulnerable Components</td><td>image_supply_chain, cluster_control_plane</td></tr>
-<tr><td><code>K08</code></td><td>Cluster-to-Cloud Lateral Movement</td><td>cloud_iam</td></tr>
-<tr><td><code>K09</code></td><td>Broken Authentication</td><td>cluster_control_plane</td></tr>
-<tr><td><code>K10</code></td><td>Inadequate Logging &amp; Monitoring</td><td>cluster_control_plane, rbac_identity</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K01-Insecure-Workload-Configurations.html" target="_blank" rel="noopener"><code>K01</code></a></td><td>Insecure Workload Configurations</td><td>workload_pod_security</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K02-Overly-Permissive-Authorization-Configurations.html" target="_blank" rel="noopener"><code>K02</code></a></td><td>Overly Permissive Authorization</td><td>rbac_identity</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K03-Secrets-Management-Failures.html" target="_blank" rel="noopener"><code>K03</code></a></td><td>Secrets Management Failures</td><td>secrets</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K04-Lack-Of-Cluster-Level-Policy-Enforcement.html" target="_blank" rel="noopener"><code>K04</code></a></td><td>Lack of Cluster-Level Policy Enforcement</td><td>admission_control, compliance</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K05-Missing-Network-Segmentation-Controls.html" target="_blank" rel="noopener"><code>K05</code></a></td><td>Missing Network Segmentation</td><td>network_security</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K06-Overly-Exposed-Kubernetes-Components.html" target="_blank" rel="noopener"><code>K06</code></a></td><td>Overly Exposed Components</td><td>network_security, cluster_control_plane</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K07-Misconfigured-And-Vulnerable-Cluster-Components.html" target="_blank" rel="noopener"><code>K07</code></a></td><td>Misconfigured &amp; Vulnerable Components</td><td>image_supply_chain, cluster_control_plane</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K08-Cluster-To-Cloud-Lateral-Movement.html" target="_blank" rel="noopener"><code>K08</code></a></td><td>Cluster-to-Cloud Lateral Movement</td><td>cloud_iam</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K09-Broken-Authentication-Mechanisms.html" target="_blank" rel="noopener"><code>K09</code></a></td><td>Broken Authentication</td><td>cluster_control_plane</td></tr>
+<tr><td><a href="https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K10-Inadequate-Logging-And-Monitoring.html" target="_blank" rel="noopener"><code>K10</code></a></td><td>Inadequate Logging &amp; Monitoring</td><td>cluster_control_plane, rbac_identity</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -1425,7 +1426,7 @@ three states — so the matrix reads as an honest coverage map, not just a list 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
   <pre><code>k8smatrixwarden matrix --mock                    <span class="c-mut"># the matrix for a fresh scan</span>
-k8smatrixwarden matrix --coverage                 <span class="c-mut"># global 'what can it detect' matrix</span>
+k8smatrixwarden matrix --coverage                 <span class="c-mut"># global 'what can it detect' matrix (coverage stats, no findings)</span>
 k8smatrixwarden matrix --scan-id scan-… -o json   <span class="c-mut"># from a saved report, as JSON</span></code></pre>
 </div>
 <p>It ships in the markdown/JSON/HTML reports, as a heatmap on the <a href="#web">web
@@ -1489,7 +1490,7 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 <div class="table-scroll"><table>
 <thead><tr><th>Tab</th><th>What you see</th></tr></thead>
 <tbody>
-<tr><td><strong>Overview</strong></td><td>KPIs (risk · rating · high+ count · MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose exposed tactics are clickable (jump to that Attack Path stage), a risk-trend sparkline, and runtime readiness — which tactics have detections armed.</td></tr>
+<tr><td><strong>Overview</strong></td><td>A <strong>scan-health banner</strong> first when the scan could not fully read the cluster, then KPIs (risk · rating · high+ count · MITRE coverage), priority findings (each links to the report), risk-by-domain bars, an attack-surface heatmap whose exposed tactics are clickable (jump to that Attack Path stage), a risk-trend sparkline, and runtime readiness — which tactics have detections armed.</td></tr>
 <tr><td><strong>Findings</strong></td><td>Live search + severity chips + tactic filter + sortable columns across every finding. Each row is clickable and opens that finding in the report.</td></tr>
 <tr><td><strong>Threat Matrix</strong></td><td>The 9×N interactive heatmap; select a coloured cell to expand its findings inline — with enriched detail (resource, score, domain, technique, OWASP/CIS) and a link per finding to its report card.</td></tr>
 <tr><td><strong>Attack Path</strong></td><td>The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. Select any stage to list every finding under that tactic, each linking to the report.</td></tr>
@@ -1498,6 +1499,85 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 <tr><td><strong>Scan</strong></td><td>A run-a-scan form and the saved-scan history table. The form takes an optional <em>Scan name</em>, a scope picker (with a namespace box that enables for <em>namespace</em> scope), a <em>Selector</em> dropdown populated from the live registry vocabulary (tactics/modules/frameworks/aliases — never an invalid term), mock/live, and — for live scans — either a typed <em>kubeconfig path</em> <em>or</em> a <em>file picker</em> to select the kubeconfig from your system. Every scan run here is saved and titled <code>&lt;name&gt; + date + time</code>.</td></tr>
 </tbody>
 </table></div>
+
+<h3>Coverage matrix vs. scan matrix</h3>
+<p>These answer two different questions, and the web UI reports different numbers for each.
+<code>/matrix</code> (the <em>Coverage Matrix</em> nav item, and <code>matrix --coverage</code>) has no
+scan overlaid, so every hit-derived number there is structurally zero &mdash; it used to render
+&ldquo;0/9 tactics implicated &middot; 0 findings mapped&rdquo;, which reads as a broken counter rather
+than an answer.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Page</th><th>Question</th><th>Headline stats</th></tr></thead>
+<tbody>
+<tr><td><code>/matrix</code></td><td>What can K8sMatrixWarden <em>detect</em>?</td>
+<td>techniques with a detection rule (e.g. <code>30/56</code>), matrix coverage&nbsp;%, tactics with
+coverage, rules mapped to the matrix. Each column reads <code>5/6 with a rule</code>.</td></tr>
+<tr><td><code>/report/&lt;id&gt;/matrix</code></td><td>What did <em>this cluster</em> expose?</td>
+<td>tactics implicated, techniques triggered, matrix coverage&nbsp;%, findings mapped. Cells painted
+by worst finding severity.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Security: binding beyond localhost</h3>
+<p>The dashboard binds <code>127.0.0.1</code> by default and <strong>has no
+authentication</strong>. Two things change the moment it binds a routable address:</p>
+<ol>
+<li>anyone who can reach the port can read every saved report, and start scans unless
+    <code>--no-scan</code> is set;</li>
+<li><strong>a kubeconfig in the request body is arbitrary code</strong> &mdash; loading one
+    <em>executes its credential plugin</em> (<code>aws eks get-token</code>,
+    <code>gke-gcloud-auth-plugin</code>, <code>kubelogin</code>) as the user running the server.
+    That is how cloud auth works and the <code>kubernetes</code> client does the same; on
+    loopback the only caller is the operator, but on a routable bind it is remote code
+    execution.</li>
+</ol>
+<p>So on a non-loopback bind the server <strong>refuses a request-supplied kubeconfig</strong>
+&mdash; both <code>kubeconfig</code> (a path) and <code>kubeconfig_content</code> (an upload),
+since either names a config whose plugin would run here. <code>POST /api/scan</code> returns
+<code>403</code>, and the <em>Scan</em> tab shows the explanation instead of a control that would
+always fail. Mock scans and live scans against the <em>server&rsquo;s own</em> kubeconfig/context
+keep working, and startup prints a warning naming the active mode.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Command</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>k8smatrixwarden web</code></td><td>Default. Loopback; the kubeconfig path box and
+file picker work.</td></tr>
+<tr><td><code>k8smatrixwarden scan --live --kubeconfig &hellip;</code></td><td>Preferred for a
+remote host &mdash; scan from the CLI on the server itself.</td></tr>
+<tr><td><code>web --host 0.0.0.0 --no-scan</code></td><td>Remote, read-only report browser.</td></tr>
+<tr><td><code>web --host 0.0.0.0 --allow-remote-kubeconfig</code></td><td>Opt back in. Only
+behind your own authentication.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Light &amp; dark mode, full-width layout</h3>
+<p>Every page &mdash; the dashboard, the coverage matrix, and each per-scan HTML report &mdash;
+carries a <strong>theme button in the top bar</strong>. It flips between light and dark, and the
+choice is remembered in <code>localStorage</code> across pages and sessions; with nothing chosen
+the page follows the OS <code>prefers-color-scheme</code>. Every colour comes from a CSS variable,
+so one attribute flip re-themes the whole surface &mdash; heatmap, tables, charts &mdash; with no
+reload. The layout uses the <strong>full browser width</strong> (up to 1720px) instead of a narrow
+centred column, so the 9-column threat matrix, the findings table and the attack map get real
+room; narrow viewports still collapse cleanly.</p>
+
+<h3>Scan health &mdash; an unread cluster is never shown as a clean one</h3>
+<p>A scan that could not read the cluster produces zero findings <em>because nothing was
+inspected</em>, which would otherwise score as <code>Excellent</code>. The dashboard refuses to
+render that:</p>
+<ul>
+<li>the rating becomes <strong><code>Unknown</code></strong> and the risk / high+ KPIs show
+    <code>&mdash;</code>, not <code>0.0</code>;</li>
+<li>a red <strong>&ldquo;Scan incomplete &mdash; this cluster was not read&rdquo;</strong> banner sits
+    above the tabs (visible on every one) and lists each unreadable resource type;</li>
+<li>Overview, Findings, Threat Matrix, Attack Path and Attack Map each repeat a short
+    <em>&ldquo;Not a result&rdquo;</em> note, so no single view can be screenshotted out of context;</li>
+<li>the saved report says the same in <strong>every</strong> format (HTML, markdown, text, terminal,
+    PDF, JSON), and <code>POST /api/scan</code> returns <code>evidence_ok</code> +
+    <code>warnings[]</code>.</li>
+</ul>
+<p>A <em>partially</em> readable cluster keeps its real rating but gets an amber
+<strong>&ldquo;Partial coverage&rdquo;</strong> banner naming the missing types &mdash; those findings
+are real, just incomplete.</p>
 
 <h3>HTTP API (for scripts &amp; other tools)</h3>
 <p>The same dashboard is a small read-mostly JSON API — everything the browser does, scriptable with <code>curl</code>:</p>
@@ -1510,7 +1590,7 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 <tr><td><code>GET /api/report/&lt;id&gt;?format=json|markdown|sarif|html|text</code></td><td>The report re-rendered in the requested format.</td></tr>
 <tr><td><code>GET /api/report/&lt;id&gt;/matrix</code></td><td>The scan's threat matrix as JSON.</td></tr>
 <tr><td><code>GET /api/timeline</code></td><td>Finding-age metrics — open/resolved counts, MTTD/MTTR, oldest critical.</td></tr>
-<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scan_name?","scope_level","namespace?","selector?","mock","context?","kubeconfig?","kubeconfig_content?"}</code> (a live scan may pass the kubeconfig by path <code>kubeconfig</code> <em>or</em> by value <code>kubeconfig_content</code> — how the browser file-picker uploads it) → returns the new scan id, <code>name</code>/<code>display_name</code>, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection. An unreachable live cluster returns a clean <code>400 {"error":…}</code>, never a stack trace.</td></tr>
+<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scan_name?","scope_level","namespace?","selector?","mock","context?","kubeconfig?","kubeconfig_content?"}</code> (a live scan may pass the kubeconfig by path <code>kubeconfig</code> <em>or</em> by value <code>kubeconfig_content</code> — how the browser file-picker uploads it) → returns the new scan id, <code>name</code>/<code>display_name</code>, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection plus <code>evidence_ok</code> (false when the cluster could not be read at all). An unreachable live cluster &mdash; or one whose kubeconfig credential plugin cannot get a token &mdash; returns a clean <code>400 {"error":…}</code> carrying the plugin&rsquo;s real error, never a stack trace and never a saved empty scan.</td></tr>
 <tr><td><code>POST /api/runtime</code></td><td>Ingest Falco/audit events — a single falcosidekick event <em>or</em> a <code>{"events":[…]}</code> batch → <code>{correlation, drift}</code>. Read-only: never mutates the cluster.</td></tr>
 <tr><td><code>GET /health</code></td><td>Liveness + platform stats (rule/shard counts).</td></tr>
 </tbody>
@@ -1690,7 +1770,7 @@ python -m pytest tests/      <span class="c-mut"># also works if pytest is insta
 errors), attack-path scoring, all 7 report formats, the CIS engine's full mitigation
 story, the Runtime Agent's event matching, scan × runtime correlation + drift + Falco-event
 normalization, cloud-provider detection, the MTTD/MTTR timeline, live-scan resilience
-(unreachable-cluster message, skip-with-warning on RBAC 403 / absent API group), the shared
+(unreachable-cluster message, fatal-on-401 with the credential plugin's own error, skip-with-warning on RBAC 403 / absent API group, <code>Unknown</code> rating when nothing was readable), the shared
 report store, and the web dashboard / <code>/api/*</code> contract.</p>
 </section>
 
@@ -1703,7 +1783,7 @@ report store, and the web dashboard / <code>/api/*</code> contract.</p>
 <tr><td><strong>Rule Registry</strong></td><td>Catalog of every rule; resolves a selector → rule_id set.</td></tr>
 <tr><td><strong>MITRE Mapping Engine</strong></td><td>Startup-built index over rule tags — O(1) tactic/technique/framework/alias lookups.</td></tr>
 <tr><td><strong>Composite Alias</strong></td><td>A named outcome selector (e.g. "Container Escape") expanding to a curated rule set.</td></tr>
-<tr><td><strong>Evidence Collector</strong></td><td>Shared, scope-aware fetch/cache — each resource kind fetched once per scan. Live mode preflights connectivity (unreachable cluster → one clear message, not a traceback) and skips-with-warning any resource type it can't read (RBAC 403 / absent API group) instead of aborting the whole scan.</td></tr>
+<tr><td><strong>Evidence Collector</strong></td><td>Shared, scope-aware fetch/cache — each resource kind fetched once per scan. Live mode preflights <em>connectivity and authentication</em>: an unreachable cluster or a <code>401</code> fails fast with one clear message (for a kubeconfig exec plugin it re-runs the plugin itself and quotes its real error &mdash; provider-agnostic, so EKS/GKE/AKS each surface their own, and the legacy <code>auth-provider</code> mechanism is named too), while a resource type it merely can't read (RBAC <code>403</code> / absent API group) is skipped-with-warning rather than aborting the scan. If <em>nothing</em> could be read, the result is flagged <code>evidence_ok:false</code> and rated <code>Unknown</code> &mdash; never <code>Excellent</code>.</td></tr>
 <tr><td><strong>Attack-Path Bonus</strong></td><td>A risk-score multiplier for a finding that enables multiple tactics along a chain.</td></tr>
 <tr><td><strong>Finding anchor</strong></td><td>A stable, URL-safe slug for a finding; the report gives each card that <code>id</code> so any surface can deep-link to <code>/report/&lt;scan_id&gt;#&lt;anchor&gt;</code>.</td></tr>
 <tr><td><strong>MCP</strong></td><td>Model Context Protocol — the open standard this tool's 30-tool server implements.</td></tr>

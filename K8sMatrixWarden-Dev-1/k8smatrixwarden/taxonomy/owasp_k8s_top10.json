@@ -1,5 +1,7 @@
 {
-  "_comment": "OWASP Kubernetes Top 10 (2025) — used as the owasp: tag vocabulary (v3.0 §13).",
+  "_comment": "OWASP Kubernetes Top 10 (2025) — used as the owasp: tag vocabulary (v3.0 §13). `urls` holds the direct per-category page on owasp.org so a report links straight to the control, not the project landing page.",
+  "edition": "2025",
+  "project_url": "https://owasp.org/www-project-kubernetes-top-ten/",
   "categories": {
     "K01": "Insecure Workload Configurations",
     "K02": "Overly Permissive Authorization",
@@ -11,5 +13,17 @@
     "K08": "Cluster-to-Cloud Lateral Movement",
     "K09": "Broken Authentication",
     "K10": "Inadequate Logging & Monitoring"
+  },
+  "urls": {
+    "K01": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K01-Insecure-Workload-Configurations.html",
+    "K02": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K02-Overly-Permissive-Authorization-Configurations.html",
+    "K03": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K03-Secrets-Management-Failures.html",
+    "K04": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K04-Lack-Of-Cluster-Level-Policy-Enforcement.html",
+    "K05": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K05-Missing-Network-Segmentation-Controls.html",
+    "K06": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K06-Overly-Exposed-Kubernetes-Components.html",
+    "K07": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K07-Misconfigured-And-Vulnerable-Cluster-Components.html",
+    "K08": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K08-Cluster-To-Cloud-Lateral-Movement.html",
+    "K09": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K09-Broken-Authentication-Mechanisms.html",
+    "K10": "https://owasp.org/www-project-kubernetes-top-ten/2025/en/src/K10-Inadequate-Logging-And-Monitoring.html"
   }
 }

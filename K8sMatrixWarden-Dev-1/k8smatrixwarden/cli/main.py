@@ -390,7 +390,8 @@ def cmd_web(a) -> int:
     from ..web.server import serve
     try:
         serve(host=a.host, port=a.port, reports_dir=a.reports_dir, config_path=a.config,
-              allow_scan=not a.no_scan, open_browser=a.open)
+              allow_scan=not a.no_scan, open_browser=a.open,
+              allow_remote_kubeconfig=a.allow_remote_kubeconfig)
     except OSError as exc:
         print(f"error: could not start web server on {a.host}:{a.port} — {exc}",
               file=sys.stderr)
@@ -520,6 +521,10 @@ def build_parser() -> argparse.ArgumentParser:
     w.add_argument("--no-scan", action="store_true",
                    help="serve saved reports read-only; disable the in-dashboard scan button")
     w.add_argument("--open", action="store_true", help="open a browser at startup")
+    w.add_argument("--allow-remote-kubeconfig", action="store_true",
+                   help="accept a kubeconfig in the request body even on a non-loopback "
+                        "bind. Loading one executes its credential plugin as this user, "
+                        "so only use this behind your own authentication.")
     w.set_defaults(func=cmd_web)
 
     mx = sub.add_parser("matrix",

@@ -47,6 +47,83 @@ Three robustness/packaging fixes landed on top of the work above (tests `220 →
 
 ---
 
+## 0.15 Evidence-honesty, UI & reference-link pass
+
+Five fixes landed after the hardening pass above (tests `184 → 195`):
+
+1. **A live scan can no longer report an unread cluster as clean.** This was the serious one.
+   The Python `kubernetes` client's `_load_from_exec_plugin` **swallows** an exec-credential
+   failure — it logs it and continues with *no credentials* — so an EKS/GKE/AKS kubeconfig whose
+   cloud profile isn't configured on the machine produced a `401` on every request. Each resource
+   type was then skipped as a per-resource warning, the scan collected nothing, and zero findings
+   scored as **Excellent**. Now, in `core/evidence.py`:
+   - `_has_credentials()` checks whether loading the kubeconfig actually produced a token/cert;
+   - if not, `_exec_plugin_failure()` runs the kubeconfig's exec plugin itself (`subprocess`,
+     same argv/env the client would use — no new trust boundary) and returns its real stderr,
+     e.g. *"The config profile (prod-admin) could not be found"*;
+   - `_auth_failed()` raises that as one actionable `RuntimeError` naming the AWS/GCP/Azure
+     profile checks. `401` is now **fatal** at preflight *and* mid-scan (`403`/`404` still
+     skip-with-warning, unchanged).
+   - `_http_status()` replaced the isinstance-on-ApiException checks so classification works
+     identically with or without the optional `kubernetes` package installed (this is also what
+     makes it unit-testable — see `tests/test_live_resilience.py`).
+2. **Degraded scans are marked, not silently scored.** `EvidenceCollector.fetched_ok` /
+   `.degraded` distinguish "nothing found" from "nothing read". `ScannerAgent.scan` replaces the
+   `RiskResult` with rating **`Unknown`** when degraded, and `ScanResult` gained `warnings[]` +
+   `evidence_ok` (both round-trip through the report store). Every renderer shows it:
+   `reporting.scan_warning_lines()` is the one source of the text, used by text/terminal/markdown
+   (`_warning_md`), HTML (`warning_banner_html`), PDF (`_scan_warnings`), and the dashboard.
+   *Watch out:* some rules fire on the **absence** of evidence (e.g. "no NetworkPolicy"), so a
+   blind scan still produces a handful of findings — which is exactly why the `Unknown` rating
+   and the banner matter rather than just checking `total() == 0`.
+3. **Dashboard scan-health surfacing.** `/api/dashboard` carries `scan.evidence_ok` +
+   `scan.warnings`; `pages.py` renders a red banner above the tabs (visible on all of them),
+   `—`/`Unknown` KPIs instead of `0.0`/`Excellent`, and a repeated note inside Overview,
+   Findings, Threat Matrix, Attack Path and Attack Map.
+4. **Light/dark toggle + full-width layout.** `reporting.THEME_BUTTON` / `THEME_JS` are shared by
+   the HTML report and every dashboard page. All colours were already CSS variables, so the fix
+   was just adding `:root[data-theme=light|dark]` blocks *after* the `prefers-color-scheme` media
+   query (order matters — the explicit attribute must win in both directions) and persisting the
+   choice in `localStorage`. `.wrap` went `max-width:1000px` → `1720px`.
+5. **Direct reference links + honest coverage stats.** `taxonomy/owasp_k8s_top10.json` gained a
+   `urls` map (the 2025 edition's per-category pages, verified live), surfaced by
+   `finding_context.owasp_url()`; `reporting.py`'s duplicate `_owasp_names` loader was deleted in
+   favour of it. `render_html_grid(coverage_only=True)` makes the standalone `/matrix` page report
+   the coverage axis (`30/56 techniques with a detection rule`) instead of the structurally-zero
+   hit axis (`0/9 tactics implicated · 0 findings mapped`) it used to show.
+
+Also: `tests/run_tests.py`'s pytest shim now supports `with pytest.raises(X) as e:` (`e.value`).
+
+---
+
+## 0.16 Security + provider-coverage follow-up
+
+Two gaps flagged during review of §0.15, both closed (tests `195 → 205`):
+
+1. **`POST /api/scan` was remote code execution on a non-loopback bind.** Loading a kubeconfig
+   executes its credential plugin as the server's user — unavoidable, that *is* cloud auth — and
+   the endpoint accepts one from the request body (`kubeconfig` path or `kubeconfig_content`
+   upload, the browser file-picker's transport). On `127.0.0.1` the only caller is the operator,
+   so it's a convenience; on `0.0.0.0` it's RCE against a dashboard with no authentication.
+   `web/server.py::is_loopback()` (conservative — `""`, `0.0.0.0`, `::` and any hostname all count
+   as remote) now decides `WebApp.allow_client_kubeconfig`. When false, `_resolve_kubeconfig`
+   raises `PermissionError` → `403` with an explanation, and `pages.kubeconfigField()` renders that
+   explanation instead of inputs that would always fail. `--allow-remote-kubeconfig` is the opt-in;
+   startup prints which mode is active. **Both** forms are gated, not just the upload — a `path`
+   also names a config whose plugin the server would run.
+2. **The credential-failure detection was described as AWS-specific; it isn't, but it had a real
+   hole.** The `exec` path was always provider-agnostic (it re-runs whatever `command` the
+   kubeconfig declares, so `gke-gcloud-auth-plugin` and `kubelogin` were already covered — now
+   pinned by a test matrix over all three clouds). The genuine gap was the pre-`exec`
+   **`auth-provider`** mechanism (`gcp` / `azure` / `oidc`), still emitted for older clusters: the
+   client's `_load_azure_token` / `_load_oid_token` can return no usable token without raising, so
+   it hit the same silent-401 path. `_exec_plugin_failure` was generalised to `_credential_failure`,
+   which now also reads the `auth-provider` block and names it plus the fix command
+   (`gcloud auth login` / `az login` / re-auth). Introspection was split into `_kubeconfig_user()`,
+   which is also the seam the provider tests stub.
+
+---
+
 ## 0.2 Remediation removal pass (detect-and-report only)
 
 The **Remediation Agent and its whole subsystem were removed** in a later pass — the tool is

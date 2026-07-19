@@ -261,12 +261,37 @@ def _title_page(pdf, result: ScanResult) -> None:
         pdf.cell(0, 6, str(v), new_x="LMARGIN", new_y="NEXT")
 
 
+def _scan_warnings(pdf, result: ScanResult) -> None:
+    """Lead the executive summary with the reason coverage was partial or absent, so a
+    shared PDF can never be read as a clean bill of health for a cluster that was never
+    successfully read. Same text as every other renderer (reporting.scan_warning_lines)."""
+    from .reporting import scan_warning_lines
+    warns = scan_warning_lines(result)
+    if not warns:
+        return
+    # The _PDF subclass already runs _ascii() over every cell/multi_cell payload.
+    rgb = _SEV_RGB["CRITICAL"] if not result.evidence_ok else _SEV_RGB["HIGH"]
+    pdf.set_text_color(*rgb)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 6, "SCAN INCOMPLETE" if not result.evidence_ok else "PARTIAL COVERAGE",
+             new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 9)
+    for w in warns[:20]:
+        pdf.multi_cell(0, 4.6, "- " + w, new_x="LMARGIN", new_y="NEXT")
+    if len(warns) > 20:
+        pdf.cell(0, 4.6, f"... and {len(warns) - 20} more",
+                 new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(*_INK)
+    pdf.ln(2)
+
+
 def _executive_summary(pdf, result: ScanResult, findings: list[Finding]) -> None:
     pdf.add_page()
     _h1(pdf, "1. Executive Summary")
     r = result.risk
     c = result.counts
     total = result.total()
+    _scan_warnings(pdf, result)
     _body(pdf, f"Overall risk {r.cluster_risk}/10 ({r.rating}) -- security score "
               f"{r.security_score}/100, based on {total} actionable finding(s) across "
               f"{len(result.resolved_rule_ids)} rule(s) evaluated in "

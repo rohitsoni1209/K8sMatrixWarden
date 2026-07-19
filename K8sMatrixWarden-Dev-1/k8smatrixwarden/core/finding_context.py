@@ -49,20 +49,32 @@ def mitre_technique_url(technique_id: str) -> str:
     return f"https://attack.mitre.org/techniques/{tid}/"
 
 
-_OWASP_NAMES: Optional[dict] = None
+_OWASP: Optional[dict] = None
 
 
-def _owasp_names() -> dict:
-    global _OWASP_NAMES
-    if _OWASP_NAMES is None:
+def _owasp_taxonomy() -> dict:
+    global _OWASP
+    if _OWASP is None:
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "taxonomy", "owasp_k8s_top10.json")
         try:
             with open(path, encoding="utf-8") as fh:
-                _OWASP_NAMES = json.load(fh).get("categories", {})
+                _OWASP = json.load(fh)
         except Exception:
-            _OWASP_NAMES = {}
-    return _OWASP_NAMES
+            _OWASP = {}
+    return _OWASP
+
+
+def _owasp_names() -> dict:
+    return _owasp_taxonomy().get("categories", {}) or {}
+
+
+def owasp_url(code: Optional[str]) -> str:
+    """The direct owasp.org page for one Top-10 category (K01 … K10), e.g. K03 ->
+    .../2025/en/src/K03-Secrets-Management-Failures.html. Falls back to the project
+    landing page for an unknown code, so a link is never dead."""
+    urls = _owasp_taxonomy().get("urls", {}) or {}
+    return urls.get((code or "").strip().upper()) or OWASP_K8S_TOP10_URL
 
 
 # --------------------------------------------------------------------------------- #
@@ -121,7 +133,7 @@ def standards_for(finding: Finding) -> list[StandardRef]:
     if finding.owasp:
         name = _owasp_names().get(finding.owasp, finding.owasp)
         out.append(StandardRef("OWASP Kubernetes Top 10 (2025)", finding.owasp, name,
-                               OWASP_K8S_TOP10_URL))
+                               owasp_url(finding.owasp)))
     for c in finding.cis:
         title = _cis_titles().get(c, f"Control {c}")
         out.append(StandardRef("CIS Kubernetes Benchmark v1.8", c, title, CIS_BENCHMARK_URL))

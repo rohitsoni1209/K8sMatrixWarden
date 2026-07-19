@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/shards-10-blueviolet"/>
   <img src="https://img.shields.io/badge/rules-56-orange"/>
   <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
-  <img src="https://img.shields.io/badge/tests-184%20passing-success"/>
+  <img src="https://img.shields.io/badge/tests-205%20passing-success"/>
   <img src="https://img.shields.io/badge/time-IST%20(UTC%2B05%3A30)-informational"/>
 </p>
 
@@ -89,7 +89,22 @@ right now**, and here's the kill-chain." On top of the scanner, the platform add
   and the Attack Path / Attack Map stages — **deep-links straight to its card in the full report**.
   The **Scan** tab lets you name a scan and, for live scans, either type a **kubeconfig path** *or*
   **select the kubeconfig file from your system** (whichever is convenient). Live Falco ingestion
-  feeds the Runtime tab. All timestamps are shown in **IST**.
+  feeds the Runtime tab. A **light/dark theme toggle** sits in the top bar of every page (remembered
+  across sessions; follows the OS preference until you choose), and the layout uses the **full
+  browser width** so the 9-column matrix and findings tables have room. All timestamps are shown
+  in **IST**.
+- **Honest evidence reporting** (`core/evidence.py`, `agents/scanner.py`) — a live scan that cannot
+  authenticate **fails with the credential plugin's real error** (e.g. *"the AWS profile could not
+  be found"*) instead of silently collecting nothing. Provider-agnostic: whatever `exec` command the
+  kubeconfig declares is re-run, so EKS / GKE / AKS each surface their own error, and the legacy
+  `auth-provider` mechanism is named too. A scan that reads no resource type at all is rated
+  **`Unknown`**, never `Excellent` — zero findings only means "clean" when the cluster was actually
+  read, and every surface (report, dashboard, PDF, JSON) says which it was.
+- **Safe by default when exposed** (`web/server.py`) — the dashboard binds `127.0.0.1` and has no
+  authentication. Loading a kubeconfig *executes its credential plugin*, so on any non-loopback bind
+  a request-supplied kubeconfig is **refused** (`403`) rather than becoming remote code execution;
+  startup warns, and `--allow-remote-kubeconfig` is the deliberate opt-in for people running their
+  own auth in front.
 
 ## Install (optional extras)
 
@@ -109,7 +124,7 @@ pip install -e ".[pdf]"       # + fpdf2, for `-o pdf` report export
 |---|---|
 | `k8smatrixwarden chat` | **Interactive conversational assistant** (plain-English, confirm-then-run) |
 | `k8smatrixwarden scan ...` | Run a scan by scope × selector, or a one-shot natural-language query |
-| `k8smatrixwarden web [--port 8080]` | **Security Dashboard** web UI — browse scans, open reports, view the per-scan threat matrix, run a scan |
+| `k8smatrixwarden web [--port 8080]` | **Security Dashboard** web UI — browse scans, open reports, view the per-scan threat matrix, run a scan. Binds `127.0.0.1`; see USAGE §4.8 before exposing it |
 | `k8smatrixwarden matrix [--coverage]` | Print the **Kubernetes Threat Matrix** for a scan (or global detection coverage) |
 | `k8smatrixwarden rules [--module M] [--tactic T]` | List the rule registry (each tagged `surface=scan`) |
 | `k8smatrixwarden coverage` | MITRE tactic coverage (rules per tactic) |

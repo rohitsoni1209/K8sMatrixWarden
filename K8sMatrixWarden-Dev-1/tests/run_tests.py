@@ -23,11 +23,18 @@ except ImportError:
 
     shim = types.ModuleType("pytest")
 
+    class _Info:
+        """Mimics pytest's ExceptionInfo enough for `with pytest.raises(X) as e:` —
+        `e.value` is the caught exception."""
+        value = None
+
     @contextlib.contextmanager
     def _raises(exc):
+        info = _Info()
         try:
-            yield
-        except exc:
+            yield info
+        except exc as caught:
+            info.value = caught
             return
         except Exception as other:  # wrong exception type
             raise AssertionError(f"expected {exc}, got {type(other)}: {other}")

@@ -20,6 +20,8 @@ from urllib.parse import parse_qs
 
 from ..core.models import (ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity)
 from ..core.report_store import DEFAULT_DIR, ReportStore
+from ..core.finding_context import _owasp_taxonomy
+from ..core.reporting import scan_warning_lines
 from ..core.results import ScanResult
 from ..core.threat_matrix import build_threat_matrix
 from . import pages
@@ -53,10 +55,21 @@ def _text(s: str, status: int = 200) -> Response:
 
 class WebApp:
     def __init__(self, platform, reports_dir: str = DEFAULT_DIR,
-                 allow_scan: bool = True):
+                 allow_scan: bool = True, allow_client_kubeconfig: bool = True):
         self.p = platform
         self.reports_dir = reports_dir
         self.allow_scan = allow_scan
+        #: Whether `POST /api/scan` may accept a kubeconfig from the request body.
+        #:
+        #: Loading a kubeconfig EXECUTES its credential plugin (`aws eks get-token`,
+        #: `gke-gcloud-auth-plugin`, `kubelogin`, …) — that is how cloud auth works, and
+        #: the `kubernetes` client does it too. So a caller who can supply a kubeconfig
+        #: can run an arbitrary command as the server's user. That is fine when the only
+        #: possible caller is the operator on loopback, and it is remote code execution
+        #: the moment the server binds a routable address. `server.serve()` therefore sets
+        #: this False for a non-loopback bind unless the operator opts back in
+        #: (`--allow-remote-kubeconfig`) after putting their own authentication in front.
+        self.allow_client_kubeconfig = allow_client_kubeconfig
 
     @property
     def store(self) -> ReportStore:
@@ -130,6 +143,7 @@ class WebApp:
         reports = self.store.list()
         if not reports:
             return {"has_scan": False, "history": [],
+                    "allow_client_kubeconfig": self.allow_client_kubeconfig,
                     "selectors": self._selector_vocab()}
         known = {r.scan_id for r in reports}
         selected = scan_id if scan_id in known else reports[0].scan_id
@@ -147,6 +161,12 @@ class WebApp:
         return {
             "has_scan": True,
             "selected_scan_id": selected,
+            # Lets the Scan form hide the kubeconfig inputs when this server would refuse
+            # them, instead of offering a control that always 403s.
+            "allow_client_kubeconfig": self.allow_client_kubeconfig,
+            # K01…K10 -> their direct owasp.org page, so a finding's OWASP tag links to
+            # the control itself rather than the project landing page.
+            "owasp_urls": _owasp_taxonomy().get("urls", {}),
             "selectors": self._selector_vocab(),
             "scan": {"scan_id": latest.scan_id, "name": latest.name,
                      "display_name": latest.display_name,
@@ -155,7 +175,11 @@ class WebApp:
                      "rating": latest.risk.rating,
                      "cluster_risk": latest.risk.cluster_risk,
                      "security_score": latest.risk.security_score,
-                     "counts": latest.counts, "total": latest.total()},
+                     "counts": latest.counts, "total": latest.total(),
+                     # Scan health — every dashboard view that shows a score or a finding
+                     # count reads these so an unread cluster is never painted as clean.
+                     "evidence_ok": latest.evidence_ok,
+                     "warnings": scan_warning_lines(latest)},
             "findings": [f.as_dict() for f in latest.findings],
             "threat_matrix": matrix.as_dict(),
             "attack_path": attack_paths(matrix),
@@ -216,8 +240,7 @@ class WebApp:
         no findings. Distinct from a scan matrix, which overlays this scan's hits."""
         empty = _empty_result(self.p)
         tm = build_threat_matrix(empty, self.p.registry.rules)
-        note = (f"Detection coverage across all {self.p.rule_count()} rules "
-                f"(no scan overlaid)")
+        note = (f"Detection coverage across all {self.p.rule_count()} registered rules")
         return _html(pages.matrix_page(tm, result=None, title_note=note))
 
     # ------------------------------------------------------------------ #
@@ -268,7 +291,10 @@ class WebApp:
         # contents uploaded from the browser file-picker (`kubeconfig_content`) — the
         # browser can't reveal a real filesystem path, so a picked file is sent by value
         # and materialised into a short-lived temp file here.
-        kubeconfig, tmp_kubeconfig = self._resolve_kubeconfig(data)
+        try:
+            kubeconfig, tmp_kubeconfig = self._resolve_kubeconfig(data)
+        except PermissionError as exc:
+            return _json({"error": str(exc)}, 403)
         try:
             try:
                 collector = self.p.make_collector(
@@ -300,7 +326,8 @@ class WebApp:
                       "security_score": result.risk.security_score,
                       "total_findings": result.total(),
                       "scope": result.request.scope.describe(),
-                      "warnings": list(getattr(collector, "warnings", [])),
+                      "evidence_ok": result.evidence_ok,
+                      "warnings": scan_warning_lines(result),
                       "report_url": f"/report/{result.scan_id}",
                       "matrix_url": f"/report/{result.scan_id}/matrix"})
 
@@ -309,11 +336,27 @@ class WebApp:
 
         Prefers an explicit server-side `kubeconfig` path; otherwise, if the browser
         uploaded the file's `kubeconfig_content`, writes it to a temp file and returns that
-        path plus the same path as the second element so the caller unlinks it afterward."""
+        path plus the same path as the second element so the caller unlinks it afterward.
+
+        Raises PermissionError when the request supplies either form and this server is
+        not configured to accept one — see `allow_client_kubeconfig`. Both forms are gated,
+        not just the uploaded content: a `kubeconfig` *path* names a file whose credential
+        plugin the server would then execute just the same."""
         path = data.get("kubeconfig")
+        content = data.get("kubeconfig_content")
+        supplied = ((isinstance(path, str) and path.strip())
+                    or (isinstance(content, str) and content.strip()))
+        if supplied and not self.allow_client_kubeconfig:
+            raise PermissionError(
+                "this server does not accept a kubeconfig from the request because it is "
+                "not bound to localhost. Loading a kubeconfig executes its credential "
+                "plugin (aws/gcloud/kubelogin), so accepting one from the network would "
+                "let any caller run commands as the server's user. Either run the "
+                "dashboard on 127.0.0.1, or scan from the CLI on the server "
+                "(`k8smatrixwarden scan --live --kubeconfig …`), or — only behind your own "
+                "authentication — restart with --allow-remote-kubeconfig.")
         if isinstance(path, str) and path.strip():
             return path.strip(), None
-        content = data.get("kubeconfig_content")
         if isinstance(content, str) and content.strip():
             import tempfile
             fd, tmp = tempfile.mkstemp(prefix="k8smw-kubeconfig-", suffix=".yaml")

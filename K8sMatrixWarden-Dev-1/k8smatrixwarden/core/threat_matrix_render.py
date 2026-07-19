@@ -111,7 +111,15 @@ def _md_state_icon(cell: MatrixCell) -> str:
 # ======================================================================= #
 # HTML GRID (fragment — no <html>/<head>; caller supplies the page + CSS)
 # ======================================================================= #
-def render_html_grid(tm: ThreatMatrix) -> str:
+def render_html_grid(tm: ThreatMatrix, *, coverage_only: bool = False) -> str:
+    """Render the heatmap.
+
+    `coverage_only=True` is the standalone /matrix page: there is no scan overlaid, so
+    every hit-derived number is structurally 0. Reporting "0/9 tactics implicated · 0
+    findings mapped" there is not a result, it is a category error — the page is about
+    *detection coverage*. In that mode the stat tiles and the per-column counter switch to
+    the covered/total axis, and the hit legend entries are dropped.
+    """
     from .reporting import _esc
     s = tm.summary()
     cols_html = []
@@ -129,25 +137,45 @@ def render_html_grid(tm: ThreatMatrix) -> str:
                 f"<span class='tmname'>{_esc(cell.technique_name)}</span>{sub}{badge}</a>")
         sev = col.max_severity
         head_sev = sev.label.lower() if sev else ("cov" if any(c.covered for c in col.cells) else "")
+        if coverage_only:
+            head_sev = "cov" if any(c.covered for c in col.cells) else ""
+            counter = (f"{sum(1 for c in col.cells if c.covered)}/{len(col.cells)} "
+                       f"with a rule")
+        else:
+            counter = f"{col.hit_count}/{len(col.cells)}"
         cols_html.append(
             f"<div class='tmcol'>"
             f"<div class='tmhead {head_sev}'>{_esc(col.tactic)}"
-            f"<span class='tmhits'>{col.hit_count}/{len(col.cells)}</span></div>"
+            f"<span class='tmhits'>{counter}</span></div>"
             f"{''.join(cells_html)}</div>")
 
-    legend = (
-        "<div class='tmlegend'>"
-        "<span><i class='sw crit'></i>Critical</span><span><i class='sw high'></i>High</span>"
-        "<span><i class='sw med'></i>Medium</span><span><i class='sw low'></i>Low</span>"
-        "<span><i class='sw covered'></i>Covered (no finding)</span>"
-        "<span><i class='sw gap'></i>No rule yet</span></div>")
-
-    stats = (
-        f"<div class='tmstats'>"
-        f"<div><b>{s['tactics_hit']}</b>/{s['tactics_total']}<span>tactics implicated</span></div>"
-        f"<div><b>{s['techniques_hit']}</b>/{s['techniques_total']}<span>techniques triggered</span></div>"
-        f"<div><b>{s['coverage_pct']}%</b><span>matrix coverage</span></div>"
-        f"<div><b>{s['finding_count']}</b><span>findings mapped</span></div></div>")
+    if coverage_only:
+        legend = (
+            "<div class='tmlegend'>"
+            "<span><i class='sw covered'></i>Detection rule exists</span>"
+            "<span><i class='sw gap'></i>No rule yet (coverage gap)</span></div>")
+        stats = (
+            f"<div class='tmstats'>"
+            f"<div><b>{s['techniques_covered']}</b>/{s['techniques_total']}"
+            f"<span>techniques with a detection rule</span></div>"
+            f"<div><b>{s['coverage_pct']}%</b><span>matrix coverage</span></div>"
+            f"<div><b>{s['tactics_covered']}</b>/{s['tactics_total']}"
+            f"<span>tactics with coverage</span></div>"
+            f"<div><b>{s['rule_count']}</b><span>rules mapped to the matrix</span></div>"
+            f"</div>")
+    else:
+        legend = (
+            "<div class='tmlegend'>"
+            "<span><i class='sw crit'></i>Critical</span><span><i class='sw high'></i>High</span>"
+            "<span><i class='sw med'></i>Medium</span><span><i class='sw low'></i>Low</span>"
+            "<span><i class='sw covered'></i>Covered (no finding)</span>"
+            "<span><i class='sw gap'></i>No rule yet</span></div>")
+        stats = (
+            f"<div class='tmstats'>"
+            f"<div><b>{s['tactics_hit']}</b>/{s['tactics_total']}<span>tactics implicated</span></div>"
+            f"<div><b>{s['techniques_hit']}</b>/{s['techniques_total']}<span>techniques triggered</span></div>"
+            f"<div><b>{s['coverage_pct']}%</b><span>matrix coverage</span></div>"
+            f"<div><b>{s['finding_count']}</b><span>findings mapped</span></div></div>")
 
     return (f"{stats}{legend}"
             f"<div class='tmgrid'>{''.join(cols_html)}</div>")

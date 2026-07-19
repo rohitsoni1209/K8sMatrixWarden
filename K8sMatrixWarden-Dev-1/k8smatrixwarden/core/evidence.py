@@ -115,6 +115,17 @@ class EvidenceCollector:
         #: with whatever it could read; surfaces make partial coverage visible instead of
         #: silently under-reporting. Empty on the mock backend.
         self.warnings: list[str] = []
+        #: True once at least one resource type was read successfully (an empty list from
+        #: a healthy API still counts — the cluster answered). Stays False when every
+        #: fetch errored, which is the difference between "clean cluster" and "we could
+        #: not read the cluster at all".
+        self.fetched_ok = False
+
+    @property
+    def degraded(self) -> bool:
+        """The scan could not read the cluster — its (empty) result is NOT evidence of a
+        clean cluster and must never be rendered as a passing score."""
+        return bool(self.warnings) and not self.fetched_ok
 
     def collect(self, needs: set[str], scope: Scope) -> Evidence:
         for kind in needs:
@@ -134,6 +145,7 @@ class MockEvidenceCollector(EvidenceCollector):
         super().__init__()
         with open(fixture_path, "r", encoding="utf-8") as fh:
             self._data = json.load(fh)
+        self.fetched_ok = True
 
     def _fetch(self, kind: str, bucket: str) -> list[dict]:
         items = self._data.get(bucket, [])
@@ -162,7 +174,7 @@ def _is_connection_error(exc: BaseException) -> bool:
     api_exc = _api_exception_type()
     if api_exc and isinstance(exc, api_exc):
         # status 0/None => the client never received an HTTP response = transport failure.
-        return not getattr(exc, "status", None)
+        return _http_status(exc) is None
     try:
         import urllib3
         if isinstance(exc, urllib3.exceptions.HTTPError):
@@ -172,17 +184,135 @@ def _is_connection_error(exc: BaseException) -> bool:
     return isinstance(exc, (ConnectionError, TimeoutError, OSError))
 
 
+def _http_status(exc: BaseException) -> Optional[int]:
+    """The HTTP status this exception carries, or None when it is not an HTTP response.
+
+    Duck-typed on `.status` (which is what ApiException exposes) instead of an isinstance
+    check, so classification behaves identically whether or not the optional `kubernetes`
+    package is importable. A status of 0/None means the client never received a response
+    at all — a transport failure, not an HTTP status."""
+    status = getattr(exc, "status", None)
+    return status if isinstance(status, int) and status > 0 else None
+
+
+#: How long a kubeconfig credential plugin (`aws eks get-token`, `gke-gcloud-auth-plugin`,
+#: `kubelogin`) gets to produce a token before we call it broken.
+_EXEC_TIMEOUT = 20
+
+
+def _has_credentials(client) -> bool:
+    """True when loading the kubeconfig actually produced usable credentials.
+
+    The kubernetes client stores them on the default Configuration: a bearer token in
+    `api_key['authorization']`, a client certificate, or basic-auth. All three empty means
+    every request will go out unauthenticated and come back 401."""
+    try:
+        cfg = client.Configuration.get_default_copy()
+    except Exception:
+        return True                       # can't tell — let the preflight decide
+    return bool((cfg.api_key or {}).get("authorization")
+                or getattr(cfg, "cert_file", None)
+                or getattr(cfg, "username", None))
+
+
+#: How the `auth-provider` name in a kubeconfig maps to the command that refreshes it.
+#: This is the pre-`exec` mechanism; `gcloud`/`az` still emit it for older clusters, and
+#: the client's `_load_gcp_token`/`_load_azure_token`/`_load_oid_token` can likewise end up
+#: returning no credentials (an unrefreshable/expired cached token) without raising.
+_AUTH_PROVIDER_FIX = {
+    "gcp": "run `gcloud auth login` (and install gke-gcloud-auth-plugin)",
+    "azure": "run `az login`, or convert the kubeconfig with `kubelogin convert-kubeconfig`",
+    "oidc": "re-authenticate with your OIDC provider to refresh the id-token",
+}
+
+
+def _kubeconfig_user(kubeconfig: Optional[str], context: Optional[str]) -> Optional[dict]:
+    """The `user:` entry the active context resolves to, or None if it can't be read.
+
+    Best-effort introspection through the client's own loader, so it honours the same
+    KUBECONFIG merge order and context selection the real load did."""
+    try:
+        from kubernetes.config import kube_config
+        merger = kube_config.KubeConfigMerger(
+            kubeconfig or kube_config.KUBE_CONFIG_DEFAULT_LOCATION)
+        loader = kube_config._get_kube_config_loader(
+            config_dict=merger.config, active_context=context)
+        return dict(loader._user or {})
+    except Exception:
+        return None
+
+
+def _credential_failure(kubeconfig: Optional[str],
+                        context: Optional[str]) -> Optional[str]:
+    """Why the kubeconfig produced no credentials, in the user's own terms, or None.
+
+    `kubernetes.config.load_kube_config()` only *logs* an exec-plugin failure and then
+    carries on with NO credentials (see `_load_from_exec_plugin`); its `auth-provider`
+    loaders can similarly yield nothing for an expired token they cannot refresh. Either
+    way the result is a 401 on every request — which, before this, meant every resource
+    type was skipped as a warning and the scan reported zero findings and an "Excellent"
+    rating for a cluster it never read.
+
+    Both mechanisms are handled, and both are **provider-agnostic**: an `exec` block is
+    re-run whatever its command is (`aws eks get-token`, `gke-gcloud-auth-plugin`,
+    `kubelogin`, or anything else), so EKS, GKE and AKS all surface their own real error.
+
+    Best-effort: if the kubeconfig can't be introspected this returns None and the 401
+    preflight still fails the scan, just with a generic message.
+    """
+    import subprocess
+    user = _kubeconfig_user(kubeconfig, context)
+    if user is None:
+        return None
+    exec_cfg = dict(user.get("exec") or {})
+    command = exec_cfg.get("command")
+    if not command:
+        # No exec block — an `auth-provider` (the pre-exec GKE/AKS/OIDC mechanism) is the
+        # other way a kubeconfig silently ends up with no usable token. We can't re-run it
+        # the way we can an exec plugin, but we can name it and the command that fixes it.
+        provider = ((user.get("auth-provider") or {}).get("name") or "").strip().lower()
+        if provider:
+            fix = _AUTH_PROVIDER_FIX.get(provider,
+                                         "re-authenticate with that provider")
+            return (f"the kubeconfig authenticates with auth-provider {provider!r}, which "
+                    f"returned no usable token (it is missing or expired and could not be "
+                    f"refreshed) — {fix}")
+        return None
+    # Same command the kubernetes client itself would run — no new trust boundary.
+    argv = [str(command)] + [str(a) for a in (exec_cfg.get("args") or [])]
+    env = dict(os.environ)
+    for e in (exec_cfg.get("env") or []):
+        if isinstance(e, dict) and e.get("name"):
+            env[str(e["name"])] = str(e.get("value", ""))
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, env=env,
+                              timeout=_EXEC_TIMEOUT)
+    except FileNotFoundError:
+        return (f"credential plugin {command!r} is not installed or not on PATH "
+                f"(the kubeconfig authenticates with: {' '.join(argv)})")
+    except subprocess.TimeoutExpired:
+        return f"credential plugin {' '.join(argv)} timed out after {_EXEC_TIMEOUT}s"
+    except Exception as exc:
+        return f"could not run credential plugin {' '.join(argv)}: {exc}"
+    if proc.returncode == 0:
+        return None
+    detail = [ln for ln in (proc.stderr or proc.stdout or "").splitlines() if ln.strip()]
+    return (f"{' '.join(argv)} failed (exit {proc.returncode}): "
+            + (detail[-1].strip()[:300] if detail else "no output"))
+
+
 def _short_api_error(exc: BaseException) -> str:
     """A one-line, human reason for skipping a resource type (used in scan warnings)."""
-    for api_exc in _api_exception_type():
-        if isinstance(exc, api_exc):
-            status = getattr(exc, "status", None)
-            if status == 403:
-                return "HTTP 403 Forbidden — scanner ServiceAccount lacks read RBAC for it"
-            if status == 404:
-                return "HTTP 404 — API group/resource not present on this cluster"
-            reason = (getattr(exc, "reason", "") or "").strip()
-            return f"HTTP {status} {reason}".strip()
+    status = _http_status(exc)
+    if status is not None:
+        if status == 401:
+            return "HTTP 401 Unauthorized — the cluster rejected our credentials"
+        if status == 403:
+            return "HTTP 403 Forbidden — scanner ServiceAccount lacks read RBAC for it"
+        if status == 404:
+            return "HTTP 404 — API group/resource not present on this cluster"
+        reason = (getattr(exc, "reason", "") or "").strip()
+        return f"HTTP {status} {reason}".strip()
     first = (str(exc).splitlines() or [""])[0][:120]
     return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
 
@@ -231,7 +361,25 @@ class LiveEvidenceCollector(EvidenceCollector):
         self._client = client
         self._api = client.ApiClient()
         self._context = context
+        self._kubeconfig = kubeconfig
+        #: The real reason authentication is broken, when we could recover it.
+        self._auth_detail: Optional[str] = None
+        if not _has_credentials(client):
+            # No credentials at all after loading: if the kubeconfig authenticates via an
+            # exec plugin, that plugin is why. Fail here with its own error rather than
+            # letting it surface as an anonymous 401 further down.
+            self._auth_detail = self._credential_error()
+            if self._auth_detail:
+                raise self._auth_failed(self._auth_detail)
         self._preflight()
+
+    def _credential_error(self) -> Optional[str]:
+        """The exec credential plugin's real failure, resolved at most once. Also covers
+        the case where a *stale* cached token loaded fine but the cluster rejects it —
+        re-running the plugin is exactly what surfaces an expired/misconfigured profile."""
+        if self._auth_detail is None:
+            self._auth_detail = _credential_failure(self._kubeconfig, self._context)
+        return self._auth_detail
 
     def _unreachable(self, exc: BaseException) -> RuntimeError:
         """A clear, actionable error for 'the API server can't be reached' — the common
@@ -246,11 +394,37 @@ class LiveEvidenceCollector(EvidenceCollector):
             f"Verify it is running:  kubectl --context {hint_ctx} cluster-info\n"
             f"Or scan the bundled sample cluster instead:  add --mock")
 
+    def _auth_failed(self, detail: Optional[str] = None) -> RuntimeError:
+        """The cluster is reachable but our credentials are missing or rejected.
+
+        This is fatal on purpose. Treating it as a per-resource warning is what produced
+        the empty "0 findings / Excellent" scan of a cluster the tool never read."""
+        ctx = self._context or "(current-context)"
+        lines = [f"Kubernetes API authentication failed for context {ctx!r} — the "
+                 f"kubeconfig loaded, but no valid credentials could be obtained."]
+        if detail:
+            lines.append(f"  → {detail}")
+        lines += [
+            "The kubeconfig's credential plugin could not issue a token. Check the "
+            "cloud profile it depends on:",
+            "  * AWS / EKS   — the AWS profile named in the kubeconfig is not configured "
+            "on this machine.",
+            "                  Verify: aws configure list-profiles  ·  "
+            "AWS_PROFILE=<name> aws sts get-caller-identity",
+            "  * GCP / GKE   — gcloud auth login, and install gke-gcloud-auth-plugin.",
+            "  * Azure / AKS — az login (kubelogin).",
+            "Refusing to save a scan of a cluster that could not be read — an empty "
+            "result would look like a clean cluster.",
+            "To scan the bundled sample cluster instead:  add --mock",
+        ]
+        return RuntimeError("\n".join(lines))
+
     def _preflight(self) -> None:
-        """Probe the API server once up front so an unreachable cluster fails fast with a
-        clear message. Only a *connection* failure is fatal here — a 401/403/etc on
-        /version (some clusters gate it) is fine; real resource fetches handle their own
-        auth per type."""
+        """Probe the API server once up front so an unreachable or unauthenticated
+        cluster fails fast with a clear message. A *connection* failure and a 401 are both
+        fatal — neither leaves anything scannable. A 403 on /version is not: some clusters
+        gate that endpoint while real resources stay readable, so per-resource fetches
+        handle their own authorization."""
         try:
             self._api.call_api("/version", "GET", auth_settings=["BearerToken"],
                                _preload_content=False,
@@ -258,6 +432,9 @@ class LiveEvidenceCollector(EvidenceCollector):
         except Exception as exc:
             if _is_connection_error(exc):
                 raise self._unreachable(exc) from exc
+            if _http_status(exc) == 401:
+                raise self._auth_failed(
+                    self._credential_error() or _short_api_error(exc)) from exc
 
     def _get_json(self, path: str) -> list[dict]:
         """Call the REST path and parse the raw JSON body ourselves (camelCase preserved).
@@ -318,11 +495,18 @@ class LiveEvidenceCollector(EvidenceCollector):
             if _is_connection_error(exc):
                 # The cluster went unreachable mid-scan — nothing more is scannable.
                 raise self._unreachable(exc) from exc
+            if _http_status(exc) == 401:
+                # Credentials are missing/expired: no resource type is readable, so this
+                # is fatal too. Downgrading it to a warning is what let an unauthenticated
+                # scan report zero findings and a passing score.
+                raise self._auth_failed(
+                    self._credential_error() or _short_api_error(exc)) from exc
             # RBAC-forbidden, missing API group, or a transient error for THIS resource
             # type only: skip it, record why, and keep scanning everything else. Honest
             # partial coverage beats aborting the whole scan over one resource type.
             self.warnings.append(f"{kind}: skipped ({_short_api_error(exc)})")
             return []
+        self.fetched_ok = True
         for it in items:
             it.setdefault("kind", kind)
         return items

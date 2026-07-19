@@ -145,3 +145,33 @@ def test_html_cards_have_standards_and_mitre_tables():
     assert "MITRE ATT&amp;CK Mapping" in html
     assert "ctx-table" in html
     assert "Validation — how to reproduce" in html
+
+
+# --------------------------------------------------------------------------- #
+# OWASP Kubernetes Top 10 — every tag links to its own control page
+# --------------------------------------------------------------------------- #
+def test_owasp_ids_link_to_their_own_page_not_the_project_landing_page():
+    from k8smatrixwarden.core.finding_context import (OWASP_K8S_TOP10_URL,
+                                                      _owasp_names, owasp_url)
+    codes = _owasp_names()
+    assert set(codes) == {f"K{n:02d}" for n in range(1, 11)}
+    seen = set()
+    for code in codes:
+        url = owasp_url(code)
+        assert url != OWASP_K8S_TOP10_URL, f"{code} still points at the landing page"
+        assert f"/{code}-" in url, url
+        assert url.startswith("https://owasp.org/www-project-kubernetes-top-ten/2025/")
+        seen.add(url)
+    assert len(seen) == 10                      # ten distinct destinations
+    # an unknown code degrades to the project page rather than a dead link
+    assert owasp_url("K99") == OWASP_K8S_TOP10_URL
+    assert owasp_url(None) == OWASP_K8S_TOP10_URL
+
+
+def test_reports_carry_the_direct_owasp_link():
+    p, res = _result()
+    tagged = next(f for f in res.findings if f.owasp)
+    from k8smatrixwarden.core.finding_context import owasp_url
+    expected = owasp_url(tagged.owasp)
+    assert expected in p.reporting.render(res, "html")
+    assert expected in p.reporting.render(res, "markdown")

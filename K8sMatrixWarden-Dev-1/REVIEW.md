@@ -4,7 +4,7 @@ This is the required review pass after the initial build. It records what was ve
 refinements made to improve the code over a naive reading of the spec, the deliberate
 deviations (with justification), and the known limitations / next steps.
 
-**Status at review:** 10 shards, **56 rules**, **30 MCP tools**, **184/184 tests passing**,
+**Status at review:** 10 shards, **56 rules**, **30 MCP tools**, **205/205 tests passing**,
 `doctor` validation clean (no duplicate rule ids, every rule's technique id present in the
 vendored taxonomy, all aliases resolve). End-to-end mock scan produces a Critical-rated report;
 tactic/technique/module/framework slices, namespace scoping, all seven report formats
@@ -12,13 +12,14 @@ tactic/technique/module/framework slices, namespace scoping, all seven report fo
 scanner core has since been extended with a scan × runtime **correlation** layer, **drift**
 detection, **attack-path** derivation, and an interactive **SPA dashboard** — see §6f — and
 the dashboard was then overhauled for deep-linking, report selection, an IST time base, and a
-professional visual pass (§6g). The tool is now **detect-and-report only**: the earlier
+professional visual pass (§6g). A later pass (§6h) closed a correctness hole in which a
+live scan that could not authenticate reported an unread cluster as `Excellent`. The tool is now **detect-and-report only**: the earlier
 remediation engine (§6c/§6d) has been removed, so no write/apply path exists on any surface.
 
 > **Note on the numbered history below.** Sections §6a–§6f record the review passes in the
 > order they happened, so their inline test/tool counts (25 → 31 → 113 → 137 → 163 → 229) are
 > *historical checkpoints*, not the current totals. The current totals are the ones in this
-> status block (56 rules, 30 MCP tools, 184 tests); §6g brings the story up to date. In
+> status block (56 rules, 30 MCP tools, 205 tests); §6g–§6h bring the story up to date. In
 > particular, the remediation engine described in §6c and the `explain_remediation` MCP tool
 > in §6d were subsequently **removed** — those sections are kept as historical record.
 
@@ -524,3 +525,82 @@ report, report-matrix, 404). Extracted the SPA JS and confirmed it renders every
 5. Render the **kill-chain attack path inline in the HTML/PDF reports** (currently JSON/markdown
    embed it; HTML/PDF still link to the web matrix).
 6. Layer the **LLM intent parser** onto `Orchestrator.interpret` for free-form phrasing.
+
+
+---
+
+## 6h. Evidence honesty — an unread cluster must never score as a clean one
+
+**The defect.** A live scan against an EKS cluster whose AWS profile was not configured on the
+machine returned **0 findings and an `Excellent` rating**. Tracing it end to end:
+
+1. `config.load_kube_config()` **succeeds** — the YAML parses fine.
+2. Its `_load_from_exec_plugin()` runs `aws eks get-token`, which fails, and the client
+   **catches the exception, logs it, and continues** with no credentials set.
+3. Every subsequent request returns `401`.
+4. `LiveEvidenceCollector._fetch` classified `401` the same as `403`/`404` — a *per-resource*
+   problem — so each resource type was skipped with a warning and returned `[]`.
+5. Zero evidence → (almost) zero findings → `cluster_risk = 0.0` → rating `Excellent`.
+
+Every individual step was defensible; the composition was not. The skip-with-warning behaviour
+(added in the earlier hardening pass) is right for `403`/`404`, which affect *one* resource type.
+`401` affects *all* of them, so inheriting that behaviour turned a total failure into a silent,
+confident, wrong answer — the worst failure mode a security tool has.
+
+**The fix, in three layers.**
+
+*Fail fast where the real reason lives.* The client hides the exec-plugin error, so the
+collector re-runs the plugin itself (`_exec_plugin_failure`, stdlib `subprocess`, same argv and
+env the client would use — the client already executes this command, so no trust boundary
+moved) and surfaces its stderr verbatim. `401` is fatal at preflight and mid-scan. A scan that
+cannot authenticate is never saved.
+
+*Never score what was not read.* `EvidenceCollector.fetched_ok`/`.degraded` separate "the API
+answered, and the answer was empty" from "the API never answered". `ScannerAgent.scan` — the one
+choke point every surface routes through — swaps in rating `Unknown` when degraded, so no
+renderer needed to learn a new rule to stop lying.
+
+*Say so everywhere.* `ScanResult.warnings` / `.evidence_ok` persist through the report store, so
+a re-rendered scan still carries the caveat. `reporting.scan_warning_lines()` is the single
+source of the wording for text, terminal, markdown, HTML, PDF and the dashboard.
+
+**Why the rating override rather than an exception at scan time.** Total auth failure *is* an
+exception (nothing is saved). But a cluster that answers and refuses every resource type is a
+different, real state — an under-privileged ServiceAccount — where the user wants the artifact
+*and* the caveat. `Unknown` is that artifact.
+
+**A subtlety worth recording.** Some rules fire on the *absence* of evidence ("no NetworkPolicy
+in this namespace"), so a scan that read nothing still yields a handful of findings. Any check of
+the form `if total == 0: warn` would therefore have missed this case entirely. The signal has to
+come from the collector, not from the finding count.
+
+**Also in this pass:** light/dark toggle and full-width layout across the dashboard and HTML
+report; direct per-ID OWASP Kubernetes Top 10 links replacing the project-landing-page pointer
+(and one duplicated taxonomy loader deleted); and the standalone `/matrix` coverage page now
+reports the coverage axis rather than the structurally-zero hit axis it inherited from the
+per-scan matrix renderer.
+
+
+---
+
+## 6i. Two follow-ups from the §6h review
+
+**The dashboard's kubeconfig upload was RCE waiting on a bind flag.** Loading a kubeconfig
+executes its credential plugin — that is how EKS/GKE/AKS auth works, and it is exactly the
+mechanism §6h leans on to recover a real error. But `POST /api/scan` accepts a kubeconfig *from
+the request body*, so the property "only the operator can reach this" was doing all the security
+work, and nothing enforced it. Documenting the hazard would have been the wrong fix; the bind
+address is knowable at startup, so it now decides. `is_loopback()` is deliberately conservative —
+`""`, `0.0.0.0`, `::` and any hostname are all treated as remote-reachable — and both the upload
+*and* the path form are gated, since a path equally names a config whose plugin runs server-side.
+The escape hatch (`--allow-remote-kubeconfig`) exists because someone running their own SSO proxy
+has legitimately re-established the missing precondition.
+
+**"Is this AWS-only?" — no, but the question found a real hole.** The `exec` path never was:
+it re-runs whatever `command` the kubeconfig declares, so GKE and AKS were covered by
+construction. That is now pinned by a test matrix across `aws` / `gke-gcloud-auth-plugin` /
+`kubelogin` rather than left implicit. The genuine gap was the *other* mechanism — the pre-`exec`
+`auth-provider` block (`gcp`/`azure`/`oidc`) that older kubeconfigs still carry, whose loaders can
+also yield no usable token without raising. It reached the same silent-401 path and produced a
+generic message. `_credential_failure` now handles both, and the provider question is answered
+structurally: the code branches on the *mechanism*, never on the cloud.

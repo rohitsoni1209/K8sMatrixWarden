@@ -10,6 +10,7 @@ from ..bootstrap import Platform
 from ..core.evidence import EvidenceCollector
 from ..core.models import ScanRequest
 from ..core.results import ScanResult
+from ..core.scoring import RiskResult
 
 
 class ScannerAgent:
@@ -30,10 +31,22 @@ class ScannerAgent:
         findings = self.p.aggregator.aggregate(findings)
         risk = self.p.scoring.score(findings)
 
+        # A collector that could read nothing produces zero findings — which scores as
+        # "Excellent". That is a lie about a cluster we never inspected, so the rating is
+        # replaced with an explicit Unknown and the reason travels on the result to every
+        # surface (report, dashboard, JSON, PDF). See EvidenceCollector.degraded.
+        warnings = list(getattr(collector, "warnings", []))
+        evidence_ok = not getattr(collector, "degraded", False)
+        if not evidence_ok:
+            risk = RiskResult(cluster_risk=0.0, security_score=0, rating="Unknown",
+                              rating_emoji="⚠️", raw=0.0)
+
         return ScanResult(
             request=request,
             findings=findings,
             risk=risk,
+            warnings=warnings,
+            evidence_ok=evidence_ok,
             resolved_rule_ids=rule_ids,
             counts=self.p.aggregator.counts(findings),
             by_tactic=self.p.aggregator.by_tactic(findings),

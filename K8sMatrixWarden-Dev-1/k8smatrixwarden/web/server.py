@@ -52,17 +52,56 @@ def make_handler(app: WebApp):
     return Handler
 
 
+def is_loopback(host: str) -> bool:
+    """True only when this bind address can be reached from this machine alone.
+
+    Conservative by construction: anything unrecognised — a hostname, or `""`/`0.0.0.0`
+    (which bind every interface) — is treated as remote-reachable."""
+    h = (host or "").strip().strip("[]").lower()
+    if h == "localhost":
+        return True
+    try:
+        import ipaddress
+        return ipaddress.ip_address(h).is_loopback
+    except ValueError:
+        return False
+
+
 def serve(host: str = "127.0.0.1", port: int = 8080,
           reports_dir: str = DEFAULT_DIR,
           config_path: Optional[str] = None, allow_scan: bool = True,
-          open_browser: bool = False) -> None:
+          open_browser: bool = False,
+          allow_remote_kubeconfig: bool = False) -> None:
     platform = build_platform(config_path)
-    app = WebApp(platform, reports_dir=reports_dir, allow_scan=allow_scan)
+    # A kubeconfig in a request body is arbitrary code: loading it runs its credential
+    # plugin as this process's user. On loopback the only caller is the operator, so the
+    # browser file-picker is just a convenience. On any routable address it is remote code
+    # execution, so it is refused unless explicitly re-enabled.
+    local = is_loopback(host)
+    allow_client_kubeconfig = local or allow_remote_kubeconfig
+    app = WebApp(platform, reports_dir=reports_dir, allow_scan=allow_scan,
+                 allow_client_kubeconfig=allow_client_kubeconfig)
     httpd = ThreadingHTTPServer((host, port), make_handler(app))
     url = f"http://{host}:{port}/"
     print(f"K8sMatrixWarden dashboard -> {url}")
     print(f"    reports dir: {reports_dir}   ·   scanning: "
           f"{'enabled' if allow_scan else 'disabled'}   ·   Ctrl-C to stop")
+    if not local:
+        print(f"    WARNING: bound to {host} — reachable beyond this machine, and the "
+              f"dashboard has NO authentication.\n"
+              f"             Anyone who can reach it can read every saved report"
+              + ("" if not allow_scan else " and start scans") + ".")
+        if allow_client_kubeconfig:
+            print("    WARNING: --allow-remote-kubeconfig is on. A kubeconfig in a request "
+                  "body executes its\n"
+                  "             credential plugin as this user — that is remote code "
+                  "execution unless you have\n"
+                  "             put your own authentication in front of this port.")
+        else:
+            print("    Client-supplied kubeconfigs are refused (credential plugins would "
+                  "execute here).\n"
+                  "             Scan from the CLI on this host, or use "
+                  "--allow-remote-kubeconfig behind your own auth.")
     if open_browser:
         threading.Timer(0.5, lambda: _open(url)).start()
     try:
