@@ -1,4 +1,4 @@
-<h1 align="center">k8smatrixwarden</h1>
+<h1 align="center">K8sMatrixWarden</h1>
 
 <p align="center">
   <strong>MITRE ATT&CK-aligned · Domain-Sharded Execution + Cross-Cutting Rule Registry</strong><br/>
