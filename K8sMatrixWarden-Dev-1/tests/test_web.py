@@ -23,7 +23,7 @@ def test_health_reports_platform_stats():
     r = _app().route("GET", "/health")
     assert r.status == 200
     d = json.loads(r.text)
-    assert d["status"] == "ok" and d["rules"] > 0 and d["shards"] == 10
+    assert d["status"] == "ok" and d["rules"] > 0 and d["shards"] >= 11
 
 
 def test_dashboard_is_spa_shell_and_api_reflects_scans():

@@ -730,7 +730,7 @@ footer.site-footer {
           <p class="home-eyebrow">At a Glance</p>
           <h2 class="home-h">The whole platform, in numbers</h2>
           <div class="stat-row" style="max-width:900px;margin:0 auto 1.4em;">
-            <div class="stat"><div class="stat-n">56</div><div class="stat-l">rules across 10 shards</div></div>
+            <div class="stat"><div class="stat-n">60</div><div class="stat-l">rules across 11 shards</div></div>
             <div class="stat"><div class="stat-n">9</div><div class="stat-l">MITRE ATT&amp;CK tactics</div></div>
             <div class="stat"><div class="stat-n">130</div><div class="stat-l">CIS controls, every one graded</div></div>
             <div class="stat"><div class="stat-n">30</div><div class="stat-l">MCP tools for AI agents</div></div>
@@ -777,7 +777,7 @@ changes which rules get selected, never the code path that runs them.</p>
 <h2><span class="h2-title">Key Capabilities</span></h2>
 <div class="card-grid">
   <div class="info-card"><span class="ic-icon">🎯</span><h4>ATT&amp;CK-Aligned Scanning</h4><p>Every finding is a rule tagged with MITRE tactic + technique — scan by adversary behavior, not just by resource.</p></div>
-  <div class="info-card"><span class="ic-icon">🧩</span><h4>Domain-Sharded Execution</h4><p>10 shards own the evidence fetch and RBAC for their domain; tactics and frameworks are cross-cutting tags on top, never the execution boundary.</p></div>
+  <div class="info-card"><span class="ic-icon">🧩</span><h4>Domain-Sharded Execution</h4><p>11 shards own the evidence fetch and RBAC for their domain; tactics and frameworks are cross-cutting tags on top, never the execution boundary.</p></div>
   <div class="info-card"><span class="ic-icon">🔗</span><h4>Deep-Linked Reports</h4><p>Every finding in the dashboard — in the Findings table, the Threat Matrix drill-downs, and the Attack Path / Attack Map stages — links straight to its card in the full report.</p></div>
   <div class="info-card"><span class="ic-icon">📋</span><h4>Full CIS Benchmark</h4><p>All 130 CIS Kubernetes Benchmark v1.8 controls evaluated — 65 straight from the API, 31 via kube-bench, 34 flagged manual, 0 silently skipped.</p></div>
   <div class="info-card"><span class="ic-icon">🔌</span><h4>30-Tool MCP Server</h4><p>Scan, audit, build the threat matrix and kill-chain, correlate a live runtime feed against static findings, and export reports — all reachable from Claude, Cursor, or any MCP client. Read-only: no apply/remediate tool.</p></div>
@@ -808,10 +808,11 @@ taxonomy cross-referencing, duplicate-id detection:</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">output</span></div>
-  <pre><code>Shards loaded : 10 (admission_control, attack_surface, cloud_iam,
+  <pre><code>Shards loaded : 11 (admission_control, attack_surface, cloud_iam,
                      cluster_control_plane, compliance, image_supply_chain,
-                     network_security, rbac_identity, secrets, workload_pod_security)
-Rules loaded  : 56
+                     log_analysis, network_security, rbac_identity, secrets,
+                     workload_pod_security)
+Rules loaded  : 60
 Validation    : ✅ clean (taxonomy + aliases + no duplicate rule ids)</code></pre>
 </div>
 
@@ -980,7 +981,7 @@ rules.</p>
 </section>
 
 <section id="shards">
-<h2><span class="h2-title">10 Domain Shards</span></h2>
+<h2><span class="h2-title">11 Domain Shards</span></h2>
 <p>Each shard owns the rules that share one evidence-fetch pattern — and, from it, the
 exact RBAC verbs that shard needs and nothing more. Expand a shard for its full rule
 catalog.</p>
@@ -1136,6 +1137,36 @@ scoped, read-only cloud credential declared in the plugin manifest.</em></p>
 </div>
 </details>
 </section>
+
+<details class="acc">
+<summary>&#9323; Log Analysis &amp; Audit Trail <span class="acc-count">4 rules</span></summary>
+<div class="acc-body">
+<p>Answers the question the other ten shards do not: <strong>if an attacker got in, could
+you tell?</strong> The others ask whether a door is open; this one asks whether anyone is
+writing down who walked through it.</p>
+<div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>OWASP</th><th>MITRE Tactic</th></tr></thead><tbody>
+<tr><td><code>log-audit-policy-missing</code></td><td><span class="sev sev-high">High</span></td><td>K10</td><td>Defense Evasion</td></tr>
+<tr><td><code>log-audit-retention-short</code></td><td><span class="sev sev-medium">Medium</span></td><td>K10</td><td>Defense Evasion</td></tr>
+<tr><td><code>log-audit-rotation-weak</code></td><td><span class="sev sev-medium">Medium</span></td><td>K10</td><td>Defense Evasion</td></tr>
+<tr><td><code>log-no-collector</code></td><td><span class="sev sev-medium">Medium</span></td><td>K10</td><td>Defense Evasion, Impact</td></tr>
+</tbody></table></div>
+<p>This is the <strong>scan-surface counterpart to the Runtime Agent</strong>. The Runtime
+Agent detects log tampering as it happens (<code>Container log cleared/truncated</code>,
+<code>K8s events deleted</code> &mdash; MITRE T1070); this shard detects, at scan time, the
+posture that makes such tampering unrecoverable. A cleared log only matters if it was the
+only copy.</p>
+<p><code>--audit-log-path</code> (CIS 1.2.17) stays in shard &#9312; as
+<code>apiserver-audit-logging</code> rather than moving here: rule ids are the identity used
+by saved reports and the finding timeline, so renaming one would orphan history. This shard
+covers what that check does not &mdash; the policy, the retention window, the rotation
+limits, and whether logs leave the node at all.</p>
+<p><strong>Absence of evidence is not evidence of absence.</strong> On a managed cluster
+(EKS/GKE/AKS) the control plane is provider-owned and its static Pods are invisible, so
+<code>ComponentConfig</code> arrives with no <code>apiServer</code> section. The three
+audit-flag rules no-op in that case rather than manufacturing three findings out of missing
+evidence &mdash; the same principle that stops an unread cluster scoring as clean.</p>
+</div>
+</details>
 
 <section id="selectors">
 <h2><span class="h2-title">Scope &amp; Selectors</span></h2>

@@ -124,6 +124,53 @@ Two gaps flagged during review of §0.15, both closed (tests `195 → 205`):
 
 ---
 
+## 0.17 Shard ⑪ — Log Analysis & Audit Trail
+
+New shard `shards/log_analysis.py` (tests `205 → 218`, shards `10 → 11`, rules `56 → 60`).
+
+Auto-discovered by the plugin loader (drop-in `SHARD = LogAnalysisShard`), so nothing else
+needed registering. Selectable everywhere as `--module log_analysis` / `module:log_analysis`.
+
+Four rules, all OWASP **K10**, all tagged Defense Evasion:
+
+| Rule | Sev | CIS | What it catches |
+|---|---|---|---|
+| `log-audit-policy-missing` | High | 3.2.1 | `--audit-policy-file` unset — the log file exists but records nothing |
+| `log-audit-retention-short` | Medium | 1.2.18 | `--audit-log-maxage` unset or < 30 days |
+| `log-audit-rotation-weak` | Medium | 1.2.19/1.2.20 | too few / too small rotated files — a burst flushes history regardless of retention days |
+| `log-no-collector` | Medium | — | no in-cluster log shipper, so logs only ever exist on the node that produced them |
+
+**Two things to know before touching it.**
+
+1. `_apiserver_flags()` returns `None` (not `{}`) when the control plane could not be read,
+   and all three audit rules no-op on `None`. On EKS/GKE/AKS the control plane is
+   provider-owned and its static Pods are invisible, so `ComponentConfig` has no `apiServer`
+   section — without that guard the shard would invent three findings out of missing
+   evidence. Same principle as `evidence_ok` in §0.15; the tests pin it.
+   **Note:** `cluster_control_plane`'s existing flag rules do NOT have this guard, so
+   `apiserver-audit-logging` / `etcd-encryption-missing` / etc. still false-positive on
+   managed clusters. Pre-existing, left alone here to keep this change scoped — worth its
+   own pass.
+2. `log-no-collector` is a substring match over DaemonSet/Deployment names and images
+   (`_LOG_COLLECTORS`). It cannot see a node agent running outside the cluster, which is why
+   it is MEDIUM and its message says so explicitly rather than asserting logs are lost.
+   Marked with a `ponytail:` comment naming the ceiling.
+
+`apiserver-audit-logging` (CIS 1.2.17, `--audit-log-path`) deliberately stays in shard
+① — rule ids are the identity used by the report store and finding timeline, so renaming
+one orphans history.
+
+Coverage effect: matrix 53.6% → 55.4%, Impact 1/3 → 2/3. Defense Evasion stays 3/6 — the
+new T1070 tags land on a cell that already had a rule, so this adds *depth* there, not
+breadth.
+
+**Test-count assertions were de-hardcoded.** Six tests asserted `== 10` shards. They now
+derive from `len(p.registry.shard_names())` where the invariant is really "one per shard"
+(scoped roles, RBAC bindings, `list_shards`), or use a `>= 11` floor — so the next shard
+doesn't break them again.
+
+---
+
 ## 0.2 Remediation removal pass (detect-and-report only)
 
 The **Remediation Agent and its whole subsystem were removed** in a later pass — the tool is

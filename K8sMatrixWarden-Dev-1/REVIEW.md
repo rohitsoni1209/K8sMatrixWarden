@@ -4,7 +4,7 @@ This is the required review pass after the initial build. It records what was ve
 refinements made to improve the code over a naive reading of the spec, the deliberate
 deviations (with justification), and the known limitations / next steps.
 
-**Status at review:** 10 shards, **56 rules**, **30 MCP tools**, **205/205 tests passing**,
+**Status at review:** 11 shards, **60 rules**, **30 MCP tools**, **218/218 tests passing**,
 `doctor` validation clean (no duplicate rule ids, every rule's technique id present in the
 vendored taxonomy, all aliases resolve). End-to-end mock scan produces a Critical-rated report;
 tactic/technique/module/framework slices, namespace scoping, all seven report formats
@@ -19,7 +19,7 @@ remediation engine (§6c/§6d) has been removed, so no write/apply path exists o
 > **Note on the numbered history below.** Sections §6a–§6f record the review passes in the
 > order they happened, so their inline test/tool counts (25 → 31 → 113 → 137 → 163 → 229) are
 > *historical checkpoints*, not the current totals. The current totals are the ones in this
-> status block (56 rules, 30 MCP tools, 205 tests); §6g–§6h bring the story up to date. In
+> status block (60 rules, 30 MCP tools, 218 tests); §6g–§6h bring the story up to date. In
 > particular, the remediation engine described in §6c and the `explain_remediation` MCP tool
 > in §6d were subsequently **removed** — those sections are kept as historical record.
 

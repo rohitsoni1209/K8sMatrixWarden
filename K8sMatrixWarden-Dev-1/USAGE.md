@@ -71,8 +71,8 @@ python -m k8smatrixwarden doctor
 
 Expected output:
 ```
-Shards loaded : 10 (admission_control, attack_surface, cloud_iam, cluster_control_plane, compliance, image_supply_chain, network_security, rbac_identity, secrets, workload_pod_security)
-Rules loaded  : 56
+Shards loaded : 11 (admission_control, attack_surface, cloud_iam, cluster_control_plane, compliance, image_supply_chain, log_analysis, network_security, rbac_identity, secrets, workload_pod_security)
+Rules loaded  : 60
 Validation    : ✅ clean (taxonomy + aliases + no duplicate rule ids)
 ```
 
@@ -525,7 +525,7 @@ These are curated bundles of rules mapped to a real-world attack outcome — see
 k8smatrixwarden scan --module rbac_identity --mock
 k8smatrixwarden scan --module network_security --mock
 ```
-Module names match the shard names shown by `k8smatrixwarden doctor` — `cluster_control_plane, workload_pod_security, rbac_identity, network_security, image_supply_chain, secrets, compliance, attack_surface, admission_control, cloud_iam`.
+Module names match the shard names shown by `k8smatrixwarden doctor` — `cluster_control_plane, workload_pod_security, rbac_identity, network_security, image_supply_chain, secrets, compliance, attack_surface, admission_control, cloud_iam, log_analysis`.
 
 ### By exact rule
 ```bash

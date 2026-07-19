@@ -9,7 +9,8 @@ from k8smatrixwarden.bootstrap import build_platform
 
 def test_all_shards_and_rules_load():
     p = build_platform()
-    assert len(p.registry.shard_names()) == 10
+    # A floor, not an equality: adding a shard is expected, silently losing one is not.
+    assert len(p.registry.shard_names()) >= 11
     assert p.rule_count() >= 40
 
 
@@ -39,7 +40,8 @@ def test_every_tactic_has_coverage():
 def test_scoped_roles_generated_per_plugin():
     p = build_platform()
     roles = p.loader.scoped_roles()
-    assert len(roles) == 10
+    # the invariant is one scoped role per shard — derived, so a new shard can't drift
+    assert len(roles) == len(p.registry.shard_names())
     assert all(r["kind"] == "ClusterRole" for r in roles)
 
 
@@ -58,8 +60,9 @@ def test_deployment_manifest_binds_every_shard():
                                             namespace="k8smatrixwarden-system")
     assert manifest["kind"] == "List"
     kinds = [item["kind"] for item in manifest["items"]]
-    assert kinds.count("ClusterRole") == 10
-    assert kinds.count("ClusterRoleBinding") == 10
+    shard_count = len(p.registry.shard_names())
+    assert kinds.count("ClusterRole") == shard_count
+    assert kinds.count("ClusterRoleBinding") == shard_count
     assert kinds.count("ServiceAccount") == 1
     assert kinds.count("Namespace") == 1
     # every binding must reference a role that was actually emitted, and the SA we asked for

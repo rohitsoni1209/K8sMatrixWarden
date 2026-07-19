@@ -151,10 +151,11 @@ def test_list_namespaces_mock():
     assert "production" in out["namespaces"]
 
 
-def test_list_shards_covers_all_ten():
+def test_list_shards_covers_every_registered_shard():
+    from k8smatrixwarden.bootstrap import build_platform
     tools = build_tools()
     shards = tools["list_shards"]()
-    assert len(shards) == 10
+    assert len(shards) == len(build_platform().registry.shard_names())
     assert all(s["rule_count"] > 0 for s in shards)
 
 
@@ -210,7 +211,7 @@ def test_validate_platform_clean():
     out = tools["validate_platform"]()
     assert out["valid"] is True
     assert out["problems"] == []
-    assert out["shards_loaded"] == 10
+    assert out["shards_loaded"] >= 11
     assert out["rules_loaded"] >= 50
 
 

@@ -8,10 +8,10 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue"/>
   <img src="https://img.shields.io/badge/deps-zero%20(stdlib%20core)-brightgreen"/>
-  <img src="https://img.shields.io/badge/shards-10-blueviolet"/>
-  <img src="https://img.shields.io/badge/rules-56-orange"/>
+  <img src="https://img.shields.io/badge/shards-11-blueviolet"/>
+  <img src="https://img.shields.io/badge/rules-60-orange"/>
   <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
-  <img src="https://img.shields.io/badge/tests-205%20passing-success"/>
+  <img src="https://img.shields.io/badge/tests-218%20passing-success"/>
   <img src="https://img.shields.io/badge/time-IST%20(UTC%2B05%3A30)-informational"/>
 </p>
 
@@ -209,11 +209,18 @@ python -m k8smatrixwarden cis --kube-bench-json kb.json   # + kube-bench → all
 | Taxonomy (Dataset 6) §6.2 | `k8smatrixwarden/taxonomy/*.json` |
 | Config §16 | `k8smatrixwarden/config/default_config.json` |
 
-## The 10 domain shards
+## The 11 domain shards
 
 `① cluster_control_plane · ② workload_pod_security · ③ rbac_identity · ④ network_security ·
-⑤ image_supply_chain · ⑥ secrets · ⑦ compliance · ⑧ attack_surface · ⑨ admission_control (NEW) ·
-⑩ cloud_iam (NEW)`
+⑤ image_supply_chain · ⑥ secrets · ⑦ compliance · ⑧ attack_surface · ⑨ admission_control ·
+⑩ cloud_iam · ⑪ log_analysis (NEW)`
+
+⑪ **log_analysis** answers the question the other ten don't: *if an attacker got in, could
+you tell?* The others ask whether a door is open; this one asks whether anyone is writing
+down who walked through it — audit policy, retention, log rotation, and whether any
+collector ships logs off-node at all. It is the scan-surface counterpart to the Runtime
+Agent's MITRE T1070 detections: the Runtime Agent sees logs being cleared, this sees the
+posture that makes clearing them unrecoverable.
 
 ## Extending
 
@@ -269,7 +276,7 @@ snapshot. The MCP surface exposes no write-capable tool, enforced by
 All project docs live in the **`K8sMatrixWarden-Dev-1/`** subfolder:
 
 - **`K8sMatrixWarden-Dev-1/K8sMatrixWarden-doc.html`** — the full reference site (open it directly
-  in a browser): architecture, all 10 shards' rule catalogs, MITRE/OWASP/CIS coverage,
+  in a browser): architecture, all 11 shards' rule catalogs, MITRE/OWASP/CIS coverage,
   the runtime-correlation layer, and the complete 30-tool MCP reference, in one self-contained
   page (dark/light aware)
 - **`K8sMatrixWarden-Dev-1/USAGE.md`** — full usage guide: every command, every flag, copy-paste workflows, CI recipes, troubleshooting

@@ -860,4 +860,66 @@ FINDING_CONTEXT: dict[str, dict] = {
                       "jq -r '.items[] | select(.spec.serviceAccountName==\"{name}\") | "
                       "\"\\(.metadata.namespace)/\\(.metadata.name)\"'"],
     },
+
+    # ---------------------------------------------------------------- shard ⑪ log analysis
+    "log-audit-policy-missing": {
+        "summary": "The API server has no `--audit-policy-file`. The audit policy is what "
+                   "decides which requests get recorded and at what level; with no policy "
+                   "the API server records nothing, so an audit log file can exist and "
+                   "still be empty.",
+        "impact": "There is no record of who did what in the cluster. Every incident "
+                 "question that matters after a breach — which identity created that "
+                 "ClusterRoleBinding, when the Secret was first read, whether the "
+                 "attacker is still active — becomes unanswerable. It also removes the "
+                 "evidence an attacker would otherwise have to tamper with, so intrusions "
+                 "leave no trace at all rather than a suspicious gap.",
+        "validation": [
+            "kubectl -n kube-system get pod -l component=kube-apiserver -o "
+            "jsonpath='{{.items[0].spec.containers[0].command}}' | tr ',' '\\n' | grep audit-",
+            "# a policy file must be present AND non-empty; an empty policy logs nothing",
+        ],
+    },
+    "log-audit-retention-short": {
+        "summary": "Audit logs are kept for fewer than 30 days (or the retention window is "
+                   "undefined). CIS sets 30 days as the floor, which is also roughly the "
+                   "median time an intruder goes unnoticed.",
+        "impact": "The audit trail can expire before anyone knows to look at it. An "
+                 "attacker who established access last month leaves a log window that has "
+                 "already rolled over, so the initial access and privilege escalation — "
+                 "the parts that explain how they got in and what else they touched — are "
+                 "gone even though the compromise is ongoing.",
+        "validation": [
+            "kubectl -n kube-system get pod -l component=kube-apiserver -o "
+            "jsonpath='{{.items[0].spec.containers[0].command}}' | tr ',' '\\n' | "
+            "grep audit-log-maxage",
+        ],
+    },
+    "log-audit-rotation-weak": {
+        "summary": "Audit-log rotation keeps too few files, or files too small, so history "
+                   "is discarded by volume regardless of the configured retention in days.",
+        "impact": "A burst of activity silently rolls older entries out of retention — and "
+                 "a burst of activity is exactly what an attack looks like. The noisiest, "
+                 "most interesting hour is the one most likely to push the preceding "
+                 "reconnaissance out of the logs, and an attacker can trigger that "
+                 "deliberately to flush evidence without touching a single log file.",
+        "validation": [
+            "kubectl -n kube-system get pod -l component=kube-apiserver -o "
+            "jsonpath='{{.items[0].spec.containers[0].command}}' | tr ',' '\\n' | "
+            "grep -E 'audit-log-(maxbackup|maxsize)'",
+        ],
+    },
+    "log-no-collector": {
+        "summary": "No workload in the cluster looks like a log-shipping agent, so "
+                   "container and audit logs exist only on the node that produced them.",
+        "impact": "Logs on the node are logs an attacker can reach. Clearing a container "
+                 "log or deleting Kubernetes events (MITRE T1070) destroys the only copy, "
+                 "and a node that is drained, autoscaled away, or simply crashes takes its "
+                 "logs with it. Shipping logs off-node is what turns them from a "
+                 "convenience into evidence.",
+        "validation": [
+            "kubectl get daemonsets,deployments -A -o json | jq -r "
+            "'.items[].spec.template.spec.containers[].image' | sort -u",
+            "# look for fluent-bit / fluentd / vector / otel-collector / a vendor agent",
+        ],
+    },
 }
