@@ -100,7 +100,7 @@ class NetworkSecurityShard(DomainShard):
                  owasp="K06", evidence_needs=["Service"]),
             Rule("net-dashboard-exposed", "Kubernetes dashboard exposed", self.name,
                  ["Service"], S.CRITICAL, DM.NETWORK, _dashboard,
-                 mitre=[M(T.DISCOVERY, "T1613", "Container and Resource Discovery")],
+                 mitre=[M(T.DISCOVERY, "T1613", "Access Kubernetes dashboard")],
                  owasp="K06", evidence_needs=["Service"]),
             Rule("net-ingress-no-tls", "Ingress without TLS", self.name, ["Ingress"],
                  S.HIGH, DM.NETWORK, _ingress_no_tls,
@@ -108,7 +108,7 @@ class NetworkSecurityShard(DomainShard):
                  owasp="K06", evidence_needs=["Ingress"]),
             Rule("net-no-networkpolicy", "Namespace without NetworkPolicy", self.name,
                  ["NetworkPolicy", "Namespace"], S.HIGH, DM.NETWORK, _no_networkpolicy,
-                 mitre=[M(T.LATERAL_MOVEMENT, "T1610", "Deploy Container")],
+                 mitre=[M(T.LATERAL_MOVEMENT, "T1610", "Cluster internal networking")],
                  owasp="K05", cis=["5.3.2"], nsa_cisa=["Network Policy"],
                  evidence_needs=["NetworkPolicy", "Namespace"]),
             Rule("net-metadata-api-open", "Metadata API not blocked", self.name,
@@ -116,7 +116,11 @@ class NetworkSecurityShard(DomainShard):
                  mitre=[M(T.CREDENTIAL_ACCESS, "T1552.005",
                           "Cloud Instance Metadata API"),
                         M(T.LATERAL_MOVEMENT, "T1552.005",
-                          "Cloud Instance Metadata API")],
+                          "Cloud Instance Metadata API"),
+                        # reachable metadata is also how an attacker enumerates the
+                        # cloud environment from inside a pod -- the Redguard matrix
+                        # lists it under Discovery too
+                        M(T.DISCOVERY, "T1552.005", "Instance Metadata API")],
                  owasp="K08", evidence_needs=["NetworkPolicy", "Namespace"]),
         ]
 

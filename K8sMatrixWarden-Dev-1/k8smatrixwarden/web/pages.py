@@ -110,6 +110,7 @@ table.ft tr:hover td{background:rgba(0,0,0,0.02)}
 .cell{border-radius:6px;padding:.4rem .35rem;font-size:.62rem;min-height:36px;border:1px solid rgba(0,0,0,0.1);
  cursor:default;color:#fff;display:flex;flex-direction:column;justify-content:center;gap:2px;transition:transform .25s var(--ease-spring),box-shadow .2s var(--ease-out)}
 .cell.gap{background:var(--card);color:var(--muted);border-color:var(--bd)}.cell.covered{background:var(--low)}
+.cell.runtime{background:var(--card);color:var(--rt);border:1px dashed var(--rt);font-weight:600}
 .cell.hit{cursor:pointer;box-shadow:0 0 0 0 rgba(0,0,0,0.1)}.cell.hit:hover{transform:scale(1.08);box-shadow:0 2px 6px rgba(0,0,0,0.2)}
 .cell.hit[data-sev=CRITICAL]{background:var(--crit)}.cell.hit[data-sev=HIGH]{background:var(--high)}
 .cell.hit[data-sev=MEDIUM]{background:var(--med)}.cell.hit[data-sev=LOW]{background:var(--low)}
@@ -533,14 +534,14 @@ function renderFindings(){
 /* ---- matrix ---- */
 function matrixView(){
   const cols=D.threat_matrix.columns;
-  let html="<div class='panel'>"+healthNote()+"<div class='fm'>Select a coloured cell to see its findings — each finding links straight to its card in the report. Green = a rule exists, dashed grey = no rule yet (coverage gap).</div><div class='mx'>";
+  let html="<div class='panel'>"+healthNote()+"<div class='fm'>Select a coloured cell to see its findings — each finding links straight to its card in the report. Green = a scan rule exists, dashed purple = no scan rule but the Runtime Agent detects it live, dashed grey = no detection yet (a real coverage gap).</div><div class='mx'>";
   html+=cols.map(c=>{
     let col=`<div class='mxcol'><div class='mxh'>${esc(c.tactic)}</div>`;
     col+=c.cells.map(cell=>{const st=cell.state;const sev=cell.max_severity||'';
       return `<div class='cell ${st}' ${st==='hit'?`data-sev='${sev}' onclick='cellFindings(${JSON.stringify(cell.finding_rule_ids)},"${esc(cell.technique_name)}","${esc(cell.technique_id||'')}")'`:''} title="${esc(cell.technique_name)}${cell.technique_id?' ('+cell.technique_id+')':''}">
         ${esc(cell.technique_name)}${cell.count?`<span class='c'>${cell.count}</span>`:''}</div>`}).join('');
     return col+'</div>';}).join('');
-  html+="</div><div class='leg'><span><i style='background:var(--crit)'></i>hit (by severity)</span><span><i style='background:var(--low)'></i>covered</span><span><i style='background:var(--card);border:1px solid var(--bd)'></i>gap</span></div>";
+  html+="</div><div class='leg'><span><i style='background:var(--crit)'></i>hit (by severity)</span><span><i style='background:var(--low)'></i>scan rule</span><span><i style='background:transparent;border:1px dashed var(--rt)'></i>runtime-only</span><span><i style='background:var(--card);border:1px solid var(--bd)'></i>no detection</span></div>";
   html+="<div id='cellout'></div></div>";
   return html;
 }

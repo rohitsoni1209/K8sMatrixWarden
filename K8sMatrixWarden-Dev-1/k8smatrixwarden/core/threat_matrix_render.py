@@ -23,6 +23,8 @@ def _cell_class(cell: MatrixCell) -> str:
         return "hit " + (_SEV_HEAT.get(sev.label, "hit") if sev else "hit")
     if cell.covered:
         return "covered"
+    if cell.covered_runtime:
+        return "runtime"
     return "gap"
 
 
@@ -40,7 +42,9 @@ def render_text(tm: ThreatMatrix) -> str:
     ]
     for col in tm.columns:
         sev = col.max_severity
-        marker = sev.emoji if sev else ("🟦" if any(c.covered for c in col.cells) else "▫️")
+        marker = sev.emoji if sev else (
+            "🟦" if any(c.covered for c in col.cells)
+            else "🟣" if any(c.covered_runtime for c in col.cells) else "▫️")
         out.append(f"  {marker} {col.tactic:<22} hit {col.hit_count}/{len(col.cells)}"
                    f"   findings {col.finding_count}")
         for cell in col.cells:
@@ -50,7 +54,8 @@ def render_text(tm: ThreatMatrix) -> str:
             out.append(f"        {sv.emoji if sv else '•'} {cell.technique_name} "
                        f"({cell.technique_id or '—'}) ×{cell.count}")
     out.append("  " + "─" * 66)
-    out.append("  legend:  severity emoji = hit · 🟦 = covered, none found · ▫️ = no rule yet")
+    out.append("  legend:  severity emoji = hit · 🟦 = scan rule, none found · "
+               "🟣 = runtime-only detection · ▫️ = no detection yet")
     return "\n".join(out)
 
 
@@ -97,7 +102,9 @@ def render_markdown(tm: ThreatMatrix, *, heading_level: int = 2,
                       f"{cell.count or '—'} | {res or '—'} |")
         md.append("")
     md += ["> **Legend** — 🔴🟠🟡🟢 hit (painted by worst finding severity) · "
-           "🟦 covered (a rule exists, nothing found this scan) · ▫️ gap (no rule yet).", ""]
+           "🟦 covered (a scan rule exists, nothing found this scan) · "
+           "🟣 runtime-only (no scan rule; the Runtime Agent detects it live) · "
+           "▫️ gap (no detection yet).", ""]
     return "\n".join(md)
 
 
@@ -105,7 +112,9 @@ def _md_state_icon(cell: MatrixCell) -> str:
     if cell.hit:
         sev = cell.max_severity
         return sev.emoji if sev else "🔵"
-    return "🟦" if cell.covered else "▫️"
+    if cell.covered:
+        return "🟦"
+    return "🟣" if cell.covered_runtime else "▫️"
 
 
 # ======================================================================= #
@@ -152,8 +161,9 @@ def render_html_grid(tm: ThreatMatrix, *, coverage_only: bool = False) -> str:
     if coverage_only:
         legend = (
             "<div class='tmlegend'>"
-            "<span><i class='sw covered'></i>Detection rule exists</span>"
-            "<span><i class='sw gap'></i>No rule yet (coverage gap)</span></div>")
+            "<span><i class='sw covered'></i>Scan rule exists</span>"
+            "<span><i class='sw runtime'></i>Runtime-only detection</span>"
+            "<span><i class='sw gap'></i>No detection yet (coverage gap)</span></div>")
         stats = (
             f"<div class='tmstats'>"
             f"<div><b>{s['techniques_covered']}</b>/{s['techniques_total']}"
@@ -161,6 +171,8 @@ def render_html_grid(tm: ThreatMatrix, *, coverage_only: bool = False) -> str:
             f"<div><b>{s['coverage_pct']}%</b><span>matrix coverage</span></div>"
             f"<div><b>{s['tactics_covered']}</b>/{s['tactics_total']}"
             f"<span>tactics with coverage</span></div>"
+            f"<div><b>+{s['techniques_runtime_only']}</b>"
+            f"<span>more covered at runtime only</span></div>"
             f"<div><b>{s['rule_count']}</b><span>rules mapped to the matrix</span></div>"
             f"</div>")
     else:
@@ -168,8 +180,9 @@ def render_html_grid(tm: ThreatMatrix, *, coverage_only: bool = False) -> str:
             "<div class='tmlegend'>"
             "<span><i class='sw crit'></i>Critical</span><span><i class='sw high'></i>High</span>"
             "<span><i class='sw med'></i>Medium</span><span><i class='sw low'></i>Low</span>"
-            "<span><i class='sw covered'></i>Covered (no finding)</span>"
-            "<span><i class='sw gap'></i>No rule yet</span></div>")
+            "<span><i class='sw covered'></i>Scan rule (no finding)</span>"
+            "<span><i class='sw runtime'></i>Runtime-only detection</span>"
+            "<span><i class='sw gap'></i>No detection yet</span></div>")
         stats = (
             f"<div class='tmstats'>"
             f"<div><b>{s['tactics_hit']}</b>/{s['tactics_total']}<span>tactics implicated</span></div>"
@@ -192,14 +205,22 @@ def _cell_tooltip(cell: MatrixCell) -> str:
         if rules:
             parts.append("· " + ", ".join(rules[:6]))
     elif cell.covered:
-        parts.append("— covered, no finding this scan")
+        parts.append("— scan rule exists, no finding this scan")
+    elif cell.covered_runtime:
+        rt = ", ".join(sorted(set(cell.runtime_rule_ids))[:4])
+        parts.append(f"— no scan rule; detected at runtime by {rt}")
     else:
-        parts.append("— no detection rule yet")
+        parts.append("— no detection yet")
     return " ".join(parts)
 
 
 # Self-contained CSS for the grid — injected once by whatever page hosts render_html_grid().
 THREAT_MATRIX_CSS = """
+/* runtime-only coverage: a distinct hue from both "scan rule" green and "gap" grey */
+:root{--rt:#8250df}
+@media (prefers-color-scheme:dark){:root{--rt:#a371f7}}
+:root[data-theme=light]{--rt:#8250df}
+:root[data-theme=dark]{--rt:#a371f7}
 .tmstats{display:flex;flex-wrap:wrap;gap:.6rem;margin:.5rem 0 1rem}
 .tmstats>div{flex:1;min-width:120px;background:var(--card);border:1px solid var(--bd);
  border-radius:10px;padding:.6rem .8rem}
@@ -229,6 +250,7 @@ THREAT_MATRIX_CSS = """
  background:rgba(0,0,0,.28);color:#fff;border-radius:10px;padding:0 .35rem}
 .tmcell.gap{opacity:.5;border-style:dashed}
 .tmcell.covered{border-color:var(--low);border-left:3px solid var(--low)}
+.tmcell.runtime{border-color:var(--rt);border-left:3px dashed var(--rt)}
 .tmcell.hit{color:#fff;border:none}
 .tmcell.hit.crit{background:var(--crit)}
 .tmcell.hit.high{background:var(--high)}
@@ -237,6 +259,7 @@ THREAT_MATRIX_CSS = """
 i.sw.crit{background:var(--crit)}i.sw.high{background:var(--high)}
 i.sw.med{background:var(--med)}i.sw.low{background:var(--low)}
 i.sw.covered{background:transparent;border-left:3px solid var(--low)}
+i.sw.runtime{background:transparent;border-left:3px dashed var(--rt)}
 i.sw.gap{background:transparent;border-style:dashed}
 @media(max-width:900px){.tmgrid{grid-template-columns:repeat(9,150px)}}
 """

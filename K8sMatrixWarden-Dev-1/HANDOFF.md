@@ -171,6 +171,44 @@ doesn't break them again.
 
 ---
 
+## 0.18 Coverage-accounting fix + managed-cluster guard
+
+Tests `218 → 231`. Matrix coverage **53.6% → 77.8%** scan, **85.2%** including runtime — with
+**zero new rules** in this pass.
+
+1. **`_locate()` now matches Redguard technique NAME before ATT&CK id**
+   (`core/threat_matrix.py`). Three Discovery techniques share id `T1613`, so id-first matching
+   collapsed them into one cell and painted the others as gaps despite rules existing. Before
+   flipping precedence I checked every rule for name/id collisions — exactly one
+   (`log-no-collector`, Impact/T1485/"Data Destruction"), pointing at the same cell either way,
+   so the change is behaviour-preserving. **If you add a rule and want it on a specific Redguard
+   cell, name the technique exactly as the matrix names it.**
+2. **Thirteen rules retagged** onto the cells they actually detect — kubelet flags to
+   "Access Kubelet API", `net-dashboard-exposed` to "Access Kubernetes dashboard",
+   hostPath/host-namespace/sshd/sidecar/SA-token rules off the generic "Deploy Container".
+   Only technique *names* changed; ids and tactics are untouched, so no scores moved. The one
+   exception: `net-metadata-api-open` gained a Discovery tactic (3 tactics now, so its
+   attack-path multiplier goes 1.25 to 1.5). That was deliberate and is the only score change
+   in this pass.
+3. **Runtime detections are now a coverage layer** with their own `runtime` cell state
+   (`MatrixCell.runtime_rule_ids` / `covered_runtime`). `build_threat_matrix` loads
+   `RuntimeAgent().catalog()` by default so no surface disagrees; pass `runtime_catalog=[]` for a
+   scan-only matrix. `covered` still means *scan* rule only — do not merge these, the separation
+   is the point. New CSS var `--rt` lives in `THREAT_MATRIX_CSS`, which `_HTML_CSS` already
+   appends, so both the report and the dashboard pick it up.
+4. **`cluster_control_plane._flag_rule` guards on unreadable evidence.** Previously nine rules
+   false-positived on EKS/GKE/AKS, where ComponentConfig has no component sections and
+   `lambda v: not v` reads absent evidence as "flag is off". Now returns early when
+   `spec.<component>` is missing, and `_build_component_config` appends one warning so the
+   operator sees "not applicable" instead of assuming a pass.
+
+Gotcha for the next person: `tests/test_matrix_coverage.py` pins both the name-before-id
+resolution and the scan/runtime separation. If you find yourself editing those assertions to make
+a change pass, re-read §6j in REVIEW.md first — they encode a correctness property, not an
+incidental number.
+
+---
+
 ## 0.2 Remediation removal pass (detect-and-report only)
 
 The **Remediation Agent and its whole subsystem were removed** in a later pass — the tool is

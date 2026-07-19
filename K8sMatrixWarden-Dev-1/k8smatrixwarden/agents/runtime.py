@@ -150,7 +150,10 @@ class RuntimeAgent:
                         M(T.CREDENTIAL_ACCESS, "T1552.007", "Container API Credentials"),
                         _audit(verb="list", resource="secrets"), source="audit"),
             RuntimeRule("rt-delete-events", "K8s events deleted", S.HIGH,
-                        M(T.DEFENSE_EVASION, "T1070", "Indicator Removal"),
+                        # named as the Redguard matrix names it, so the threat matrix
+                        # lights the "Delete K8s events" cell rather than collapsing onto
+                        # "Clear container logs" (both carry ATT&CK T1070)
+                        M(T.DEFENSE_EVASION, "T1070", "Delete K8s events"),
                         _audit(verb="delete", resource="events"), source="audit"),
             RuntimeRule("rt-mass-delete", "Mass deletion spike", S.CRITICAL,
                         M(T.IMPACT, "T1485", "Data Destruction"),

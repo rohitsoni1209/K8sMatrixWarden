@@ -19,10 +19,29 @@ def _cfg(ev):
 
 
 def _flag_rule(path, bad_predicate, message):
+    """A check over one control-plane flag at `path` (``spec.<component>.<field>``).
+
+    Fires only when that component's config was actually READ. On a managed cluster
+    (EKS/GKE/AKS) the control plane is provider-owned and its kube-system static Pods are
+    invisible, so ComponentConfig arrives with no `apiServer`/`etcd`/`kubelet` section at
+    all. `Evidence.dig` then returns None for every flag, and a predicate like
+    ``lambda v: not v`` reads that as "the flag is off" — inventing a Critical finding out
+    of evidence that was never available. Absence of evidence is not evidence of absence:
+    when the section is missing the rule stays silent, and the collector records one
+    warning explaining that these checks were not applicable (see
+    core/evidence.py::_build_component_config).
+    """
     parts = path.split(".")
+    # spec.<component>.<field> -> the section that must be present; spec.<field> -> none.
+    section = parts[1] if len(parts) >= 3 else None
     component = parts[1] if len(parts) > 1 else "control-plane"   # apiServer/etcd/kubelet
+
     def _check(rule, ev, scope):
         cfg = _cfg(ev)
+        if not cfg:
+            return                       # control plane not readable at all
+        if section is not None and not Evidence.dig(cfg, f"spec.{section}"):
+            return                       # this component's config was never read
         val = Evidence.dig(cfg, path)
         if bad_predicate(val):
             yield rule.finding(ResourceRef("ControlPlane", component),
@@ -87,20 +106,20 @@ class ClusterControlPlaneShard(DomainShard):
                  need, S.CRITICAL, DM.STATIC_CONFIG,
                  _flag_rule("spec.kubelet.anonymousAuth", lambda v: v is True,
                             "kubelet --anonymous-auth=true"),
-                 mitre=[M(T.DISCOVERY, "T1613", "Container and Resource Discovery")],
+                 mitre=[M(T.DISCOVERY, "T1613", "Access Kubelet API")],
                  owasp="K06", cis=["4.2.1"], evidence_needs=need),
             Rule("kubelet-read-only-port", "Kubelet read-only port open", self.name,
                  need, S.HIGH, DM.STATIC_CONFIG,
                  _flag_rule("spec.kubelet.readOnlyPort", lambda v: v not in (0, None),
                             "kubelet read-only port {val} is open"),
-                 mitre=[M(T.DISCOVERY, "T1613", "Container and Resource Discovery")],
+                 mitre=[M(T.DISCOVERY, "T1613", "Access Kubelet API")],
                  owasp="K06", cis=["4.2.4"], evidence_needs=need),
             Rule("kubelet-authz-always-allow", "Kubelet AlwaysAllow authz", self.name,
                  need, S.CRITICAL, DM.STATIC_CONFIG,
                  _flag_rule("spec.kubelet.authorizationMode",
                             lambda v: v == "AlwaysAllow",
                             "kubelet --authorization-mode=AlwaysAllow"),
-                 mitre=[M(T.DISCOVERY, "T1613", "Container and Resource Discovery")],
+                 mitre=[M(T.DISCOVERY, "T1613", "Access Kubelet API")],
                  owasp="K06", cis=["4.2.2"], evidence_needs=need),
             Rule("deprecated-k8s-version", "Deprecated/EOL Kubernetes version", self.name,
                  need, S.HIGH, DM.STATIC_CONFIG,

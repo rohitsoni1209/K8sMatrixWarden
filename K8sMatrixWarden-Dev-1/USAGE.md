@@ -365,7 +365,18 @@ stays true as the tool surface grows.
 
 ### 4.7 `k8smatrixwarden matrix` — Kubernetes Threat Matrix
 
-Project a scan's findings onto the 9-tactic [Kubernetes Threat Matrix](https://kubernetes-threat-matrix.redguard.ch/) (MITRE ATT&CK for Containers). Each technique cell is one of three states — **hit** (a finding fired, coloured by worst severity), **covered** (a rule exists, nothing found this scan), **gap** (no rule yet) — so the matrix reads as an honest coverage map, not just a hit list.
+Project a scan's findings onto the 9-tactic [Kubernetes Threat Matrix](https://kubernetes-threat-matrix.redguard.ch/) (MITRE ATT&CK for Containers). Each technique cell is one of four states, so the matrix reads as an honest coverage map rather than just a hit list:
+
+| State | Meaning |
+|---|---|
+| **hit** | a finding fired here — coloured by worst severity |
+| **covered** | a *scan* rule exists; nothing found this scan |
+| **runtime** | no scan rule, but the Runtime Agent detects it live (Falco/audit/drift) |
+| **gap** | nothing detects this yet — a real coverage gap |
+
+`runtime` is deliberately **not** folded into `covered`. The two answer different questions: a scan rule says *"the configuration allows this"*, a runtime detection says *"this is happening right now"*. Several Redguard techniques — a shell spawned inside a container, a miner starting — are structurally invisible to a config snapshot and can only ever be covered at runtime. Reporting them as flat gaps understated the platform's real coverage; folding them into `covered` would have overstated what a point-in-time scan can tell you.
+
+Cell resolution prefers an exact Redguard technique **name**, falling back to the ATT&CK id. This matters because the Redguard matrix is finer-grained than ATT&CK-for-Containers: *Access the K8s API server*, *Access Kubelet API* and *Access Kubernetes dashboard* are three distinct Discovery techniques all carrying the single id `T1613`. Matching by id first collapsed them into one cell and painted the other two as gaps even though rules for them existed.
 
 ```bash
 k8smatrixwarden matrix --mock                     # the matrix for a fresh cluster scan
@@ -389,7 +400,7 @@ The same matrix is embedded in the markdown/JSON/HTML scan reports, shown as a h
 
 | Page | Question it answers | Headline stats |
 |---|---|---|
-| `/matrix` (or `matrix --coverage`) | *What can K8sMatrixWarden detect?* | techniques with a detection rule (e.g. `30/56`), matrix coverage %, tactics with coverage, rules mapped to the matrix. Each column reads `5/6 with a rule`. |
+| `/matrix` (or `matrix --coverage`) | *What can K8sMatrixWarden detect?* | techniques with a scan rule (e.g. `42/54`), matrix coverage %, tactics with coverage, how many more are covered at runtime only, rules mapped to the matrix. Each column reads `5/6 with a rule`. |
 | `/report/<scan_id>/matrix` | *What did this cluster expose?* | tactics implicated, techniques triggered, matrix coverage %, findings mapped. Cells are painted by worst finding severity. |
 
 The coverage page has no scan overlaid, so every hit-derived number there is structurally zero. It used to display `0/9 tactics implicated · 0 findings mapped`, which read as a broken counter rather than an answer; it now reports the coverage axis instead, and states plainly that no scan is overlaid.

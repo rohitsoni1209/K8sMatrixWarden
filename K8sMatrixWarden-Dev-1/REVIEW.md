@@ -4,7 +4,7 @@ This is the required review pass after the initial build. It records what was ve
 refinements made to improve the code over a naive reading of the spec, the deliberate
 deviations (with justification), and the known limitations / next steps.
 
-**Status at review:** 11 shards, **60 rules**, **30 MCP tools**, **218/218 tests passing**,
+**Status at review:** 11 shards, **60 rules**, **30 MCP tools**, **231/231 tests passing**,
 `doctor` validation clean (no duplicate rule ids, every rule's technique id present in the
 vendored taxonomy, all aliases resolve). End-to-end mock scan produces a Critical-rated report;
 tactic/technique/module/framework slices, namespace scoping, all seven report formats
@@ -19,7 +19,7 @@ remediation engine (§6c/§6d) has been removed, so no write/apply path exists o
 > **Note on the numbered history below.** Sections §6a–§6f record the review passes in the
 > order they happened, so their inline test/tool counts (25 → 31 → 113 → 137 → 163 → 229) are
 > *historical checkpoints*, not the current totals. The current totals are the ones in this
-> status block (60 rules, 30 MCP tools, 218 tests); §6g–§6h bring the story up to date. In
+> status block (60 rules, 30 MCP tools, 231 tests); §6g–§6h bring the story up to date. In
 > particular, the remediation engine described in §6c and the `explain_remediation` MCP tool
 > in §6d were subsequently **removed** — those sections are kept as historical record.
 
@@ -604,3 +604,60 @@ construction. That is now pinned by a test matrix across `aws` / `gke-gcloud-aut
 also yield no usable token without raising. It reached the same silent-401 path and produced a
 generic message. `_credential_failure` now handles both, and the provider question is answered
 structurally: the code branches on the *mechanism*, never on the cloud.
+
+
+---
+
+## 6j. The matrix was understating its own coverage
+
+Asked to "build the missing modules", the honest first step was measuring what was actually
+missing. The matrix reported 53.6% coverage with 25 gap cells. Twenty of those were not gaps.
+
+**Cause 1 — id-first cell resolution.** `_locate()` matched a rule's ATT&CK technique id
+before its name. The Redguard matrix is finer-grained than ATT&CK-for-Containers: *Access the
+K8s API server*, *Access Kubelet API* and *Access Kubernetes dashboard* are three distinct
+Discovery techniques that all carry the single id `T1613`. Whichever cell held that id absorbed
+every Discovery-tagged rule, and the other two rendered as gaps — while `kubelet-anonymous-auth`,
+`kubelet-read-only-port`, `kubelet-authz-always-allow` and `net-dashboard-exposed` sat in the
+registry detecting exactly those techniques. The same pattern hid hostPath, host-namespace,
+sidecar, SSH-in-container and service-account coverage behind the generic ATT&CK name
+"Deploy Container" (`T1610`).
+
+Resolution is now name-before-id. Naming a Redguard technique verbatim is how a rule opts into
+that exact cell; a canonical ATT&CK name never matches a Redguard cell name, so everything else
+still resolves by id unchanged. Verified before the change that exactly one existing rule's
+technique name collided with a Redguard cell name, and that it pointed at the same cell either
+way — so the precedence flip was behaviour-preserving.
+
+Thirteen cells closed by retagging. **No new rules were written**, because none were needed;
+writing them would have duplicated detections that already existed.
+
+**Cause 2 — the coverage layer ignored the Runtime Agent.** The platform ships eleven runtime
+detections, fully MITRE-tagged, and the matrix never read them. So *Exec into container*,
+*bash/cmd inside container*, *Resource hijacking* and *Delete K8s events* displayed as flat gaps
+even though the Runtime Agent detects all four.
+
+They are now a **distinct `runtime` state**, not folded into `covered`. That distinction is the
+whole point: a scan rule says the configuration allows something, a runtime detection says it is
+happening. Folding them together would claim point-in-time coverage the scanner does not have —
+the same class of dishonesty as §6h's "Excellent" rating for an unread cluster. `covered` stays
+strictly "a scan rule exists"; `coverage_pct` and `coverage_pct_with_runtime` are reported
+separately.
+
+The catalog loads by default inside `build_threat_matrix`, so the CLI, reports, dashboard and MCP
+cannot disagree about coverage; an explicit empty list opts out.
+
+**Result: 53.6% → 77.8% scan coverage, 85.2% including runtime — with four new rules (shard ⑪)
+and thirteen retags.** The twelve remaining gaps are now real: CVE scanning (needs the Trivy
+adapter), backdoor-container provenance, cloud service-principal mounts, and three techniques
+that would require adding a Lateral Movement tactic to existing Credential Access rules —
+deliberately not done, since extra tactics inflate the attack-path score multiplier and would
+silently move every historical score.
+
+**Also in this pass:** `cluster_control_plane`'s nine flag rules gained the managed-cluster guard
+flagged during the §0.17 review. On EKS/GKE/AKS the control plane is provider-owned and
+`ComponentConfig` has no `apiServer`/`etcd`/`kubelet` section, so `lambda v: not v` predicates
+read absent evidence as "the flag is off" and reported up to nine findings — several Critical —
+for settings that were never readable. `_flag_rule` now returns early when the component section
+is missing, and the collector records one warning explaining that those checks were not
+applicable, so the operator reads "not evaluated" rather than assuming they passed.

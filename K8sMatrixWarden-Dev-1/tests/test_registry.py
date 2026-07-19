@@ -101,3 +101,66 @@ def test_generated_object_names_are_dns_1123_safe():
         name = item["metadata"]["name"]
         assert "_" not in name, f"{item['kind']} name {name!r} contains an underscore"
         assert dns1123.match(name), f"{item['kind']} name {name!r} is not DNS-1123"
+
+
+# --------------------------------------------------------------------------- #
+# Control-plane flag rules must not invent findings from unreadable evidence
+#
+# On EKS/GKE/AKS the control plane is provider-owned and its kube-system static Pods are
+# invisible, so ComponentConfig arrives with no apiServer/etcd/kubelet section. A predicate
+# like `lambda v: not v` reads that as "the flag is off" and reports a Critical finding for
+# a setting that was never readable.
+# --------------------------------------------------------------------------- #
+def _control_plane_rule_ids(component_config):
+    from k8smatrixwarden.agents.scanner import ScannerAgent
+    from k8smatrixwarden.core.evidence import EvidenceCollector
+    from k8smatrixwarden.core.models import (ScanMode, ScanRequest, Scope, ScopeLevel,
+                                              Selector)
+
+    class _Fixture(EvidenceCollector):
+        def __init__(self):
+            super().__init__()
+            self.fetched_ok = True
+
+        def _fetch(self, kind, bucket):
+            return list(component_config) if bucket == "componentconfig" else []
+
+    p = build_platform()
+    request = ScanRequest(scope=Scope(ScopeLevel.CLUSTER),
+                          selector=Selector(modules=["cluster_control_plane"]),
+                          mode=ScanMode.SYNC)
+    return sorted(f.rule_id for f in ScannerAgent(p).scan(request, _Fixture()).findings)
+
+
+def test_managed_control_plane_produces_no_flag_findings():
+    # ComponentConfig exists but carries no component sections — the managed-cluster shape
+    assert _control_plane_rule_ids(
+        [{"kind": "ComponentConfig", "spec": {"version": None}}]) == []
+
+
+def test_absent_component_config_produces_no_flag_findings():
+    assert _control_plane_rule_ids([]) == []
+
+
+def test_readable_insecure_control_plane_still_fires_every_rule():
+    # the guard must not silence real findings on a self-managed cluster
+    ids = _control_plane_rule_ids([{"kind": "ComponentConfig", "spec": {
+        "apiServer": {"anonymousAuth": True, "insecurePort": 6443,
+                      "auditLogPath": "", "encryptionProvider": ""},
+        "etcd": {"clientCertAuth": False},
+        "kubelet": {"anonymousAuth": True, "readOnlyPort": 10255,
+                    "authorizationMode": "AlwaysAllow"},
+        "version": "v1.24.0"}}])
+    assert ids == ["apiserver-anonymous-auth", "apiserver-audit-logging",
+                   "apiserver-insecure-port", "deprecated-k8s-version",
+                   "etcd-client-cert-auth", "etcd-encryption-missing",
+                   "kubelet-anonymous-auth", "kubelet-authz-always-allow",
+                   "kubelet-read-only-port"]
+
+
+def test_one_readable_component_does_not_unlock_the_others():
+    """A cluster exposing only the kubelet config must be graded on the kubelet alone."""
+    ids = _control_plane_rule_ids([{"kind": "ComponentConfig", "spec": {
+        "kubelet": {"anonymousAuth": True, "readOnlyPort": 0,
+                    "authorizationMode": "Webhook"}}}])
+    assert ids == ["kubelet-anonymous-auth"]

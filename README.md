@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/shards-11-blueviolet"/>
   <img src="https://img.shields.io/badge/rules-60-orange"/>
   <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
-  <img src="https://img.shields.io/badge/tests-218%20passing-success"/>
+  <img src="https://img.shields.io/badge/tests-231%20passing-success"/>
   <img src="https://img.shields.io/badge/time-IST%20(UTC%2B05%3A30)-informational"/>
 </p>
 
@@ -83,6 +83,12 @@ right now**, and here's the kill-chain." On top of the scanner, the platform add
   because it means a control the operator *thinks* is enforced is not.
 - **Attack-path derivation** (`core/threat_matrix.py::attack_paths`) — chains the threat matrix's
   hit cells into a kill-chain (Initial Access → … → Impact) with entry points and a reaches-Impact flag.
+- **Honest coverage accounting** (`core/threat_matrix.py`) — the matrix resolves cells by Redguard
+  technique *name* before ATT&CK id (three distinct Discovery techniques share `T1613`, and
+  id-first matching collapsed them into one cell), and it overlays the Runtime Agent's detections
+  as their own `runtime` state. Techniques only observable live — a shell spawned in a container,
+  a miner starting — are no longer reported as coverage gaps, and are still never counted as
+  *scan* coverage. **77.8% scan coverage, 85.2% including runtime.**
 - **Interactive dashboard** (`web/`) — a zero-dependency SPA with seven tabs (Overview, Findings,
   Threat Matrix, Attack Path, Attack Map, Runtime, Scan). A **report selector** switches the whole
   view to any saved scan, and every finding — in the Findings table, the Threat Matrix drill-downs,

@@ -585,6 +585,7 @@ footer.site-footer {
         <li><a href="#shards">10 Domain Shards</a></li>
         <li><a href="#selectors">Scope &amp; Selectors</a></li>
         <li><a href="#mitre">MITRE ATT&amp;CK Coverage</a></li>
+        <li><a href="#coverage-model">How Coverage Is Counted</a></li>
         <li><a href="#owasp">OWASP K8s Top 10</a></li>
       </ul>
     </div>
@@ -979,6 +980,63 @@ rules.</p>
   doesn't exist.</p></div>
 </div>
 </section>
+
+<section id="coverage-model">
+<h2><span class="h2-title">How Coverage Is Counted</span></h2>
+<p class="lede">Every technique cell carries one of four states. The distinctions are
+deliberate &mdash; collapsing them would over- or under-state what the tool actually knows.</p>
+
+<div class="table-scroll"><table>
+<thead><tr><th>State</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>hit</strong></td><td>a finding fired here &mdash; the cell is painted by its
+worst finding severity</td></tr>
+<tr><td><strong>covered</strong></td><td>a <em>scan</em> rule exists; nothing was found this
+scan</td></tr>
+<tr><td><strong>runtime</strong></td><td>no scan rule, but the Runtime Agent detects it live
+(Falco / audit / drift)</td></tr>
+<tr><td><strong>gap</strong></td><td>nothing detects this yet &mdash; a real coverage gap</td></tr>
+</tbody>
+</table></div>
+
+<h3>Why <code>runtime</code> is not folded into <code>covered</code></h3>
+<p>The two answer different questions. A scan rule says <em>&ldquo;the configuration allows
+this&rdquo;</em>; a runtime detection says <em>&ldquo;this is happening right now&rdquo;</em>.
+Several Redguard techniques &mdash; a shell spawned inside a container, a crypto-miner starting
+&mdash; are structurally invisible to a configuration snapshot and can only ever be covered at
+runtime. Reporting them as flat gaps understated the platform&rsquo;s real coverage; merging them
+into <code>covered</code> would claim point-in-time coverage the scanner does not have. So
+<code>coverage_pct</code> (scan only) and <code>coverage_pct_with_runtime</code> are reported as
+separate numbers, and the Runtime Agent&rsquo;s catalog is loaded by default in
+<code>build_threat_matrix</code> so the CLI, reports, dashboard and MCP cannot disagree.</p>
+
+<h3>Cells resolve by name, then by ATT&amp;CK id</h3>
+<p>The Redguard matrix is <strong>finer-grained than ATT&amp;CK-for-Containers</strong>.
+<em>Access the K8s API server</em>, <em>Access Kubelet API</em> and <em>Access Kubernetes
+dashboard</em> are three distinct Discovery techniques that all carry the single id
+<code>T1613</code>. Matching by id first meant whichever cell held that id absorbed every
+Discovery-tagged rule, and the other two rendered as coverage gaps &mdash; even though rules
+detecting exactly those techniques were sitting in the registry. The same pattern hid hostPath,
+host-namespace, sidecar, SSH-in-container and service-account coverage behind the generic
+ATT&amp;CK name &ldquo;Deploy Container&rdquo; (<code>T1610</code>).</p>
+<p>Resolution is therefore <strong>name before id</strong>: naming a Redguard technique verbatim
+is how a rule opts into that exact cell, while a canonical ATT&amp;CK name (which never matches a
+Redguard cell name) still resolves by id exactly as before. <strong>If you add a rule and want it
+on a specific cell, name the technique exactly as the matrix names it.</strong></p>
+
+<div class="stat-row">
+<div class="stat"><div class="stat-n">77.8%</div><div class="stat-l">scan coverage</div></div>
+<div class="stat"><div class="stat-n">85.2%</div><div class="stat-l">including runtime</div></div>
+<div class="stat"><div class="stat-n">12</div><div class="stat-l">honest remaining gaps</div></div>
+</div>
+<p>The remaining gaps are real ones: CVE scanning (needs the Trivy adapter), backdoor-container
+provenance, cloud service-principal mounts, and a few techniques that would require adding a
+Lateral Movement tactic to existing Credential Access rules &mdash; deliberately not done, since
+extra tactics inflate the attack-path score multiplier and would silently move every historical
+score.</p>
+</section>
+
+<hr>
 
 <section id="shards">
 <h2><span class="h2-title">11 Domain Shards</span></h2>
@@ -1541,8 +1599,8 @@ than an answer.</p>
 <thead><tr><th>Page</th><th>Question</th><th>Headline stats</th></tr></thead>
 <tbody>
 <tr><td><code>/matrix</code></td><td>What can K8sMatrixWarden <em>detect</em>?</td>
-<td>techniques with a detection rule (e.g. <code>30/56</code>), matrix coverage&nbsp;%, tactics with
-coverage, rules mapped to the matrix. Each column reads <code>5/6 with a rule</code>.</td></tr>
+<td>techniques with a scan rule (e.g. <code>42/54</code>), matrix coverage&nbsp;%, tactics with
+coverage, how many more are covered at runtime only, and rules mapped to the matrix. Each column reads <code>5/6 with a rule</code>.</td></tr>
 <tr><td><code>/report/&lt;id&gt;/matrix</code></td><td>What did <em>this cluster</em> expose?</td>
 <td>tactics implicated, techniques triggered, matrix coverage&nbsp;%, findings mapped. Cells painted
 by worst finding severity.</td></tr>

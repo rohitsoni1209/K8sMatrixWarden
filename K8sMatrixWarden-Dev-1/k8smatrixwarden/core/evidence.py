@@ -520,9 +520,22 @@ class LiveEvidenceCollector(EvidenceCollector):
         """
         try:
             pods = self._get_json("/api/v1/namespaces/kube-system/pods")
-        except Exception:
+        except Exception as exc:
+            self.warnings.append(
+                f"ComponentConfig: control-plane flags unavailable "
+                f"({_short_api_error(exc)}) — control-plane checks were not evaluated")
             return []
-        return [build_component_config(pods)]
+        config = build_component_config(pods)
+        # No component sections means no control-plane static Pods were visible — the
+        # normal case on a managed cluster (EKS/GKE/AKS), where the control plane is
+        # provider-owned. The flag rules correctly stay silent; say so, so an operator
+        # reads "not applicable" rather than assuming those checks passed.
+        if not any(k != "version" for k in (config.get("spec") or {})):
+            self.warnings.append(
+                "ComponentConfig: no control-plane static Pods visible in kube-system — "
+                "the control plane is provider-managed (EKS/GKE/AKS) or runs outside the "
+                "cluster, so API server / etcd / kubelet flag checks were not applicable")
+        return [config]
 
 
 def build_component_config(pods: list[dict]) -> dict:
