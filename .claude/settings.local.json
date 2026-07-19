@@ -64,7 +64,12 @@
       "Bash(python -m k8smatrixwarden web --port 8093)",
       "Bash(python -c \"import sys,json; print\\('error field:', json.load\\(sys.stdin\\)['error'].splitlines\\(\\)[0]\\)\")",
       "Bash(python -m k8smatrixwarden scan --mock -o terminal)",
-      "Bash(python -)"
+      "Bash(python -)",
+      "Bash(python -c \"import mcp; print\\('mcp', getattr\\(mcp,'__version__','?'\\)\\)\")",
+      "Bash(python -c \"import pydantic; print\\('pydantic', pydantic.__version__\\)\")",
+      "Bash(grep -rnE \"scan-[0-9]|scan_id|scan-\\\\\\\\\\\\\\\\d|startswith\\\\\\\\\\(.scan\" tests/)",
+      "Bash(PYTHONIOENCODING=utf-8 python tests/run_tests.py)",
+      "Bash(kill 1487)"
     ]
   }
 }

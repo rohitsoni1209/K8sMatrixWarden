@@ -179,6 +179,10 @@ button.btn.ghost:hover{background:var(--bg);border-color:var(--accent);box-shado
 .scanform input,.scanform select{background:var(--bg);color:var(--fg);border:1px solid var(--bd);
  border-radius:8px;padding:.5rem .7rem;font-size:.87rem;min-width:140px;transition:border-color .2s}
 .scanform input:focus,.scanform select:focus{outline:none;border-color:var(--accent)}
+.scanform .kc{display:flex;flex-direction:column;gap:.35rem;min-width:260px}
+.scanform .kc input[type=file]{padding:.4rem;font-size:.8rem}
+.scanform .kc-or{font-size:.72rem;color:var(--muted);text-align:center;margin:.1rem 0}
+#kubeconfigfilename{font-size:.74rem;color:var(--muted)}
 #scanmsg{font-size:.84rem;margin-top:.8rem;color:var(--muted);font-weight:500}
 """
 
@@ -582,7 +586,7 @@ async function runCorrelate(){
 /* ---- scan / history ---- */
 function scanView(){
   const rows=D.history.map(r=>`<tr>
-    <td><a href='/report/${esc(r.scan_id)}'><code>${esc(r.scan_id)}</code></a></td>
+    <td><a href='/report/${esc(r.scan_id)}'>${esc(r.name||r.scan_id)}</a>${r.name?`<div class='fm'><code>${esc(r.scan_id)}</code></div>`:''}</td>
     <td class='fm'>${fmtTime(r.generated_at)}</td>
     <td><span class='pill ${r.rating}'>${esc(r.rating)}</span></td>
     <td>${r.risk_score}</td><td>${r.total}</td><td><code>${esc(r.scope)}</code></td>
@@ -591,27 +595,80 @@ function scanView(){
     <div class='panel'><h2>Scan history</h2><table class='ft'><thead><tr>
     <th>Scan</th><th>Generated</th><th>Rating</th><th>Risk</th><th>Findings</th><th>Scope</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
+function selectorOptions(){
+  const s=(D&&D.selectors)||{};
+  const grp=(label,arr,type)=>(arr&&arr.length)?`<optgroup label='${esc(label)}'>`+
+    arr.map(v=>`<option value='${esc(type)}:${esc(v)}'>${esc(v)}</option>`).join('')+'</optgroup>':'';
+  return `<option value=''>All rules (no selector)</option>`
+    +grp('MITRE tactics',s.tactics,'tactic')
+    +grp('Modules (domain shards)',s.modules,'module')
+    +grp('Compliance frameworks',s.frameworks,'framework')
+    +grp('Technique aliases',s.aliases,'alias');
+}
 function scanForm(){
   return `<div class='scanform'>
-    <div><label>Scope</label><select id='scope'><option value='cluster'>whole cluster</option><option value='namespace'>namespace</option></select></div>
-    <div><label>Namespace</label><input id='ns' placeholder='e.g. default'></div>
-    <div><label>Selector (optional)</label><input id='sel' placeholder='e.g. Persistence'></div>
+    <div><label>Scan name (optional)</label><input id='scanname' placeholder='e.g. Prod nightly — used in the report name'></div>
+    <div><label>Scope</label><select id='scope' onchange='toggleScope()'><option value='cluster'>whole cluster</option><option value='namespace'>namespace</option></select></div>
+    <div><label>Namespace</label><input id='ns' placeholder='select "namespace" scope first' disabled></div>
+    <div><label>Selector (optional)</label><select id='sel'>${selectorOptions()}</select></div>
     <div><label>Cluster</label><select id='mock' onchange='toggleLive()'><option value='0'>live (--live)</option><option value='1'>bundled mock</option></select></div>
     <div><label>Context (live only)</label><input id='ctx' placeholder='e.g. kind-kind / current-context'></div>
-    <div><label>Kubeconfig path (optional)</label><input id='kubeconfig' placeholder='e.g. C:\\Users\\me\\.kube\\config'></div>
+    <div class='kc'><label>Kubeconfig (optional, live only)</label>
+      <input id='kubeconfig' placeholder='type a path, e.g. C:\\Users\\me\\.kube\\config' oninput='onKubeconfigPath()'>
+      <div class='kc-or'>— or select a file from your system —</div>
+      <input type='file' id='kubeconfigfile' onchange='pickKubeconfig(this)'>
+      <span id='kubeconfigfilename' class='fm'></span></div>
     <button class='btn' id='run' onclick='runScan()'>Scan &amp; save</button></div><div id='scanmsg'></div>`;
 }
-function toggleLive(){const mock=$('#mock').value==='1';['#ctx','#kubeconfig'].forEach(id=>{const el=$(id);if(el)el.disabled=mock;});}
-function wireScan(){toggleLive();}
+/* A browser can't reveal a picked file's real path, so read its contents and send them by
+   value; the server writes a short-lived temp kubeconfig. Path box and file picker are
+   mutually exclusive — the most recently used one wins. */
+let KUBECONFIG_CONTENT=null;
+function pickKubeconfig(input){
+  const f=input.files&&input.files[0];
+  const lbl=$('#kubeconfigfilename');
+  if(!f){KUBECONFIG_CONTENT=null;if(lbl)lbl.textContent='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{KUBECONFIG_CONTENT=e.target.result;
+    if(lbl)lbl.textContent='selected: '+f.name+' ('+e.target.result.length+' bytes)';
+    const path=$('#kubeconfig');if(path)path.value='';};   // file wins over a typed path
+  reader.onerror=()=>{if(lbl)lbl.textContent='could not read file';};
+  reader.readAsText(f);
+}
+function onKubeconfigPath(){   // typing a path clears any picked file
+  if($('#kubeconfig').value.trim()){
+    KUBECONFIG_CONTENT=null;
+    const fi=$('#kubeconfigfile');if(fi)fi.value='';
+    const lbl=$('#kubeconfigfilename');if(lbl)lbl.textContent='';}
+}
+/* Context + kubeconfig only apply to a live (--live) scan; disable them for the mock cluster. */
+function toggleLive(){const mock=$('#mock').value==='1';['#ctx','#kubeconfig','#kubeconfigfile'].forEach(id=>{const el=$(id);if(el)el.disabled=mock;});}
+/* Namespace only applies when the Scope is "namespace"; disable it otherwise. */
+function toggleScope(){const ns=$('#ns');if(ns)ns.disabled=($('#scope')?$('#scope').value:'cluster')!=='namespace';}
+function wireScan(){toggleLive();toggleScope();}
 async function runScan(){
   const btn=$('#run'),msg=$('#scanmsg');btn.disabled=true;msg.textContent='scanning…';
   const mock=$('#mock').value==='1';
-  const body={scope_level:$('#scope').value,namespace:$('#ns').value||null,selector:$('#sel').value||null,mock:mock};
-  if(!mock){body.context=$('#ctx').value||null;body.kubeconfig=$('#kubeconfig').value||null;}
+  const scope=$('#scope').value;
+  const body={scan_name:$('#scanname').value||null,scope_level:scope,
+    namespace:(scope==='namespace'?($('#ns').value||null):null),mock:mock};
+  // The selector dropdown carries "<axis>:<value>" (e.g. "tactic:Persistence",
+  // "module:rbac_identity"); split it into the structured selector field the API expects.
+  const selVal=($('#sel')&&$('#sel').value)||'';
+  if(selVal){
+    const i=selVal.indexOf(':'), axis=selVal.slice(0,i), val=selVal.slice(i+1);
+    const field={tactic:'tactics',module:'modules',framework:'frameworks',alias:'aliases'}[axis];
+    if(field) body[field]=[val];
+  }
+  if(!mock){
+    body.context=$('#ctx').value||null;
+    if(KUBECONFIG_CONTENT){body.kubeconfig_content=KUBECONFIG_CONTENT;}
+    else if($('#kubeconfig').value.trim()){body.kubeconfig=$('#kubeconfig').value.trim();}
+  }
   try{const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!r.ok||d.error){msg.textContent='Error: '+(d.error||('HTTP '+r.status));btn.disabled=false;return;}
-    msg.innerHTML='Saved '+d.scan_id+' — '+d.rating+' ('+d.risk+'/10), '+d.total_findings+' findings. Reloading…';
+    msg.innerHTML='Saved “'+esc(d.display_name||d.scan_id)+'” — '+d.rating+' ('+d.risk+'/10), '+d.total_findings+' findings. Reloading…';
     setTimeout(()=>location.reload(),800);
   }catch(e){msg.textContent='Error: '+e;btn.disabled=false;}
 }

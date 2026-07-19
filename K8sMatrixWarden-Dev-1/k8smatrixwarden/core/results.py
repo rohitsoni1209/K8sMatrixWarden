@@ -2,18 +2,36 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
 from .models import Finding, ScanRequest
 from .scoring import RiskResult
-from .timeutil import ist_date_compact, ist_timestamp, now_ist
+from .timeutil import format_ist, ist_date_compact, ist_timestamp, now_ist
 
 
-def _scan_id() -> str:
+def slugify_name(name: str) -> str:
+    """Turn a human scan name into a filesystem-/URL-safe slug for use inside a scan id.
+
+    Lowercased, non-alphanumeric runs collapsed to single hyphens, trimmed, and capped so
+    the resulting scan id stays short. Always matches the report store's `_SAFE_SCAN_ID`
+    charset ([A-Za-z0-9._-]); returns "" when nothing usable remains."""
+    slug = re.sub(r"[^a-z0-9]+", "-", (name or "").strip().lower()).strip("-")
+    return slug[:40]
+
+
+def _scan_id(name: str = "") -> str:
+    """Build a scan id of the form ``<name>-YYYYMMDD-HHMMSS-<hash>`` so the id itself
+    carries the (optional) scan name, the date, and the time — the report naming format
+    surfaced everywhere (files on disk, download filenames, dashboard history). Falls back
+    to the ``scan`` prefix when no name is given, preserving the historic ``scan-…`` shape.
+    The 4-char hash keeps ids unique even for two scans started in the same second."""
     now = now_ist()
     digest = hashlib.sha1(now.isoformat().encode()).hexdigest()[:4]
-    return f"scan-{ist_date_compact()}-{digest}"
+    stamp = now.strftime("%Y%m%d-%H%M%S")
+    base = slugify_name(name) or "scan"
+    return f"{base}-{stamp}-{digest}"
 
 
 @dataclass
@@ -25,11 +43,28 @@ class ScanResult:
     counts: dict[str, int] = field(default_factory=dict)
     by_tactic: dict[str, int] = field(default_factory=dict)
     by_shard: dict[str, int] = field(default_factory=dict)
-    scan_id: str = field(default_factory=_scan_id)
+    #: Optional human scan name. When set, it seeds the scan_id and the display name so a
+    #: report is identifiable as "<name> + date + time" instead of an opaque id.
+    name: str = ""
+    #: Left empty on construction so __post_init__ can derive it from `name`; an explicit
+    #: id (a replayed/stored report, the coverage pseudo-scan) is always respected.
+    scan_id: str = ""
     cluster_name: str = "target-cluster"
     generated_at: str = field(default_factory=ist_timestamp)
     tool_version: str = "1.0"
     mode: str = "mock"
+
+    def __post_init__(self):
+        if not self.scan_id:
+            self.scan_id = _scan_id(self.name)
+
+    @property
+    def display_name(self) -> str:
+        """Report name as shown to humans: the scan name (if any) followed by its date and
+        time, e.g. "Prod nightly — 19 Jul 2026, 01:13 IST". Falls back to the scan id when
+        the scan was never named."""
+        when = format_ist(self.generated_at)
+        return f"{self.name} — {when}" if self.name else f"{self.scan_id} — {when}"
 
     def total(self) -> int:
         return sum(v for k, v in self.counts.items() if k != "INFO")
@@ -37,6 +72,8 @@ class ScanResult:
     def as_dict(self) -> dict:
         return {
             "scan_id": self.scan_id,
+            "name": self.name,
+            "display_name": self.display_name,
             "cluster": self.cluster_name,
             "generated_at": self.generated_at,
             "tool_version": self.tool_version,
@@ -76,6 +113,7 @@ class ScanResult:
             counts=d.get("counts", {}) or {},
             by_tactic=d.get("by_tactic", {}) or {},
             by_shard=d.get("by_shard", {}) or {},
+            name=d.get("name", ""),
             scan_id=d.get("scan_id", ""),
             cluster_name=d.get("cluster", "target-cluster"),
             generated_at=d.get("generated_at", ""),

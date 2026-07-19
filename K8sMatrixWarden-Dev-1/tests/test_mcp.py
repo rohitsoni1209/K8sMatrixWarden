@@ -373,11 +373,15 @@ def test_run_scan_output_format_sarif_is_valid_json():
 
 
 def test_run_scan_default_output_format_is_unchanged_json_shape():
-    # default behavior must stay exactly what it was before output_format existed
+    # default output_format stays structured JSON (findings, no rendered `content`).
+    # Scans now persist by default so they reach the web dashboard — assert that, using an
+    # isolated store so the test never writes into the real per-user reports dir.
     tools = build_tools()
-    r = tools["run_scan"](rule_ids=["workload-no-seccomp"], mock=True)
-    assert "findings" in r and "content" not in r
-    assert r["saved"] is False
+    with tempfile.TemporaryDirectory() as d:
+        r = tools["run_scan"](rule_ids=["workload-no-seccomp"], mock=True, reports_dir=d)
+        assert "findings" in r and "content" not in r
+        assert r["saved"] is True
+        assert tools["list_reports"](reports_dir=d), "default scan should be listed"
 
 
 def test_run_scan_typoed_output_format_returns_error_not_silent_terminal():

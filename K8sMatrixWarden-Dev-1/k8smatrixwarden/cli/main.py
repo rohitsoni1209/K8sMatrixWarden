@@ -114,7 +114,8 @@ def cmd_scan(a) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     try:
-        result = orch.run(request, collector, mode_label=mode_label)
+        result = orch.run(request, collector, mode_label=mode_label,
+                          name=getattr(a, "name", None) or "")
     except RuntimeError as exc:
         # A clean, actionable message (e.g. cluster unreachable) — not a traceback.
         print(f"error: {exc}", file=sys.stderr)
@@ -140,11 +141,15 @@ def cmd_scan(a) -> int:
                 fh.write(rendered)
             print(f"\n[written] {a.output_file}", file=sys.stderr)
 
-    if getattr(a, "save", False):
+    # Persist to the shared report store by default so the scan shows up in the web
+    # dashboard (`k8smatrixwarden web`). Opt out with --no-save for a throwaway run.
+    if not getattr(a, "no_save", False):
         from ..core.report_store import ReportStore
         path = ReportStore(a.reports_dir).save(result)
-        print(f"[saved] {result.scan_id} → {path}  "
-              f"(download later: k8smatrixwarden report download --scan-id {result.scan_id})",
+        print(f"[saved] {result.display_name}\n"
+              f"  {result.scan_id} → {path}\n"
+              f"  view in dashboard: k8smatrixwarden web    ·    "
+              f"download: k8smatrixwarden report download --scan-id {result.scan_id}",
               file=sys.stderr)
 
     if a.fail_on:
@@ -273,14 +278,17 @@ def cmd_report(a) -> int:
     if a.report_cmd == "list":
         reports = store.list(limit=a.limit)
         if not reports:
-            print(f"No stored reports in '{a.reports_dir}'. "
-                  f"Run a scan with --save first.")
+            print(f"No stored reports in '{a.reports_dir}'. Run a scan first "
+                  f"(scans are saved automatically unless --no-save).")
             return 0
+        from ..core.timeutil import format_ist
         print(f"{len(reports)} stored report(s) in '{a.reports_dir}':\n")
-        print(f"  {'SCAN ID':<22} {'WHEN':<21} {'RATING':<10} {'RISK':<5} FINDINGS  SCOPE")
+        print(f"  {'NAME':<26} {'WHEN':<22} {'RATING':<9} {'RISK':<5} "
+              f"{'FIND':<5} SCAN ID (download key)")
         for r in reports:
-            print(f"  {r.scan_id:<22} {r.generated_at:<21} {r.rating:<10} "
-                  f"{r.risk_score:<5} {r.total:<8}  {r.scope}")
+            name = (r.name or "—")[:26]
+            print(f"  {name:<26} {format_ist(r.generated_at):<22} {r.rating:<9} "
+                  f"{r.risk_score:<5} {r.total:<5} {r.scan_id}")
         print("\nDownload:  k8smatrixwarden report download --scan-id <ID> "
               "--format markdown --output report.md")
         return 0
@@ -426,8 +434,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--yes", "-y", action="store_true", help="skip confirmation")
     s.add_argument("--fail-on", choices=["LOW", "MEDIUM", "HIGH", "CRITICAL"],
                    help="exit 1 if a finding at/above this severity is found (CI mode)")
+    s.add_argument("--name", help="human name for this scan; the report is named/identified "
+                   "as '<name> + date + time' and is easy to find in the web dashboard")
     s.add_argument("--save", action="store_true",
-                   help="persist the result to the report store for later download")
+                   help="(deprecated) scans are saved by default now; this flag is a no-op")
+    s.add_argument("--no-save", action="store_true",
+                   help="do NOT persist this scan to the report store (skips the dashboard)")
     s.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR,
                    help=f"report store directory (shared default: {_DEFAULT_REPORTS_DIR}; "
                         f"override with $K8SMATRIXWARDEN_REPORTS_DIR)")

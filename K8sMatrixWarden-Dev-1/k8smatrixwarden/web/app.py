@@ -13,6 +13,7 @@ the cluster from any surface.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import parse_qs
@@ -128,7 +129,8 @@ class WebApp:
         is missing/unknown so a stale selection never 404s the whole dashboard."""
         reports = self.store.list()
         if not reports:
-            return {"has_scan": False, "history": []}
+            return {"has_scan": False, "history": [],
+                    "selectors": self._selector_vocab()}
         known = {r.scan_id for r in reports}
         selected = scan_id if scan_id in known else reports[0].scan_id
         latest = self._load(selected)
@@ -145,7 +147,10 @@ class WebApp:
         return {
             "has_scan": True,
             "selected_scan_id": selected,
-            "scan": {"scan_id": latest.scan_id, "generated_at": latest.generated_at,
+            "selectors": self._selector_vocab(),
+            "scan": {"scan_id": latest.scan_id, "name": latest.name,
+                     "display_name": latest.display_name,
+                     "generated_at": latest.generated_at,
                      "mode": latest.mode, "scope": latest.request.scope.describe(),
                      "rating": latest.risk.rating,
                      "cluster_risk": latest.risk.cluster_risk,
@@ -158,7 +163,9 @@ class WebApp:
                         "exposed_tactics": exposed},
             "trend": [[r.generated_at, r.risk_score] for r in reversed(reports)],
             "timeline": self.store.timeline(),
-            "history": [{"scan_id": r.scan_id, "generated_at": r.generated_at,
+            "history": [{"scan_id": r.scan_id, "name": r.name,
+                         "display_name": r.display_name,
+                         "generated_at": r.generated_at,
                          "rating": r.rating, "risk_score": r.risk_score,
                          "total": r.total, "scope": r.scope} for r in reports],
         }
@@ -218,7 +225,9 @@ class WebApp:
     # ------------------------------------------------------------------ #
     def _api_reports(self, q: dict) -> Response:
         limit = _int(q.get("limit"))
-        return _json([{"scan_id": r.scan_id, "generated_at": r.generated_at,
+        return _json([{"scan_id": r.scan_id, "name": r.name,
+                       "display_name": r.display_name,
+                       "generated_at": r.generated_at,
                        "rating": r.rating, "risk_score": r.risk_score,
                        "total_findings": r.total, "scope": r.scope}
                       for r in self.store.list(limit=limit)])
@@ -253,23 +262,40 @@ class WebApp:
         scope = self._scope_from(data)
         selector = self._selector_from(data)
         mock = bool(data.get("mock", True))
-        try:
-            collector = self.p.make_collector(
-                mock=mock, fixture=data.get("fixture"),
-                kubeconfig=data.get("kubeconfig"), context=data.get("context"))
-        except RuntimeError as exc:
-            return _json({"error": str(exc)}, 400)
+        scan_name = (data.get("scan_name") or "").strip()
 
-        from ..agents.scanner import ScannerAgent
-        request = ScanRequest(scope=scope, selector=selector, mode=ScanMode.SYNC)
+        # kubeconfig may arrive as a server-side path (`kubeconfig`) OR as the file's
+        # contents uploaded from the browser file-picker (`kubeconfig_content`) — the
+        # browser can't reveal a real filesystem path, so a picked file is sent by value
+        # and materialised into a short-lived temp file here.
+        kubeconfig, tmp_kubeconfig = self._resolve_kubeconfig(data)
         try:
-            result = ScannerAgent(self.p).scan(
-                request, collector, mode_label="mock" if mock else "live")
-        except Exception as exc:
-            return _json({"error": f"scan failed: {exc}"}, 400)
+            try:
+                collector = self.p.make_collector(
+                    mock=mock, fixture=data.get("fixture"),
+                    kubeconfig=kubeconfig, context=data.get("context"))
+            except RuntimeError as exc:
+                return _json({"error": str(exc)}, 400)
+
+            from ..agents.scanner import ScannerAgent
+            request = ScanRequest(scope=scope, selector=selector, mode=ScanMode.SYNC)
+            try:
+                result = ScannerAgent(self.p).scan(
+                    request, collector, mode_label="mock" if mock else "live",
+                    name=scan_name)
+            except Exception as exc:
+                return _json({"error": f"scan failed: {exc}"}, 400)
+        finally:
+            if tmp_kubeconfig:
+                try:
+                    os.unlink(tmp_kubeconfig)
+                except OSError:
+                    pass
 
         self.store.save(result)
-        return _json({"scan_id": result.scan_id, "rating": result.risk.rating,
+        return _json({"scan_id": result.scan_id, "name": result.name,
+                      "display_name": result.display_name,
+                      "rating": result.risk.rating,
                       "risk": result.risk.cluster_risk,
                       "security_score": result.risk.security_score,
                       "total_findings": result.total(),
@@ -278,9 +304,39 @@ class WebApp:
                       "report_url": f"/report/{result.scan_id}",
                       "matrix_url": f"/report/{result.scan_id}/matrix"})
 
+    def _resolve_kubeconfig(self, data: dict) -> tuple[Optional[str], Optional[str]]:
+        """Return (kubeconfig_path, temp_path_to_clean_up).
+
+        Prefers an explicit server-side `kubeconfig` path; otherwise, if the browser
+        uploaded the file's `kubeconfig_content`, writes it to a temp file and returns that
+        path plus the same path as the second element so the caller unlinks it afterward."""
+        path = data.get("kubeconfig")
+        if isinstance(path, str) and path.strip():
+            return path.strip(), None
+        content = data.get("kubeconfig_content")
+        if isinstance(content, str) and content.strip():
+            import tempfile
+            fd, tmp = tempfile.mkstemp(prefix="k8smw-kubeconfig-", suffix=".yaml")
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            return tmp, tmp
+        return None, None
+
     # ------------------------------------------------------------------ #
     # helpers
     # ------------------------------------------------------------------ #
+    def _selector_vocab(self) -> dict:
+        """Every selectable term the dashboard's Scan-form selector dropdown offers, grouped
+        by axis (the same vocabulary the CLI/chat resolve against, from the mapping engine's
+        registry-derived index — so it never drifts from what actually exists). Techniques
+        and rule ids are intentionally omitted: there are too many to be a usable dropdown,
+        and tactics/modules/frameworks/aliases cover the user-facing selectors."""
+        terms = self.p.mapping.known_terms()
+        return {"tactics": terms.get("tactics", []),
+                "modules": terms.get("modules", []),
+                "frameworks": terms.get("frameworks", []),
+                "aliases": terms.get("aliases", [])}
+
     def _scope_from(self, data: dict) -> Scope:
         key = str(data.get("scope_level") or "cluster").lower().replace("-", "_")
         try:

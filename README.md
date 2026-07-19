@@ -17,11 +17,25 @@
 
 ---
 
+## Repository layout
+
+This README lives at the repository root; the Python package and all project docs live in
+the **`K8sMatrixWarden-Dev-1/`** subfolder. Run every command below from inside it (or
+`pip install -e .` once from there to get the `k8smatrixwarden` command on your PATH):
+
+```bash
+cd K8sMatrixWarden-Dev-1
+python -m k8smatrixwarden doctor        # sanity-check the install
+```
+
 ## TL;DR
 
 ```bash
 # no install, no dependencies — runs against a bundled insecure mock cluster
 python -m k8smatrixwarden scan --mock
+
+# name a scan — the saved report is "<name> + date + time" in the dashboard history
+python -m k8smatrixwarden scan --mock --name "Prod nightly"
 
 # scan by MITRE tactic  (resolves across shards through ONE registry index)
 python -m k8smatrixwarden scan --tactic Persistence --mock
@@ -73,7 +87,9 @@ right now**, and here's the kill-chain." On top of the scanner, the platform add
   Threat Matrix, Attack Path, Attack Map, Runtime, Scan). A **report selector** switches the whole
   view to any saved scan, and every finding — in the Findings table, the Threat Matrix drill-downs,
   and the Attack Path / Attack Map stages — **deep-links straight to its card in the full report**.
-  Live Falco ingestion feeds the Runtime tab. All timestamps are shown in **IST**.
+  The **Scan** tab lets you name a scan and, for live scans, either type a **kubeconfig path** *or*
+  **select the kubeconfig file from your system** (whichever is convenient). Live Falco ingestion
+  feeds the Runtime tab. All timestamps are shown in **IST**.
 
 ## Install (optional extras)
 
@@ -98,7 +114,7 @@ pip install -e ".[pdf]"       # + fpdf2, for `-o pdf` report export
 | `k8smatrixwarden rules [--module M] [--tactic T]` | List the rule registry (each tagged `surface=scan`) |
 | `k8smatrixwarden coverage` | MITRE tactic coverage (rules per tactic) |
 | `k8smatrixwarden cis ...` | Full **CIS Kubernetes Benchmark v1.8** (all 130 controls) |
-| `k8smatrixwarden report list / download` | List & re-download saved scans in any format/filename (`scan --save`) |
+| `k8smatrixwarden report list / download` | List & re-download saved scans in any format/filename (scans are saved automatically) |
 | `k8smatrixwarden roles` | Per-plugin scoped RBAC ClusterRoles (§20/§21) |
 | `k8smatrixwarden doctor` | Validate taxonomy, aliases, duplicate rule ids |
 | `k8smatrixwarden mcp [--list-tools]` | Run the MCP server, or list its 30 tools |
@@ -108,10 +124,16 @@ pip install -e ".[pdf]"       # + fpdf2, for `-o pdf` report export
 ```
 scope    : --namespace/-n · --pod · --workload KIND/name · --node · --image · --helm-release
 selector : --tactic · --technique · --module · --rule · --alias · --framework · --severity-min
-mode     : --mock (default) · --live · --fixture PATH · --kubeconfig PATH
+mode     : --mock (default) · --live · --fixture PATH · --kubeconfig PATH · --context NAME
 output   : -o {terminal,text,markdown,json,sarif,html,pdf} · --output-file PATH
+naming   : --name "<scan name>"     report is named "<name> + date + time"
+store    : (saved by default → web dashboard) · --no-save to skip · --reports-dir PATH
 flow     : --dry-run · --yes · --fail-on {LOW,MEDIUM,HIGH,CRITICAL}   (CI mode)
 ```
+
+> **Scans are saved by default.** Every `scan` (and every MCP `run_scan`/`intelligent_scan`)
+> persists to the shared report store, so it shows up immediately in the web dashboard's
+> **Scan history** — no `--save` needed. Use `--no-save` for a throwaway run.
 
 Examples:
 
@@ -164,7 +186,7 @@ python -m k8smatrixwarden cis --kube-bench-json kb.json   # + kube-bench → all
 | Orchestrator §4 | `k8smatrixwarden/agents/orchestrator.py` |
 | Scanner Agent §5 | `k8smatrixwarden/agents/scanner.py` |
 | Runtime Agent §8 | `k8smatrixwarden/agents/runtime.py` (Falco/audit/drift detections, all tagged `surface=runtime`) |
-| MCP Server + 5 datasets §10 | `k8smatrixwarden/mcp/` — **30 tools** across 4 layers: knowledge (14), scan/audit/runtime/analysis (12: `run_scan`, `preview_scan`, `interpret_query`, `intelligent_scan`, `detect_cluster_provider`, `run_cis_benchmark`, `build_threat_matrix`, `build_attack_path`, `evaluate_runtime_events`, `correlate_runtime`, `detect_drift`, `list_runtime_detections`), reports (2: `list_reports`, `download_report`), platform (2: `generate_rbac_manifest`, `deploy_falco`). Read-only: no remediation/apply tool is exposed. Full per-tool descriptions in `USAGE.md` §4.5. |
+| MCP Server + 5 datasets §10 | `k8smatrixwarden/mcp/` — **30 tools** across 4 layers: knowledge (14), scan/audit/runtime/analysis (12: `run_scan`, `preview_scan`, `interpret_query`, `intelligent_scan`, `detect_cluster_provider`, `run_cis_benchmark`, `build_threat_matrix`, `build_attack_path`, `evaluate_runtime_events`, `correlate_runtime`, `detect_drift`, `list_runtime_detections`), reports (2: `list_reports`, `download_report`), platform (2: `generate_rbac_manifest`, `deploy_falco`). **Every parameter of every tool carries a schema description** (via `Annotated[..., Field(description=…)]`) so the calling LLM sees fully documented arguments. Read-only: no remediation/apply tool is exposed. Full per-tool descriptions in `K8sMatrixWarden-Dev-1/USAGE.md` §4.5. |
 | Scan × Runtime correlation §8 | `k8smatrixwarden/core/correlation.py` (`correlate()`, `detect_drift()`) — joins static findings to live Falco/audit alerts by MITRE tactic; drift flags declared-vs-observed posture contradictions |
 | Attack-path derivation §12 | `k8smatrixwarden/core/threat_matrix.py::attack_paths()` — chains threat-matrix hit cells into a kill-chain |
 | Interactive Dashboard §3.1/§19 | `k8smatrixwarden/web/` — zero-dependency SPA (7 tabs) with a report selector + finding deep-links to the report; `/api/dashboard[?scan_id=…]` · `/api/timeline` (MTTD/MTTR metrics) · `/api/runtime` (live Falco ingestion) |
@@ -211,9 +233,13 @@ skipped types (CLI `warning:` lines; a `warnings[]` field on the web `/api/scan`
 `run_scan`/`intelligent_scan` responses), so partial coverage is always visible.
 
 All surfaces (CLI, MCP, web) also share **one report store** by default —
-`~/.k8smatrixwarden/reports` (override with `$K8SMATRIXWARDEN_REPORTS_DIR`) — so a scan saved
-from the CLI or an LLM/MCP call appears in the web dashboard's **Scan history** with no extra
-wiring. See `USAGE.md` §4.5.
+`~/.k8smatrixwarden/reports` (override with `$K8SMATRIXWARDEN_REPORTS_DIR`) — and **every scan
+is persisted to it automatically** (CLI `scan`, MCP `run_scan`/`intelligent_scan`, and the web
+scan button), so a scan run from the CLI or an LLM/MCP call appears in the web dashboard's
+**Scan history** with no extra wiring. Give a scan a name (CLI `--name`, MCP `scan_name`, or
+the dashboard's *Scan name* field) and its report is titled **"&lt;name&gt; + date + time"**
+(e.g. `Prod nightly — 19 Jul 2026, 01:13 IST`) so it's easy to find later. See
+`K8sMatrixWarden-Dev-1/USAGE.md` §4.5.
 
 ## Safety
 
@@ -223,12 +249,14 @@ output (reports, threat matrix, MCP tools, web dashboard) is derived from that r
 snapshot. The MCP surface exposes no write-capable tool, enforced by
 `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed`.
 
-## Docs in this folder
+## Docs
 
-- **`K8sMatrixWarden-doc.html`** — the full reference site (open it directly in a browser):
-  architecture, all 10 shards' rule catalogs, MITRE/OWASP/CIS coverage,
+All project docs live in the **`K8sMatrixWarden-Dev-1/`** subfolder:
+
+- **`K8sMatrixWarden-Dev-1/K8sMatrixWarden-doc.html`** — the full reference site (open it directly
+  in a browser): architecture, all 10 shards' rule catalogs, MITRE/OWASP/CIS coverage,
   the runtime-correlation layer, and the complete 30-tool MCP reference, in one self-contained
   page (dark/light aware)
-- **`USAGE.md`** — full usage guide: every command, every flag, copy-paste workflows, CI recipes, troubleshooting
-- `ANALYSIS.md` — pre-implementation technical analysis of the architecture spec
-- `REVIEW.md` — post-implementation review, refinements made, and the forward roadmap
+- **`K8sMatrixWarden-Dev-1/USAGE.md`** — full usage guide: every command, every flag, copy-paste workflows, CI recipes, troubleshooting
+- `K8sMatrixWarden-Dev-1/ANALYSIS.md` — pre-implementation technical analysis of the architecture spec
+- `K8sMatrixWarden-Dev-1/REVIEW.md` — post-implementation review, refinements made, and the forward roadmap

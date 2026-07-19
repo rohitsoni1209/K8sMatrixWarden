@@ -679,7 +679,7 @@ footer.site-footer {
             </div>
             <div class="term-body">
 <div class="ln"><span class="pr">$</span> k8smatrixwarden scan --mock</div>
-<div class="ln"><span class="cm">🛡️  K8s SECURITY REPORT · scan-20260717-4839</span></div>
+<div class="ln"><span class="cm">🛡️  K8s SECURITY REPORT · scan-20260717-143012-4839</span></div>
 <div class="ln">Scope: cluster-wide  ·  Rules run: 56</div>
 <div class="ln">RISK  <span class="cr">🔴 9.7/10 (Critical)</span>  ·  Security score 3/100</div>
 <div class="ln"><span class="cr">🔴 CRITICAL</span>  16   <span class="hi">🟠 HIGH</span>  42</div>
@@ -821,8 +821,13 @@ Validation    : ✅ clean (taxonomy + aliases + no duplicate rule ids)</code></p
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
   <pre><code>k8smatrixwarden scan --mock
 k8smatrixwarden scan --tactic Persistence --mock
+k8smatrixwarden scan --mock --name "Prod nightly"   <span class="c-mut"># name it → saved as "&lt;name&gt; + date + time"</span>
 k8smatrixwarden chat</code></pre>
 </div>
+<div class="callout">Every scan is <strong>saved automatically</strong> to the shared report
+store, so it appears in the <a href="#web">web dashboard</a>'s Scan history — no flag needed.
+Add <code>--name "…"</code> to title it <code>&lt;name&gt; + date + time</code>, or
+<code>--no-save</code> for a throwaway run.</div>
 
 <h4>Optional extras</h4>
 <div class="table-scroll"><table>
@@ -1401,9 +1406,11 @@ same engine. Pick whichever fits the moment.</p>
 <tr><td><code>text</code></td><td>The same content, dependency-free plain text</td></tr>
 </tbody>
 </table></div>
-<p>Scan once with <code>--save</code>, then re-download in a <em>different</em> format
-later — markdown for the PR, SARIF for CI, HTML for a stakeholder — all from the one
-stored scan.</p>
+<p>Every scan is <strong>saved automatically</strong> to the shared report store, so you can
+re-download it in a <em>different</em> format later — markdown for the PR, SARIF for CI, HTML
+for a stakeholder — all from the one stored scan. Add <code>--name "…"</code> to title it
+<code>&lt;name&gt; + date + time</code> in the history; use <code>--no-save</code> for a
+throwaway run.</p>
 
 <h3 id="threat-matrix">Kubernetes Threat Matrix</h3>
 <p>Every scan projects its findings onto the 9-tactic
@@ -1471,8 +1478,11 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
   <strong>One shared history across CLI, MCP, and web.</strong> By default all three surfaces
   read/write the same store — <code>~/.k8smatrixwarden/reports</code> (override for all at once
   with <code>$K8SMATRIXWARDEN_REPORTS_DIR</code>) — resolved independently of the working
-  directory. So a scan you <code>--save</code> from the CLI, or that an LLM runs through the
-  <code>run_scan</code> MCP tool, shows up in this dashboard's <em>Scan history</em> automatically.
+  directory, and <strong>every scan is persisted automatically</strong>. So a scan you run from
+  the CLI, or that an LLM runs through the <code>run_scan</code>/<code>intelligent_scan</code>
+  MCP tools, shows up in this dashboard's <em>Scan history</em> with no extra step. Name a scan
+  (CLI <code>--name</code>, MCP <code>scan_name</code>, or the dashboard's <em>Scan name</em>
+  field) and its report is titled <code>&lt;name&gt; + date + time</code>.
 </div>
 
 <h3>The seven tabs</h3>
@@ -1485,7 +1495,7 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 <tr><td><strong>Attack Path</strong></td><td>The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. Select any stage to list every finding under that tactic, each linking to the report.</td></tr>
 <tr><td><strong>Attack Map</strong></td><td>The kill-chain <em>with the vulnerable resources</em> (Pods/Deployments/…) grouped per tactic — an accordion; expand a stage to see its exposed resources and the findings there (each linking to the report).</td></tr>
 <tr><td><strong>Runtime</strong></td><td>Paste Falco events (or load a sample) → correlate against the scan's findings + detect drift, rendered as confirmed / corroborated / runtime-only cards and drift findings.</td></tr>
-<tr><td><strong>Scan</strong></td><td>A run-a-scan form (scope + selector + mock/live) and the saved-scan history table.</td></tr>
+<tr><td><strong>Scan</strong></td><td>A run-a-scan form and the saved-scan history table. The form takes an optional <em>Scan name</em>, a scope picker (with a namespace box that enables for <em>namespace</em> scope), a <em>Selector</em> dropdown populated from the live registry vocabulary (tactics/modules/frameworks/aliases — never an invalid term), mock/live, and — for live scans — either a typed <em>kubeconfig path</em> <em>or</em> a <em>file picker</em> to select the kubeconfig from your system. Every scan run here is saved and titled <code>&lt;name&gt; + date + time</code>.</td></tr>
 </tbody>
 </table></div>
 
@@ -1496,11 +1506,11 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 <tbody>
 <tr><td><code>GET /api/dashboard</code></td><td>Everything the SPA renders in one call: scan meta, findings, threat matrix, attack path, runtime readiness, risk trend, and timeline. Timestamps are IST.</td></tr>
 <tr><td><code>GET /api/dashboard?scan_id=&lt;id&gt;</code></td><td>Render a specific saved scan instead of the latest (the report selector) — falls back to the latest on an unknown id; includes <code>selected_scan_id</code>.</td></tr>
-<tr><td><code>GET /api/reports</code></td><td>List of saved scans (id, time, rating, risk, findings, scope).</td></tr>
+<tr><td><code>GET /api/reports</code></td><td>List of saved scans (id, <code>name</code>, <code>display_name</code>, time, rating, risk, findings, scope).</td></tr>
 <tr><td><code>GET /api/report/&lt;id&gt;?format=json|markdown|sarif|html|text</code></td><td>The report re-rendered in the requested format.</td></tr>
 <tr><td><code>GET /api/report/&lt;id&gt;/matrix</code></td><td>The scan's threat matrix as JSON.</td></tr>
 <tr><td><code>GET /api/timeline</code></td><td>Finding-age metrics — open/resolved counts, MTTD/MTTR, oldest critical.</td></tr>
-<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scope_level","namespace?","selector?","mock","context?","kubeconfig?"}</code> → returns the new scan id, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection. An unreachable live cluster returns a clean <code>400 {"error":…}</code>, never a stack trace.</td></tr>
+<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scan_name?","scope_level","namespace?","selector?","mock","context?","kubeconfig?","kubeconfig_content?"}</code> (a live scan may pass the kubeconfig by path <code>kubeconfig</code> <em>or</em> by value <code>kubeconfig_content</code> — how the browser file-picker uploads it) → returns the new scan id, <code>name</code>/<code>display_name</code>, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection. An unreachable live cluster returns a clean <code>400 {"error":…}</code>, never a stack trace.</td></tr>
 <tr><td><code>POST /api/runtime</code></td><td>Ingest Falco/audit events — a single falcosidekick event <em>or</em> a <code>{"events":[…]}</code> batch → <code>{correlation, drift}</code>. Read-only: never mutates the cluster.</td></tr>
 <tr><td><code>GET /health</code></td><td>Liveness + platform stats (rule/shard counts).</td></tr>
 </tbody>
@@ -1524,7 +1534,11 @@ path-traversal-guarded, and <code>--no-scan</code> serves existing reports fully
 <p class="lede">30 tools across four layers, so any MCP-compatible AI agent — Claude,
 Cursor, VS Code, Windsurf — can do everything the CLI can: scan, audit, project the threat
 matrix and kill-chain, correlate a live runtime feed against static findings, and export
-reports. The whole surface is read-only — there is no apply/remediate tool.</p>
+reports. The whole surface is read-only — there is no apply/remediate tool. Every tool's
+docstring is its LLM-facing description, and <strong>every parameter carries its own schema
+description</strong> (via <code>Annotated[T, Field(description=…)]</code>) — a fully documented
+argument list for all 150 parameters. Scans over MCP save to the shared store by default, so an
+LLM-driven scan appears in the web dashboard's Scan history.</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">.cursor/mcp.json</span><button class="copy-btn" data-copy>Copy</button></div>
@@ -1576,9 +1590,9 @@ fails the build if a write-capable tool name ever appears.</p></div>
 <thead><tr><th>Tool</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>preview_scan</code></td><td>Resolve scope+selector to the exact rule set — no cluster access, the plan-before-you-run step.</td></tr>
-<tr><td><code>run_scan</code></td><td>Run a real scan. <code>output_format</code> returns structured JSON (default, includes the <code>threat_matrix</code> block) or a fully rendered markdown/html/sarif/text/terminal/pdf report; <code>save</code> persists it.</td></tr>
+<tr><td><code>run_scan</code></td><td>Run a real scan. <code>output_format</code> returns structured JSON (default, includes the <code>threat_matrix</code> block) or a fully rendered markdown/html/sarif/text/terminal/pdf report. <code>save=True</code> by default (persists to the shared store → dashboard history; pass <code>save=False</code> to skip); <code>scan_name</code> titles the report <code>&lt;name&gt; + date + time</code>.</td></tr>
 <tr><td><code>interpret_query</code></td><td>Parse natural language ("scan production for persistence") into scope/selector — no execution.</td></tr>
-<tr><td><code>intelligent_scan</code></td><td><strong>One call, everything:</strong> parse plain English → detect the cluster → scan → return findings, risk, the threat matrix, <em>and</em> the kill-chain attack path. Composes the five tools below.</td></tr>
+<tr><td><code>intelligent_scan</code></td><td><strong>One call, everything:</strong> parse plain English → detect the cluster → scan → return findings, risk, the threat matrix, <em>and</em> the kill-chain attack path. Composes the five tools below. Saves by default (<code>save=True</code>); <code>scan_name</code> labels it.</td></tr>
 <tr><td><code>detect_cluster_provider</code></td><td>Detect the cluster from its Node objects — <code>cloud</code>, <code>managed</code>, and the CIS <code>profile</code> to feed <code>run_cis_benchmark</code>. Read-only, no control-plane access.</td></tr>
 <tr><td><code>run_cis_benchmark</code></td><td>The full 130-control CIS benchmark. <code>profile="auto"</code> auto-detects the provider.</td></tr>
 <tr><td><code>build_threat_matrix</code></td><td>Project findings onto the 9-tactic Kubernetes Threat Matrix (fresh scan, a saved report, or global detection coverage) — the same structure the report/dashboard heatmap uses.</td></tr>
@@ -1596,7 +1610,7 @@ fails the build if a write-capable tool name ever appears.</p></div>
 <div class="table-scroll"><table>
 <thead><tr><th>Tool</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>list_reports</code></td><td>List previously saved scans (from <code>run_scan(save=True)</code>).</td></tr>
+<tr><td><code>list_reports</code></td><td>List previously saved scans (every <code>run_scan</code>/<code>intelligent_scan</code> is saved by default) — name, time, rating, risk, findings, scan id.</td></tr>
 <tr><td><code>download_report</code></td><td>Re-render a saved scan in any of the 7 formats without re-scanning; omit <code>scan_id</code> for the latest.</td></tr>
 </tbody>
 </table></div>

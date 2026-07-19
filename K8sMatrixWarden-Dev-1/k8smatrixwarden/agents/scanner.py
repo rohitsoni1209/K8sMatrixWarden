@@ -21,7 +21,7 @@ class ScannerAgent:
         return self.p.mapping.resolve(request.selector)
 
     def scan(self, request: ScanRequest, collector: EvidenceCollector,
-             mode_label: str = "mock") -> ScanResult:
+             mode_label: str = "mock", name: str = "") -> ScanResult:
         rule_ids = self.resolve(request)
 
         # Evidence is already scope-constrained by the collector, so findings are in scope.
@@ -38,5 +38,6 @@ class ScannerAgent:
             counts=self.p.aggregator.counts(findings),
             by_tactic=self.p.aggregator.by_tactic(findings),
             by_shard=self.p.aggregator.by_shard(findings),
+            name=name,
             mode=mode_label,
         )

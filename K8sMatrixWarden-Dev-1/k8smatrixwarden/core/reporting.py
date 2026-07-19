@@ -94,7 +94,13 @@ class ReportingEngine:
     def terminal(self, result: ScanResult) -> str:
         if not _RICH:
             return self.text(result)
-        console = Console(record=True, width=100)
+        # A plain `Console(record=True)` still writes every `console.print(...)` straight to
+        # the real stdout while *also* recording it — so callers that print the returned
+        # string (cli cmd_scan does) would emit the whole report twice. Render into an
+        # in-memory sink instead: this stays a pure string-builder like every other
+        # renderer, so the single caller-side print emits it exactly once.
+        import io
+        console = Console(record=True, width=100, file=io.StringIO())
         r = result.risk
         c = result.counts
 
@@ -205,9 +211,12 @@ class ReportingEngine:
         md: list[str] = []
 
         # ---- frontmatter ------------------------------------------------ #
+        # scan name is free user input — escape quotes so the YAML frontmatter stays valid
+        _yaml_name = str(result.name).replace("\\", "\\\\").replace('"', '\\"')
         md += [
             "---",
             'title: "K8s Security Report"',
+            f'name: "{_yaml_name}"',
             f'cluster: "{result.cluster_name}"',
             f'scan_id: "{result.scan_id}"',
             f'generated_at: "{result.generated_at}"',
@@ -519,21 +528,30 @@ class ReportingEngine:
         for f in findings:
             ctx = build_finding_context(f)
 
-            mitre_tags = " ".join(f"<span class='tag mitre'>{_esc(m.tactic)} · "
-                                  f"{_esc(m.technique_id)}</span>" for m in ctx.mitre)
+            # Chips: the technique / standard IDs are themselves clickable, each deep-linking
+            # to its authoritative reference (MITRE per-technique page, OWASP Top 10, CIS
+            # benchmark) — so a reader can jump straight from the ID to its source.
+            mitre_tags = " ".join(
+                f"<a class='tag mitre' href='{_esc(m.url)}' target='_blank' rel='noopener' "
+                f"title='View {_esc(m.technique_id)} on MITRE ATT&amp;CK'>{_esc(m.tactic)} · "
+                f"{_esc(m.technique_id)}</a>" for m in ctx.mitre)
             std_tags = "".join(
-                f"<span class='tag std'>{_esc(s.framework.split()[0])} "
-                f"{_esc(s.control)}</span>" for s in ctx.standards)
+                f"<a class='tag std' href='{_esc(s.url)}' target='_blank' rel='noopener' "
+                f"title='{_esc(s.framework)} {_esc(s.control)} reference'>"
+                f"{_esc(s.framework.split()[0])} {_esc(s.control)}</a>" for s in ctx.standards)
             amp = "<span class='tag amp'>⚡ multi-tactic</span>" if len(f.tactics) > 1 else ""
 
             mitre_rows = "".join(
                 f"<tr><td>{_esc(m.tactic)}</td><td>{_esc(m.technique_name)} "
-                f"<code>{_esc(m.technique_id)}</code></td>"
+                f"<a href='{_esc(m.url)}' target='_blank' rel='noopener'>"
+                f"<code>{_esc(m.technique_id)}</code></a></td>"
                 f"<td><a href='{_esc(m.url)}' target='_blank' rel='noopener'>Reference</a></td></tr>"
                 for m in ctx.mitre) or "<tr><td colspan='3' class='muted'>Not mapped to a " \
                 "MITRE ATT&amp;CK technique.</td></tr>"
             std_rows = "".join(
-                f"<tr><td>{_esc(s.framework)}</td><td>{_esc(s.control)} — {_esc(s.title)}</td>"
+                f"<tr><td>{_esc(s.framework)}</td>"
+                f"<td><a href='{_esc(s.url)}' target='_blank' rel='noopener'>{_esc(s.control)}</a>"
+                f" — {_esc(s.title)}</td>"
                 f"<td><a href='{_esc(s.url)}' target='_blank' rel='noopener'>Reference</a></td></tr>"
                 for s in ctx.standards) or "<tr><td colspan='3' class='muted'>No named " \
                 "standard or benchmark maps to this finding.</td></tr>"
@@ -640,7 +658,8 @@ def _finding_card(f: Finding, i: int) -> list[str]:
     if ctx.standards:
         out += ["| Framework | Control | Reference |", "|:--|:--|:--|"]
         for s in ctx.standards:
-            out.append(f"| {s.framework} | {s.control} — {s.title} | [Reference]({s.url}) |")
+            out.append(f"| {s.framework} | [{s.control}]({s.url}) — {s.title} | "
+                       f"[Reference]({s.url}) |")
         out.append("")
     else:
         out += ["_No named standard or benchmark control maps to this finding._", ""]
@@ -650,7 +669,7 @@ def _finding_card(f: Finding, i: int) -> list[str]:
     if ctx.mitre:
         out += ["| Tactic | Technique | Reference |", "|:--|:--|:--|"]
         for m in ctx.mitre:
-            out.append(f"| {m.tactic} | {m.technique_name} (`{m.technique_id}`) | "
+            out.append(f"| {m.tactic} | {m.technique_name} ([`{m.technique_id}`]({m.url})) | "
                        f"[Reference]({m.url}) |")
         out.append("")
     else:
@@ -895,6 +914,8 @@ h1{font-size:1.6rem;margin:.2rem 0}.sub{color:var(--muted);font-size:.9rem}
 .tag.owasp{border-color:var(--high);color:var(--high)}
 .tag.std{border-color:var(--low);color:var(--low)}
 .tag.amp{border-color:var(--crit);color:var(--crit);font-weight:600}
+a.tag{text-decoration:none;cursor:pointer}a.tag:hover{filter:brightness(1.15);text-decoration:underline}
+table.ctx-table code{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:0 .3rem}
 details{margin-top:.5rem}summary{cursor:pointer;font-size:.85rem;color:var(--accent)}
 pre.cmd{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:.7rem;
  overflow:auto;font-size:.82rem;white-space:pre-wrap}

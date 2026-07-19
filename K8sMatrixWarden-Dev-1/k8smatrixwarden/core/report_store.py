@@ -45,7 +45,8 @@ DEFAULT_DIR = default_reports_dir()
 #: point-in-time scan alone can't. Granularity == scan cadence.
 _TIMELINE_FILE = "_timeline.json"
 
-#: A scan id is `scan-YYYYMMDD-xxxx` (or synthetic ids like `coverage`). Anything with a
+#: A scan id is `<name>-YYYYMMDD-HHMMSS-xxxx` (or `scan-…` when unnamed, or a synthetic id
+#: like `coverage`) — see core/results.py::_scan_id. Anything with a
 #: path separator, `..`, or other filesystem-significant character is rejected before it is
 #: ever joined into a path — otherwise a caller-supplied id (a web route param, an
 #: LLM-provided argument) could traverse out of the store dir and read arbitrary `*.json`.
@@ -61,6 +62,8 @@ class StoredReport:
     risk_score: float
     total: int
     scope: str
+    name: str = ""
+    display_name: str = ""
 
 
 class ReportStore:
@@ -156,14 +159,19 @@ class ReportStore:
             risk = d.get("risk", {}) or {}
             counts = d.get("counts", {}) or {}
             total = sum(v for k, v in counts.items() if k != "INFO")
+            scan_id = d.get("scan_id", os.path.basename(p)[:-5])
             out.append(StoredReport(
-                scan_id=d.get("scan_id", os.path.basename(p)[:-5]),
+                scan_id=scan_id,
                 path=p,
                 generated_at=d.get("generated_at", ""),
                 rating=risk.get("rating", "?"),
                 risk_score=risk.get("cluster_risk", 0.0),
                 total=total,
-                scope=d.get("scope", "")))
+                scope=d.get("scope", ""),
+                name=d.get("name", ""),
+                display_name=d.get("display_name")
+                or _fallback_display_name(d.get("name", ""), scan_id,
+                                          d.get("generated_at", ""))))
         out.sort(key=lambda r: r.generated_at, reverse=True)
         return out[:limit] if limit else out
 
@@ -184,6 +192,15 @@ class ReportStore:
         if not scan_id or scan_id == "latest":
             return self.load_latest()
         return self.load(scan_id)
+
+
+def _fallback_display_name(name: str, scan_id: str, generated_at: str) -> str:
+    """Reconstruct a report's display name for reports saved before `display_name` was
+    persisted, so old scans still list with a "<name/id> — <date> <time>" label."""
+    from .timeutil import format_ist
+    head = name or scan_id
+    when = format_ist(generated_at)
+    return f"{head} — {when}" if when != "—" else head
 
 
 def _parse_ts(s: str) -> Optional[_dt.datetime]:

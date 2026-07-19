@@ -26,8 +26,7 @@
 7. [Natural-Language Queries](#7-natural-language-queries)
 8. [Output Formats](#8-output-formats)
 9. [Running Against a Real Cluster](#9-running-against-a-real-cluster)
-10. [CI/CD Integration](#10-cicd-integration)
-11. [Common Workflows (copy-paste recipes)](#11-common-workflows-copy-paste-recipes)
+11. [Common Workflows](#11-common-workflows)
 12. [Configuration](#12-configuration)
 13. [Understanding the Output](#13-understanding-the-output)
 14. [Troubleshooting](#14-troubleshooting)
@@ -177,13 +176,28 @@ k8smatrixwarden scan [QUERY...] [scope flags] [selector flags] [output flags] [f
 | `--kubeconfig PATH` | kubeconfig file to use with `--live` (default: `~/.kube/config`) |
 | `--context NAME` | kubeconfig context to use with `--live` (default: `current-context`) |
 
+**Naming & report-store flags:**
+
+| Flag | Meaning |
+|---|---|
+| `--name "TEXT"` | give the scan a human name; the saved report is titled **`<name> + date + time`** (e.g. `Prod nightly — 19 Jul 2026, 01:13 IST`) and is easy to find in the dashboard / `report list` |
+| *(saved by default)* | every scan is persisted to the shared report store automatically, so it appears in the web dashboard's **Scan history** — no flag needed |
+| `--no-save` | do **not** persist this scan (skips the dashboard / `report list`) — for a throwaway run |
+| `--save` | **deprecated no-op** — scans are saved by default now; kept so old scripts don't break |
+| `--reports-dir DIR` | override where this scan is saved (default: the shared store, see [§4.5](#45-k8smatrixwarden-report--download-saved-reports-later)) |
+
 **Flow flags:**
 
 | Flag | Meaning |
 |---|---|
-| `--dry-run` | show which rules *would* run, without scanning |
+| `--dry-run` | show which rules *would* run, without scanning (nothing is saved) |
 | `-y, --yes` | skip the confirmation prompt (natural-language mode) |
 | `--fail-on LEVEL` | exit code `1` if any finding ≥ this severity (for CI) |
+
+> **Scans save automatically.** Since scans are persisted by default, running
+> `k8smatrixwarden scan --live` (or any scan) makes the result show up immediately in the web
+> dashboard's **Scan history** — you no longer need `--save`. Add `--name "…"` to label it,
+> or `--no-save` to skip persistence entirely.
 
 ### 4.2 `k8smatrixwarden chat`
 
@@ -193,7 +207,7 @@ Interactive conversational assistant.
 k8smatrixwarden chat [--live] [--fixture PATH] [--kubeconfig PATH] [--context NAME]
 ```
 
-Type plain English; it shows you the resolved plan and waits for confirmation before scanning. See [§7](#7-natural-language-queries) for example phrases, and the transcript in [§11](#11-common-workflows-copy-paste-recipes).
+Type plain English; it shows you the resolved plan and waits for confirmation before scanning. See [§7](#7-natural-language-queries) for example phrases, and the transcript in [§11](#11-common-workflows).
 
 ### 4.3 `k8smatrixwarden cis`
 
@@ -229,24 +243,29 @@ Run `doctor` any time something seems off, or after editing `config/default_conf
 
 ### 4.5 `k8smatrixwarden report` — download saved reports later
 
-Scan once with `--save`, then list and re-download the result in any format, to any filename:
+Every scan is saved automatically, so you can list and re-download any result in any format,
+to any filename — no `--save` needed:
 
 ```bash
-k8smatrixwarden scan --live --save                                   # persist to the shared report store
-k8smatrixwarden report list                                          # what's stored
-k8smatrixwarden report download --scan-id scan-… --format html --output audit.html
+k8smatrixwarden scan --live --name "Prod audit"                      # runs AND saves to the shared store
+k8smatrixwarden report list                                          # what's stored (newest first)
+k8smatrixwarden report download --scan-id prod-audit-… --format html --output audit.html
 k8smatrixwarden report download --format markdown --output report.md   # (no --scan-id ⇒ latest)
 ```
 
 | Command | Meaning |
 |---|---|
-| `report list [--limit N] [--reports-dir DIR]` | list stored scans (id, time, rating, risk, findings, scope) |
+| `report list [--limit N] [--reports-dir DIR]` | list stored scans — **name**, time, rating, risk, findings, and the scan id (the download key) |
 | `report download [--scan-id ID] [--format FMT] [--output FILE] [--reports-dir DIR]` | re-render a stored scan; `--scan-id` defaults to the latest; `--output` picks the filename (omit ⇒ print to stdout) |
 
+The scan id — the `--scan-id` download key — encodes the name, date, and time, e.g.
+`prod-audit-20260719-011300-a1b2` (or `scan-20260719-011300-a1b2` when unnamed).
+
 **Shared report store (one history across CLI, MCP, and web).** By default every surface
-reads and writes the **same** store, resolved independently of the working directory, so a
-scan you `--save` from the CLI — or that an LLM runs via the `run_scan` MCP tool — shows up
-in the web dashboard's **Scan history** without anything having to run from the same folder:
+reads and writes the **same** store, resolved independently of the working directory, and
+**every scan is persisted automatically** — so a scan you run from the CLI, or that an LLM
+runs via the `run_scan` / `intelligent_scan` MCP tools, shows up in the web dashboard's
+**Scan history** without anything having to run from the same folder:
 
 - Default location: `~/.k8smatrixwarden/reports` (on Windows, `%USERPROFILE%\.k8smatrixwarden\reports`).
 - Override for all surfaces at once with the `K8SMATRIXWARDEN_REPORTS_DIR` environment
@@ -276,7 +295,12 @@ k8smatrixwarden mcp                  # start the MCP server over stdio (requires
 
 **30 tools, four layers.** Every tool's description below is verbatim its Python
 docstring — that's exactly what the calling LLM sees, since FastMCP reads docstrings
-directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
+directly as tool descriptions (`k8smatrixwarden/mcp/server.py`). In addition, **every
+parameter of every tool carries its own schema description**, declared with
+`Annotated[T, Field(description=…)]`, so an MCP client sees a fully documented argument list
+(name, type, default, and a one-line description) for all 150 parameters across the 30 tools —
+not just the tool-level summary. (The descriptions degrade gracefully to metadata-only when
+the tool runs in-process without the MCP SDK.)
 
 #### Layer 1 — Knowledge & introspection (14 tools · read-only, no scan execution)
 
@@ -302,9 +326,9 @@ directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 | Tool | Description |
 |---|---|
 | `preview_scan(scope..., selector...)` | Resolve a scan's scope+selector to the exact rule set **without scanning** — the plan-before-you-run step. |
-| `run_scan(scope..., selector..., mock?, output_format?, save?, max_findings?)` | Run a real scan. `output_format="json"` (default) returns structured findings + risk + the `threat_matrix` block + full per-finding context (summary/impact/standards/MITRE/validation); `"markdown"/"html"/"sarif"/"text"/"terminal"` instead returns the fully rendered report string. `"pdf"` returns base64-encoded PDF bytes (`content_base64` + `encoding: "base64"` instead of `content`) — requires the `pdf` extra server-side. `save=True` persists it for later `list_reports`/`download_report`. |
+| `run_scan(scope..., selector..., mock?, output_format?, save?, scan_name?, max_findings?)` | Run a real scan. `output_format="json"` (default) returns structured findings + risk + the `threat_matrix` block + full per-finding context (summary/impact/standards/MITRE/validation); `"markdown"/"html"/"sarif"/"text"/"terminal"` instead returns the fully rendered report string. `"pdf"` returns base64-encoded PDF bytes (`content_base64` + `encoding: "base64"` instead of `content`) — requires the `pdf` extra server-side. **`save=True` by default**, so the scan lands in the shared store and the web dashboard's Scan history (pass `save=False` for a throwaway run); `scan_name` labels the saved report as `<name> + date + time`. |
 | `interpret_query(text)` | Parse a natural-language request ("scan production for persistence") into scope/selector/resolved rules — no execution. |
-| `intelligent_scan(query, scope..., include_attack_path?, mock?)` | **One call, everything:** parse plain English → detect the cluster → run the read-only scan → return findings, risk, the threat matrix, **and** the kill-chain attack path. Composes `detect_cluster_provider` + `interpret_query` + `run_scan` + `build_threat_matrix` + `build_attack_path`. Use it to just ask and get the full analysis. |
+| `intelligent_scan(query, scope..., include_attack_path?, mock?, save?, scan_name?)` | **One call, everything:** parse plain English → detect the cluster → run the read-only scan → return findings, risk, the threat matrix, **and** the kill-chain attack path. Composes `detect_cluster_provider` + `interpret_query` + `run_scan` + `build_threat_matrix` + `build_attack_path`. Also **saves by default** (`save=True`) so an LLM-driven scan appears in the dashboard; `scan_name` labels it. Use it to just ask and get the full analysis. |
 | `detect_cluster_provider(mock?, fixture?, kubeconfig?, context?)` | Detect the cluster kind from its Node objects — `cloud` (gcp/aws/azure/local), `managed` (is the control plane GKE/EKS/AKS), and `profile` (feed straight into `run_cis_benchmark`). Reads Node `providerID` + managed-service labels only; no writes, no control-plane access. |
 | `run_cis_benchmark(mock?, profile?, kube_bench_json?)` | Run the full CIS Kubernetes Benchmark v1.8 (130 controls, PASS/FAIL/MANUAL/NA/NEEDS_NODE). `profile="auto"` (default) auto-detects the provider via `detect_cluster_provider`. |
 | `build_threat_matrix(scope..., selector..., scan_id?, coverage?, mock?)` | Project findings onto the 9-tactic **Kubernetes Threat Matrix** — from a fresh scan, a saved report (`scan_id`), or global detection coverage (`coverage=True`). Returns the same `{summary, columns[cells]}` structure the report/dashboard heatmap uses. Cells are `hit`/`covered`/`gap`. |
@@ -318,7 +342,7 @@ directly as tool descriptions (`k8smatrixwarden/mcp/server.py`).
 
 | Tool | Description |
 |---|---|
-| `list_reports(reports_dir?, limit?)` | List previously saved scans (from `run_scan(..., save=True)`). |
+| `list_reports(reports_dir?, limit?)` | List previously saved scans (every `run_scan`/`intelligent_scan` is saved by default) — each with its name, time, rating, risk, findings, and scan id. |
 | `download_report(scan_id?, format?, reports_dir?)` | Re-render a saved scan in any of the 7 formats without re-scanning; omit `scan_id` for the latest. Returns the rendered content — save it to a file yourself using your own file-write tool. `format="pdf"` returns base64-encoded bytes instead (same convention as `run_scan`). |
 
 #### Layer 4 — Platform (2 tools)
@@ -392,7 +416,7 @@ k8smatrixwarden web --reports-dir ./my-reports   # where to read/write saved sca
 | **Attack Path** | The kill-chain flow (tactics → techniques), entry points, and a reaches-Impact flag. **Select any stage to list every finding under that tactic**, each linking to the report. |
 | **Attack Map** | The kill-chain **with the vulnerable resources** (Pods/Deployments/…) grouped per tactic — an accordion; **expand a stage** to see its exposed resources and the findings at that stage (each linking to the report). |
 | **Runtime** | Paste Falco events (or load a sample) → **correlate** them against the scan's findings + **detect drift**, rendered as confirmed/corroborated/runtime-only cards and drift findings. |
-| **Scan** | A run-a-scan form (scope + selector + mock/live) and the saved-scan history table (each row can be opened in the dashboard, or as a report/matrix/JSON). |
+| **Scan** | A run-a-scan form and the saved-scan history table (each row can be opened in the dashboard, or as a report/matrix/JSON). The form takes an optional **Scan name**, a scope selector (with a namespace box that enables when you pick *namespace* scope), a **Selector dropdown** populated from the live registry vocabulary (tactics/modules/frameworks/aliases — so it never offers a term that doesn't exist), mock/live, and — for live scans — either a typed **kubeconfig path** *or* a **file picker to select the kubeconfig from your system** (whichever is convenient; the picked file's contents are read in-browser and materialised server-side into a short-lived temp file). Every scan run here is saved and titled `<name> + date + time`. |
 
 **HTTP API** — the same dashboard is a small read-mostly JSON API, scriptable with `curl`:
 
@@ -405,7 +429,9 @@ curl http://127.0.0.1:8080/api/report/latest/matrix             # a scan's threa
 curl http://127.0.0.1:8080/api/timeline                         # finding age / MTTD / MTTR metrics
 curl -X POST http://127.0.0.1:8080/api/scan \
      -H 'Content-Type: application/json' \
-     -d '{"scope_level":"cluster","selector":"Persistence","mock":true}'   # run & save a scan
+     -d '{"scan_name":"Prod nightly","scope_level":"cluster","selector":"Persistence","mock":true}'   # run & save a named scan
+# live scans may pass a kubeconfig by path ("kubeconfig":"/path") OR by value
+# ("kubeconfig_content":"<file text>") — the latter is how the browser file-picker uploads it
 curl -X POST http://127.0.0.1:8080/api/runtime \
      -H 'Content-Type: application/json' \
      -d '{"events":[ ... ]}'                                     # ingest Falco events → {correlation, drift}
@@ -596,9 +622,9 @@ something different from another about what a finding means.
    For `-o pdf`, `--output-file` is optional — if you omit it, k8smatrixwarden writes
    `k8smatrixwarden-report-<scan_id>.pdf` in the current directory (PDF is binary, so
    unlike every other format it's never printed to the terminal).
-2. **Later, from a saved scan** — scan once with `--save`, then download in any format/filename (see [§4.5](#45-k8smatrixwarden-report--download-saved-reports-later)):
+2. **Later, from a saved scan** — every scan is saved automatically, so just download it in any format/filename afterwards (see [§4.5](#45-k8smatrixwarden-report--download-saved-reports-later)):
    ```bash
-   k8smatrixwarden scan --mock --save
+   k8smatrixwarden scan --mock --name "Prod nightly"
    k8smatrixwarden report download --format markdown --output my-report.md
    k8smatrixwarden report download --format pdf --output my-report.pdf
    ```
@@ -726,32 +752,7 @@ k8smatrixwarden scan --live --context my-cluster                    # 4. scan
 
 ---
 
-## 10. CI/CD Integration
-
-Use `--fail-on` (scan) or `--fail-on-fail` (cis) to get a non-zero exit code when something bad is found — this is what makes the tool usable as a pipeline gate.
-
-```bash
-# Fail the build if any CRITICAL finding exists
-k8smatrixwarden scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
-
-# Fail the build if any CIS control fails
-k8smatrixwarden cis --live --fail-on-fail -o json --output-file cis-results.json
-```
-
-**Example GitHub Actions step:**
-```yaml
-- name: Kubernetes security scan
-  run: |
-    python -m k8smatrixwarden scan --live --fail-on CRITICAL -o sarif --output-file results.sarif
-- name: Upload SARIF
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: results.sarif
-```
-
----
-
-## 11. Common Workflows (copy-paste recipes)
+## 11. Common Workflows
 
 **"Is this cluster secure at all?"**
 ```bash
@@ -842,7 +843,7 @@ Always run `k8smatrixwarden doctor --config my-config.json` after editing — it
 
 Every scan report has the same shape, regardless of output format:
 
-- **Generated time & scan id** — in **Indian Standard Time (IST, UTC+05:30)**. `generated_at` is written as an ISO-8601 timestamp with the `+05:30` offset (e.g. `2026-07-19T01:13:00+05:30`) and shown in reports/dashboard as `19 Jul 2026, 01:13 IST`; the scan id's date (`scan-YYYYMMDD-…`) is the IST date.
+- **Generated time & scan id** — in **Indian Standard Time (IST, UTC+05:30)**. `generated_at` is written as an ISO-8601 timestamp with the `+05:30` offset (e.g. `2026-07-19T01:13:00+05:30`) and shown in reports/dashboard as `19 Jul 2026, 01:13 IST`. The scan id encodes the (optional) **name, date, and time** in IST: `<name>-YYYYMMDD-HHMMSS-<hash>` when you pass `--name`/`scan_name` (e.g. `prod-nightly-20260719-011300-a1b2`), or `scan-YYYYMMDD-HHMMSS-<hash>` when unnamed. The report's human display name is `<name> + date + time` (falling back to the id when unnamed).
 - **Risk score** — `0–10`, plus a rating (`Excellent → Critical`) and a `0–100` security score.
 - **Severity counts** — 🔴 CRITICAL · 🟠 HIGH · 🟡 MEDIUM · 🟢 LOW.
 - **Findings**, each with:
@@ -937,11 +938,12 @@ python -m k8smatrixwarden scan --mock -o sarif --output-file results.sarif
 python -m k8smatrixwarden scan --mock -o pdf --output-file report.pdf
 python -m k8smatrixwarden scan --mock -o json
 
-# Save once, download later in any format/filename
-python -m k8smatrixwarden scan --mock --save
+# Scans save automatically → name one, then download later in any format/filename
+python -m k8smatrixwarden scan --mock --name "Prod nightly"       # runs AND saves
+python -m k8smatrixwarden scan --mock --no-save                    # throwaway run (not saved)
 python -m k8smatrixwarden report list
 python -m k8smatrixwarden report download --format html --output audit.html
-python -m k8smatrixwarden report download --scan-id scan-… --format markdown --output report.md
+python -m k8smatrixwarden report download --scan-id prod-nightly-… --format markdown --output report.md
 
 # Compliance
 python -m k8smatrixwarden cis --mock
