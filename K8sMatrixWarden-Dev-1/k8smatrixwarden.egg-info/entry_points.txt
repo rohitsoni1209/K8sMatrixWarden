@@ -1,2 +1,0 @@
-[console_scripts]
-k8smatrixwarden = k8smatrixwarden.cli.main:main

@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "k8smatrixwarden": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "k8smatrixwarden", "mcp"]
+    }
+  }
+}

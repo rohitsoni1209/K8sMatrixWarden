@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# K8sMatrixWarden — what does NOT belong in the repo.
+#
+# Rule of thumb: anything a clone can regenerate (bytecode, build artifacts,
+# scan output), anything local to one machine (venvs, editor state, kubeconfig),
+# and the working docs whose content now lives in K8sMatrixWarden-doc.html.
+# ---------------------------------------------------------------------------
+
+# --- Python bytecode / build artifacts -------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# --- Virtual environments ---------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# --- Test / tooling caches --------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# --- Working documents (content merged into K8sMatrixWarden-doc.html) -------
+# These are the authoring sources; the shipped reference is the single
+# self-contained HTML page, so a clone gets one document, not five.
+K8sMatrixWarden v1.0 - MITRE-Aligned Architecture.md
+USAGE.md
+ANALYSIS.md
+REVIEW.md
+HANDOFF.md
+
+# --- Scan output ------------------------------------------------------------
+# Scans are saved to the shared store (~/.k8smatrixwarden/reports) by default,
+# but --reports-dir / --output-file can drop them anywhere. None are source.
+k8smatrixwarden-reports/
+k8smatrixwarden-report-*.md
+k8smatrixwarden-report-*.html
+k8smatrixwarden-report-*.json
+k8smatrixwarden-report-*.sarif
+k8smatrixwarden-report-*.pdf
+*-report-scan-*.md
+*Mockscan-report.md
+*scan-report*.md
+cis-report*.md
+results.sarif
+
+# --- Local cluster credentials — never commit these -------------------------
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+.kube/
+kube-bench*.json
+
+# --- Editor / assistant local state -----------------------------------------
+# .claude/ holds per-machine skills, launch configs and local settings.
+# The MCP client configs that DO ship are .mcp.json, .cursor/, .vscode/.
+.claude/
+.idea/
+*.swp
+*.swo
+
+# --- OS noise ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
