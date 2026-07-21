@@ -38,7 +38,7 @@ pure Python standard library: **zero dependencies, no agent, no database.**
 - `kubectl` installed and configured
 - A valid `kubeconfig` for the target cluster
 - Read-only access to the target Kubernetes cluster
-- Cloud CLI configured (AWS CLI, Azure CLI, or gcloud) for managed Kubernetes clusters (EKS, AKS, GKE)
+- Cloud CLI configured (AWS, Azure, GCP) for managed Kubernetes clusters.
 
 ## Installation & Setup
 
