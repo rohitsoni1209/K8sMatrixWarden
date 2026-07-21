@@ -1010,10 +1010,29 @@ def serve(config_path: Optional[str] = None) -> None:
     """Run the MCP server over stdio (requires the `mcp` SDK)."""
     try:
         from mcp.server.fastmcp import FastMCP  # type: ignore
-    except Exception:
+    except Exception as exc:
+        # Do NOT claim the SDK is missing — very often it is installed, just not
+        # visible to *this* interpreter. MCP clients spawn the server with a
+        # stripped environment, which hides a per-user site-packages directory
+        # (where `pip install` silently lands when the interpreter's own
+        # site-packages isn't writable). Report the interpreter, the real
+        # exception, and the user-site state so the log alone explains it.
+        import site
+        import sys as _sys
+        try:
+            usersite = site.getusersitepackages() if site.ENABLE_USER_SITE else "DISABLED"
+        except Exception:
+            usersite = "unavailable"
         raise SystemExit(
-            "The MCP Python SDK is not installed.\n"
-            "  pip install mcp\n"
+            f"The MCP Python SDK could not be imported: {type(exc).__name__}: {exc}\n"
+            f"  interpreter : {_sys.executable}\n"
+            f"  user-site   : {usersite}\n"
+            "Install it for THIS interpreter:\n"
+            f'  "{_sys.executable}" -m pip install mcp\n'
+            "If it IS installed but lives in a per-user site-packages directory, an "
+            "MCP client's stripped environment cannot see it — install it into the "
+            "interpreter's own site-packages, use a virtualenv, or point the client "
+            "at an interpreter that has it.\n"
             "The same datasets are available in-process via "
             "k8smatrixwarden.mcp.server.build_tools() without the SDK.")
 

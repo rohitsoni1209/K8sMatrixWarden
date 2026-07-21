@@ -2373,6 +2373,34 @@ python -c "import mcp"                          <span class="c-mut"># does it ha
 <span class="c-mut"># fix: install into that interpreter, from the repo root</span>
 python -m pip install -e ".[mcp]"               <span class="c-mut"># or ".[all]" for every extra</span></code></pre>
 </div>
+Read the server's own error before acting on it: since v1.0 it prints the interpreter path, the
+real exception and the user-site state, which usually identifies the problem outright.</li>
+
+<li><strong>"The SDK is installed, my shell proves it, and the client still fails."</strong> Then
+your shell is not the environment the client uses. MCP clients spawn the server with a
+<strong>stripped environment</strong>, and a per-user site-packages directory disappears with it —
+so a package you can import at a prompt becomes invisible to the server. This happens silently
+whenever <code>pip</code> falls back to a user install, which it does automatically when the
+interpreter's own <code>site-packages</code> isn't writable (a system-wide Python without admin
+rights — the common case on Windows).
+<p>The check above gives a <strong>false negative</strong> here. Reproduce the client's
+environment instead:</p>
+<div class="code-card">
+  <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
+  <pre><code><span class="c-mut"># macOS / Linux — disable user-site, as a stripped spawn effectively does</span>
+PYTHONNOUSERSITE=1 python -c "from mcp.server.fastmcp import FastMCP"
+
+<span class="c-mut"># Windows PowerShell</span>
+$env:PYTHONNOUSERSITE=1; python -c "from mcp.server.fastmcp import FastMCP"</code></pre>
+</div>
+<p>If that fails while the plain import succeeds, this is your problem. Any one of these fixes
+it — install into the interpreter's own <code>site-packages</code> (an elevated/admin
+<code>pip</code>), create a <strong>virtualenv</strong> and point the client's
+<code>"command"</code> at its <code>python</code>, or point the client at a different interpreter
+that already has the SDK in a non-user location.</p>
+<p>Where a package lives is the thing to check — <code>python -c "import mcp, os;
+print(mcp.__file__)"</code>. A path under <code>AppData\Roaming</code> (Windows) or
+<code>~/.local</code> (Linux) is a per-user install and is the fragile case.</p>
 An <strong>editable</strong> install is worth doing regardless: it puts the package on
 <code>sys.path</code> permanently, so the server starts no matter which working directory the
 client spawns it in.</li>
