@@ -803,6 +803,29 @@ changes which rules get selected, never the code path that runs them.</p>
 <p>The core engine has <strong>zero required dependencies</strong> — it runs on the Python
 standard library alone, against a bundled, deliberately-insecure mock cluster.</p>
 
+<h4>Requirements</h4>
+<p><strong>Python 3.10 – 3.14</strong>, and nothing else. Because the core imports only the
+standard library, no third-party package can lag a new Python release. The 3.10 floor comes from
+the optional extras — <code>mcp</code>, <code>kubernetes</code> and <code>fpdf2</code> each require
+3.10+ — not from the engine, which uses no version-gated syntax and none of the stdlib modules
+removed in 3.12&ndash;3.13.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Version</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>3.9 and older</td><td>❌ Not supported — blocked by the optional extras</td></tr>
+<tr><td>3.10</td><td>✅ Supported (minimum)</td></tr>
+<tr><td><strong>3.11 · 3.12</strong></td><td>✅ <strong>Recommended</strong> — mature, every extra has long-standing wheels</td></tr>
+<tr><td>3.13</td><td>✅ Supported</td></tr>
+<tr><td>3.14</td><td>✅ Supported — leading edge, so a transitive dependency may occasionally need a compiler</td></tr>
+</tbody>
+</table></div>
+<div class="callout">
+<span class="co-icon">◆</span>
+<div class="co-body"><p>If more than one Python is installed, an MCP client launches whichever one
+<code>python</code> resolves to — which may not be the one holding your dependencies. That is the
+most common reason tools fail to appear; see <a href="#troubleshooting">Troubleshooting</a>.</p></div>
+</div>
+
 <div class="code-card">
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
   <pre><code><span class="c-mut"># Option A — run directly, no install</span>
@@ -1966,18 +1989,30 @@ launcher is on <code>PATH</code> and location stops mattering:</p>
   <pre><code>pip install -e ".[mcp]"     <span class="c-mut"># from the repo root — puts `k8smatrixwarden` on PATH</span></code></pre>
 </div>
 
-<p>Then add this block to that client's config file:</p>
+<p>The install is what matters here — an <strong>editable</strong> install puts the package on
+<code>sys.path</code> permanently, so the server starts regardless of which working directory the
+client spawns it in. Then add this block to that client's config file:</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">claude_desktop_config.json · mcp_config.json</span><button class="copy-btn" data-copy>Copy</button></div>
   <pre><code>{
   "mcpServers": {
     "k8smatrixwarden": {
-      "command": "k8smatrixwarden",
-      "args": ["mcp"]
+      "command": "python",
+      "args": ["-m", "k8smatrixwarden", "mcp"]
     }
   }
 }</code></pre>
+</div>
+<div class="callout">
+<span class="co-icon">◆</span>
+<div class="co-body"><p>The <code>k8smatrixwarden mcp</code> console script works too, but is the more
+fragile choice: <code>pip</code> installs that launcher into a per-interpreter
+<code>Scripts/</code> (Windows) or <code>bin/</code> directory that is <strong>often not on
+<code>PATH</code></strong> — pip usually prints a warning saying so, which is easy to miss. With
+several Pythons installed you can also end up with one launcher per interpreter and no control over
+which one wins. <code>python -m</code> sidesteps both problems by using the same interpreter
+resolution as every other config on this page.</p></div>
 </div>
 
 <div class="table-scroll"><table>
@@ -2325,8 +2360,24 @@ print 30 tool names. If it errors, run <code>pip install -e ".[mcp]"</code>.</li
 call MCP tools.</li>
 <li>If <code>python</code> is not on your <code>PATH</code> (common on macOS/Linux where only
 <code>python3</code> exists), change <code>"command"</code> to <code>python3</code> in the config
-file for your client, or <code>pip install -e .</code> and use
-<code>"command": "k8smatrixwarden", "args": ["mcp"]</code>.</li>
+file for your client.</li>
+<li><strong>If you have more than one Python installed, this is almost certainly the cause.</strong>
+The client launches whichever interpreter <code>python</code> resolves to, and if that one lacks
+the MCP SDK the server dies at <code>import mcp</code> — silently, from the client's point of
+view. Check which one you are actually getting, then install into <em>that</em> interpreter:
+<div class="code-card">
+  <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
+  <pre><code>python -c "import sys; print(sys.executable)"   <span class="c-mut"># which interpreter is 'python'?</span>
+python -c "import mcp"                          <span class="c-mut"># does it have the SDK?</span>
+
+<span class="c-mut"># fix: install into that interpreter, from the repo root</span>
+python -m pip install -e ".[mcp]"               <span class="c-mut"># or ".[all]" for every extra</span></code></pre>
+</div>
+An <strong>editable</strong> install is worth doing regardless: it puts the package on
+<code>sys.path</code> permanently, so the server starts no matter which working directory the
+client spawns it in.</li>
+<li>Restart the client fully after any config or install change — reloading the window is often
+not enough to re-spawn the server.</li>
 </ul>
 </section>
 

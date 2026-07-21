@@ -33,7 +33,21 @@ pure Python standard library: **zero dependencies, no agent, no database.**
 
 ---
 
+## Requirements
+
+**Python 3.10 – 3.14.** Nothing else — the core engine imports only the standard library, so
+there is no dependency that can lag a new Python release. The 3.10 floor comes from the optional
+extras (`mcp`, `kubernetes` and `fpdf2` each require 3.10+), not from the engine.
+
+Verified on 3.11 and 3.14 (231/231 tests on both). **3.11 or 3.12 is the safest choice** for a
+real deployment — every extra has shipped wheels for them for years.
+
+If you have more than one Python installed, note that MCP clients launch whichever one `python`
+resolves to. See [Troubleshooting](K8sMatrixWarden-doc.html#troubleshooting) if tools don't appear.
+
 ## Prerequisites
+
+Only for scanning a **real cluster** — `--mock` needs none of this and is the default:
 
 - A valid `kubeconfig` for the target cluster
 - Read-only access to the target Kubernetes cluster
@@ -86,10 +100,11 @@ immediately in the web dashboard's **Scan history**.
 <summary><strong>Claude Desktop and Windsurf</strong> — one paste, once</summary>
 
 These read a single machine-wide config rather than a project file, so no repo file can reach
-them. Install once so the launcher is on `PATH`:
+them. Install once — an **editable** install puts the package on `sys.path` permanently, so the
+server starts no matter which directory the client spawns it in:
 
 ```bash
-pip install -e ".[mcp]"
+pip install -e ".[mcp]"     # from the repo root
 ```
 
 Then add to that client's config:
@@ -98,12 +113,17 @@ Then add to that client's config:
 {
   "mcpServers": {
     "k8smatrixwarden": {
-      "command": "k8smatrixwarden",
-      "args": ["mcp"]
+      "command": "python",
+      "args": ["-m", "k8smatrixwarden", "mcp"]
     }
   }
 }
 ```
+
+> The `k8smatrixwarden mcp` console script works too, but is more fragile — `pip` installs that
+> launcher into a per-interpreter `Scripts/` (Windows) or `bin/` directory that is **often not on
+> `PATH`**, and with several Pythons installed you get one launcher each with no control over which
+> wins. `python -m` avoids both problems.
 
 | Client | Config file |
 |---|---|
