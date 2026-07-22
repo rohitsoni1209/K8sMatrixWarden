@@ -24,8 +24,10 @@ pretty = ["rich>=13.0"]
 mcp = ["mcp>=1.0"]
 # PDF report export
 pdf = ["fpdf2>=2.7"]
+# Optional LLM-driven orchestration for the local `chat` REPL (multi-step tool chaining)
+agent = ["anthropic>=0.40"]
 # Everything
-all = ["kubernetes>=28.0", "rich>=13.0", "mcp>=1.0", "fpdf2>=2.7"]
+all = ["kubernetes>=28.0", "rich>=13.0", "mcp>=1.0", "fpdf2>=2.7", "anthropic>=0.40"]
 dev = ["pytest>=7.0"]
 
 [project.scripts]

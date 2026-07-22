@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/shards-11-blueviolet"/>
   <img src="https://img.shields.io/badge/rules-60-orange"/>
   <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
-  <img src="https://img.shields.io/badge/tests-231%20passing-success"/>
+  <img src="https://img.shields.io/badge/tests-270%20passing-success"/>
   <img src="https://img.shields.io/badge/time-IST%20(UTC%2B05%3A30)-informational"/>
 </p>
 
@@ -39,7 +39,7 @@ pure Python standard library: **zero dependencies, no agent, no database.**
 there is no dependency that can lag a new Python release. The 3.10 floor comes from the optional
 extras (`mcp`, `kubernetes` and `fpdf2` each require 3.10+), not from the engine.
 
-Verified on 3.11 and 3.14 (231/231 tests on both). **3.11 or 3.12 is the safest choice** for a
+Verified on 3.11 and 3.14 (270/270 tests on both). **3.11 or 3.12 is the safest choice** for a
 real deployment — every extra has shipped wheels for them for years.
 
 If you have more than one Python installed, note that MCP clients launch whichever one `python`

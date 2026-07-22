@@ -17,6 +17,7 @@ Per-turn logic lives in `handle_turn()` so it is unit-testable without a live TT
 from __future__ import annotations
 
 import difflib
+import os
 import re
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -172,7 +173,27 @@ class ChatSession:
             return TurnResult(fu)
 
         # 5) natural-language scan / audit
+        #    Multi-step requests go to the optional LLM orchestrator when a key is set;
+        #    it chains the same tools MCP exposes. Regex interpretation is the fallback.
+        agentic = self._maybe_agentic(raw)
+        if agentic is not None:
+            return TurnResult(agentic)
         return self._interpret_and_scan(raw, low)
+
+    # ------------------------------------------------------------------ #
+    def _maybe_agentic(self, raw: str) -> Optional[str]:
+        """LLM-driven tool chaining for likely multi-step requests. Returns None (so the
+        caller falls back to the regex interpreter) when no key is set, the request looks
+        single-step, or the LLM path is unavailable/fails."""
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            return None
+        from ..agents.llm_orchestrator import LLMUnavailable, _looks_multi_step, investigate
+        if not _looks_multi_step(raw):
+            return None
+        try:
+            return investigate(raw, self.platform)
+        except LLMUnavailable:
+            return None
 
     # ------------------------------------------------------------------ #
     def _resolve_pending(self, raw: str, low: str) -> TurnResult:

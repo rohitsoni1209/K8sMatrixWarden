@@ -1,0 +1,6 @@
+{
+  "memory": {"enabled": true},
+  "critic": {"enabled": true, "max_validation_rounds": 3, "minimum_confidence": 0.75},
+  "learning": {"enabled": true},
+  "max_tool_iterations": 10
+}

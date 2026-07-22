@@ -569,6 +569,18 @@ footer.site-footer {
     </div>
 
     <div class="nav-group">
+      <p class="nav-group-label">Connect an AI Agent (MCP)</p>
+      <ul class="nav-items">
+        <li><a href="#mcp-connect">Connect a Client</a></li>
+        <li><a href="#mcp-single-file">One File for Every Client?</a></li>
+        <li><a href="#mcp-knowledge">Knowledge Layer (14)</a></li>
+        <li><a href="#mcp-scan">Scan / Audit / Runtime (12)</a></li>
+        <li><a href="#mcp-reports">Reports (2)</a></li>
+        <li><a href="#mcp-platform">Platform (2)</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
       <p class="nav-group-label">Architecture</p>
       <ul class="nav-items">
         <li><a href="#arch-overview">Core Agents</a></li>
@@ -631,18 +643,6 @@ footer.site-footer {
       <p class="nav-group-label">Web Dashboard</p>
       <ul class="nav-items">
         <li><a href="#web">Web Interface</a></li>
-      </ul>
-    </div>
-
-    <div class="nav-group">
-      <p class="nav-group-label">MCP Server</p>
-      <ul class="nav-items">
-        <li><a href="#mcp-connect">Connecting an Agent</a></li>
-        <li><a href="#mcp-single-file">One File for Every Client?</a></li>
-        <li><a href="#mcp-knowledge">Knowledge Layer (14)</a></li>
-        <li><a href="#mcp-scan">Scan / Audit / Runtime (12)</a></li>
-        <li><a href="#mcp-reports">Reports (2)</a></li>
-        <li><a href="#mcp-platform">Platform (2)</a></li>
       </ul>
     </div>
 
@@ -744,7 +744,7 @@ footer.site-footer {
             <div class="stat"><div class="stat-n">9</div><div class="stat-l">MITRE ATT&amp;CK tactics</div></div>
             <div class="stat"><div class="stat-n">130</div><div class="stat-l">CIS controls, every one graded</div></div>
             <div class="stat"><div class="stat-n">30</div><div class="stat-l">MCP tools for AI agents</div></div>
-            <div class="stat"><div class="stat-n">231</div><div class="stat-l">tests, 0 required deps</div></div>
+            <div class="stat"><div class="stat-n">270</div><div class="stat-l">tests, 0 required deps</div></div>
           </div>
         </div>
       </div>
@@ -753,13 +753,12 @@ footer.site-footer {
 
 <section id="overview">
 <h1>Overview</h1>
-<p class="lede">K8sMatrixWarden is an AI-powered, Kubernetes-native security platform that
-continuously scans and monitors clusters. A multi-agent architecture —
-Orchestrator, Scanner, Runtime — collaborates to detect vulnerabilities, map
-attack surfaces, <strong>correlate static findings with live runtime behaviour</strong>,
-and enforce compliance, all reachable from a CLI, a conversational chat, or any
-MCP-connected AI agent. It is <em>detect-and-report only</em> — read-only on every surface,
-with no apply/remediate path.</p>
+<p class="lede">K8sMatrixWarden is an <strong>MCP-native</strong> Kubernetes security platform.
+Its whole surface — scanning, the CIS benchmark, the threat matrix, kill-chain attack paths,
+and scan×runtime correlation — is exposed as <strong>30 MCP tools</strong>, so an AI agent
+(Claude, Cursor, VS&nbsp;Code, Windsurf) drives it conversationally. The <a href="#cli">CLI</a>
+and <a href="#web">web dashboard</a> run the same engine for anyone not on an MCP client. It is
+<em>detect-and-report only</em> — read-only on every surface, no apply/remediate path.</p>
 
 <p>Every check is a <strong>Rule</strong> — a technique-level detection that self-declares
 which MITRE tactic, OWASP category, CIS control, and NSA/CISA guidance it maps to. That
@@ -800,6 +799,12 @@ changes which rules get selected, never the code path that runs them.</p>
 
 <section id="quickstart">
 <h2><span class="h2-title">Install &amp; Quickstart</span></h2>
+<div class="callout">
+<span class="co-icon">◆</span>
+<div class="co-body"><p>Running this from an AI agent? That is the intended path — skip to
+<a href="#mcp-connect">Connect an AI Agent (MCP)</a>. This section covers the standalone CLI,
+which runs the identical engine.</p></div>
+</div>
 <p>The core engine has <strong>zero required dependencies</strong> — it runs on the Python
 standard library alone, against a bundled, deliberately-insecure mock cluster.</p>
 
@@ -1934,14 +1939,12 @@ path-traversal-guarded, and <code>--no-scan</code> serves existing reports fully
 
 <section id="mcp-connect">
 <h1>MCP Server</h1>
-<p class="lede">30 tools across four layers, so any MCP-compatible AI agent — Claude,
-Cursor, VS Code, Windsurf — can do everything the CLI can: scan, audit, project the threat
-matrix and kill-chain, correlate a live runtime feed against static findings, and export
-reports. The whole surface is read-only — there is no apply/remediate tool. Every tool's
-docstring is its LLM-facing description, and <strong>every parameter carries its own schema
-description</strong> (via <code>Annotated[T, Field(description=…)]</code>) — a fully documented
-argument list for all 150 parameters. Scans over MCP save to the shared store by default, so an
-LLM-driven scan appears in the web dashboard's Scan history.</p>
+<p class="lede">This is the intended way to run K8sMatrixWarden. 30 tools across four layers
+let any MCP-compatible AI agent — Claude, Cursor, VS&nbsp;Code, Windsurf — do everything the CLI
+can: scan, audit, project the threat matrix and kill-chain, correlate a live runtime feed against
+static findings, and export reports. Every tool's docstring and all 150 parameters carry their own
+schema descriptions (<code>Annotated[T, Field(description=…)]</code>), so the agent picks tools and
+arguments without guesswork. Read-only throughout — no apply/remediate tool.</p>
 
 <h3>Zero-config clients — the repo already contains the file</h3>
 <p>Three MCP clients discover a server from a file <em>inside the project</em>. All three of
@@ -2191,7 +2194,7 @@ by a standing test that fails the build if any shard's role ever gains a write v
 <section id="quality">
 <h1>Testing &amp; Quality</h1>
 <div class="stat-row">
-<div class="stat"><div class="stat-n">231</div><div class="stat-l">tests passing</div></div>
+<div class="stat"><div class="stat-n">270</div><div class="stat-l">tests passing</div></div>
 <div class="stat"><div class="stat-n">0</div><div class="stat-l">required dependencies</div></div>
 <div class="stat"><div class="stat-n">10/10</div><div class="stat-l">shards loaded clean</div></div>
 </div>

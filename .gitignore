@@ -40,6 +40,7 @@ USAGE.md
 ANALYSIS.md
 REVIEW.md
 HANDOFF.md
+MCP_Handoff.md
 
 # --- Scan output ------------------------------------------------------------
 # Scans are saved to the shared store (~/.k8smatrixwarden/reports) by default,
@@ -55,6 +56,16 @@ k8smatrixwarden-report-*.pdf
 *scan-report*.md
 cis-report*.md
 results.sarif
+
+# --- Agent-layer runtime state (optional [agent] extra) ---------------------
+# The self-improving chat path writes a sqlite memory DB. Default lives outside
+# the repo (~/.k8smatrixwarden/agent_memory.db); these guard against a local
+# K8SMATRIXWARDEN_MEMORY_DB override dropping one in-tree. config/agent.json is
+# source and stays tracked.
+.k8smatrixwarden/
+*.db
+*.sqlite
+*.sqlite3
 
 # --- Local cluster credentials — never commit these -------------------------
 kubeconfig

@@ -13,9 +13,9 @@ datasets, and report rendering/export are all side-effect-free;
 `tests/test_mcp.py::test_no_remediation_or_apply_tool_is_exposed` enforces this stays true.
 
 30 tools, four layers:
-  1. Knowledge   — browse/query the rule registry, taxonomy, and the 5 MCP datasets
+  1. Knowledge   — browse/query the rule registry, taxonomy, and the 6 MCP datasets
   2. Scan/audit  — scan / CIS benchmark / runtime detections + event eval / threat matrix
-  3. Reports     — persist a scan and list/export it later in any of the 6 formats
+  3. Reports     — persist a scan and list/export it later in any of the 7 formats
   4. Platform    — validate the install, generate least-privilege RBAC
 
 Uses the official `mcp` Python SDK (FastMCP) when installed. If it is not installed, the
