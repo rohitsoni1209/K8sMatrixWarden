@@ -1,7 +1,7 @@
 <h1 align="center">K8sMatrixWarden</h1>
 
 <p align="center">
-  <strong>The only K8s tool that links static scan findings to live runtime exploitation</strong><br/>
+  <strong>The K8s tool that links static scan findings to live runtime exploitation</strong><br/>
   <em>Not "here's a weakness" — "this weakness is being exploited right now, here's the kill-chain"</em>
 </p>
 
