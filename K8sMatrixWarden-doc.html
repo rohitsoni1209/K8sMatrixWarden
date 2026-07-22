@@ -782,6 +782,215 @@ changes which rules get selected, never the code path that runs them.</p>
 </div>
 </section>
 
+<section id="whats-new">
+<h2><span class="h2-title">What's New</span></h2>
+
+<details class="acc" open>
+<summary>🔗 Scan × Runtime Correlation <span class="acc-count">confirmed / corroborated / runtime-only</span></summary>
+<div class="acc-body">
+<svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 100%; background: var(--paper-alt); border-radius: 8px; padding: 12px; margin: 16px 0;">
+  <!-- Title -->
+  <text x="10" y="25" font-size="12" font-weight="bold" fill="var(--ink)">Static Scan Finding</text>
+  <text x="400" y="25" font-size="12" font-weight="bold" fill="var(--ink)">Runtime Event (Falco)</text>
+
+  <!-- Finding box -->
+  <rect x="10" y="35" width="180" height="100" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="20" y="55" font-size="11" font-weight="bold" fill="var(--crit-fg)">Rule: Privilege Escalation</text>
+  <text x="20" y="70" font-size="10" fill="var(--crit-fg)">MITRE: TA0004</text>
+  <text x="20" y="85" font-size="10" fill="var(--crit-fg)">Pod: nginx-deployment</text>
+  <text x="20" y="100" font-size="10" fill="var(--crit-fg)">NS: production</text>
+  <text x="20" y="115" font-size="10" fill="var(--crit-fg)">Severity: CRITICAL</text>
+
+  <!-- Event box -->
+  <rect x="410" y="35" width="180" height="100" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="420" y="55" font-size="11" font-weight="bold" fill="var(--crit-fg)">evt.type: execve</text>
+  <text x="420" y="70" font-size="10" fill="var(--crit-fg)">proc.name: setuid</text>
+  <text x="420" y="85" font-size="10" fill="var(--crit-fg)">k8s.pod: nginx-deployment</text>
+  <text x="420" y="100" font-size="10" fill="var(--crit-fg)">k8s.ns: production</text>
+  <text x="420" y="115" font-size="10" fill="var(--crit-fg)">timestamp: now</text>
+
+  <!-- Arrow -->
+  <path d="M 200 85 L 390 85" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+
+  <!-- Correlation result -->
+  <rect x="200" y="160" width="300" height="80" fill="#fff" stroke="var(--signal)" stroke-width="2" rx="4"/>
+  <text x="220" y="180" font-size="13" font-weight="bold" fill="var(--signal-text)">✓ CONFIRMED</text>
+  <text x="220" y="200" font-size="11" fill="var(--ink)">Tactic match: Privilege Escalation</text>
+  <text x="220" y="217" font-size="11" fill="var(--ink)">Namespace match: production</text>
+  <text x="220" y="234" font-size="11" fill="var(--ink)">Confidence: CONFIRMED (highest)</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="var(--signal)"/>
+    </marker>
+  </defs>
+</svg>
+<p style="font-size: 13px; margin: 8px 0;">4 of 358 Goat findings confirmed exploited in real-time.</p>
+</div>
+</details>
+
+<details class="acc">
+<summary>🔄 Drift Detection <span class="acc-count">declared vs observed</span></summary>
+<div class="acc-body">
+<svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 100%; background: var(--paper-alt); border-radius: 8px; padding: 12px; margin: 16px 0;">
+  <!-- Headers -->
+  <text x="10" y="25" font-size="12" font-weight="bold" fill="var(--ink)">Declared Pod Spec</text>
+  <text x="400" y="25" font-size="12" font-weight="bold" fill="var(--ink)">Runtime Behavior (Falco)</text>
+
+  <!-- Example 1: runAsNonRoot -->
+  <rect x="10" y="40" width="180" height="90" fill="var(--high-bg)" stroke="var(--high-bd)" stroke-width="2" rx="4"/>
+  <text x="20" y="60" font-size="11" font-weight="bold" fill="var(--high-fg)">runAsNonRoot: true</text>
+  <text x="20" y="77" font-size="10" fill="var(--high-fg)">Expected UID: 1000+</text>
+  <text x="20" y="94" font-size="10" fill="var(--high-fg)">Pod: vulnerable-app</text>
+  <text x="20" y="111" font-size="10" fill="var(--high-fg)">Namespace: default</text>
+  <text x="20" y="125" font-size="10" fill="var(--high-fg)">Severity: HIGH</text>
+
+  <!-- Example 1: Runtime -->
+  <rect x="410" y="40" width="180" height="90" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="420" y="60" font-size="11" font-weight="bold" fill="var(--crit-fg)">✗ ACTUAL UID: 0</text>
+  <text x="420" y="77" font-size="10" fill="var(--crit-fg)">proc: /bin/bash</text>
+  <text x="420" y="94" font-size="10" fill="var(--crit-fg)">k8s.pod: vulnerable-app</text>
+  <text x="420" y="111" font-size="10" fill="var(--crit-fg)">k8s.ns: default</text>
+  <text x="420" y="125" font-size="10" fill="var(--crit-fg)">tactic: Privilege Escalation</text>
+
+  <!-- Example 2: readOnlyRootFilesystem -->
+  <rect x="10" y="150" width="180" height="90" fill="var(--high-bg)" stroke="var(--high-bd)" stroke-width="2" rx="4"/>
+  <text x="20" y="170" font-size="11" font-weight="bold" fill="var(--high-fg)">readOnlyRootFS: true</text>
+  <text x="20" y="187" font-size="10" fill="var(--high-fg)">Expected: no writes</text>
+  <text x="20" y="204" font-size="10" fill="var(--high-fg)">Pod: web-server</text>
+  <text x="20" y="221" font-size="10" fill="var(--high-fg)">Namespace: production</text>
+  <text x="20" y="235" font-size="10" fill="var(--high-fg)">Severity: HIGH</text>
+
+  <!-- Example 2: Runtime -->
+  <rect x="410" y="150" width="180" height="90" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="420" y="170" font-size="11" font-weight="bold" fill="var(--crit-fg)">✗ WRITE to /etc/passwd</text>
+  <text x="420" y="187" font-size="10" fill="var(--crit-fg)">evt.type: open write</text>
+  <text x="420" y="204" font-size="10" fill="var(--crit-fg)">k8s.pod: web-server</text>
+  <text x="420" y="221" font-size="10" fill="var(--crit-fg)">k8s.ns: production</text>
+  <text x="420" y="235" font-size="10" fill="var(--crit-fg)">tactic: Privilege Escalation</text>
+
+  <!-- Drift badges -->
+  <rect x="200" y="40" width="180" height="40" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="220" y="55" font-size="10" font-weight="bold" fill="var(--crit-fg)">DRIFT DETECTED</text>
+  <text x="220" y="70" font-size="9" fill="var(--crit-fg)">uid mismatch</text>
+
+  <rect x="200" y="150" width="180" height="40" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="220" y="165" font-size="10" font-weight="bold" fill="var(--crit-fg)">DRIFT DETECTED</text>
+  <text x="220" y="180" font-size="9" fill="var(--crit-fg)">filesystem write</text>
+</svg>
+<p style="font-size: 13px; margin: 8px 0;">Detects: uid 0 despite runAsNonRoot, writes despite readOnlyRootFilesystem.</p>
+</div>
+</details>
+
+<details class="acc">
+<summary>⚔️ Attack Path Derivation <span class="acc-count">kill-chain: access → impact</span></summary>
+<div class="acc-body">
+<svg viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 100%; background: var(--paper-alt); border-radius: 8px; padding: 12px; margin: 16px 0;">
+  <!-- Kill chain stages -->
+  <g>
+    <rect x="10" y="30" width="80" height="60" fill="var(--high-bg)" stroke="var(--high-bd)" stroke-width="2" rx="4"/>
+    <text x="20" y="50" font-size="11" font-weight="bold" fill="var(--high-fg)">Initial</text>
+    <text x="20" y="65" font-size="10" fill="var(--high-fg)">Access</text>
+    <text x="20" y="85" font-size="9" fill="var(--high-fg)">3 findings</text>
+  </g>
+
+  <path d="M 95 60 L 115 60" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrow1)"/>
+
+  <g>
+    <rect x="120" y="30" width="80" height="60" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+    <text x="130" y="50" font-size="11" font-weight="bold" fill="var(--crit-fg)">Execution</text>
+    <text x="130" y="70" font-size="9" fill="var(--crit-fg)">8 findings</text>
+    <text x="130" y="85" font-size="9" fill="var(--crit-fg)">4 exploited</text>
+  </g>
+
+  <path d="M 205 60 L 225 60" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrow1)"/>
+
+  <g>
+    <rect x="230" y="30" width="80" height="60" fill="var(--med-bg)" stroke="var(--med-bd)" stroke-width="2" rx="4"/>
+    <text x="240" y="50" font-size="11" font-weight="bold" fill="var(--med-fg)">Persistence</text>
+    <text x="240" y="70" font-size="9" fill="var(--med-fg)">2 findings</text>
+  </g>
+
+  <path d="M 315 60 L 335 60" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrow1)"/>
+
+  <g>
+    <rect x="340" y="30" width="100" height="60" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+    <text x="350" y="45" font-size="11" font-weight="bold" fill="var(--crit-fg)">Privilege</text>
+    <text x="350" y="60" font-size="11" font-weight="bold" fill="var(--crit-fg)">Escalation</text>
+    <text x="350" y="80" font-size="9" fill="var(--crit-fg)">12 findings</text>
+  </g>
+
+  <path d="M 445 60 L 465 60" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrow1)"/>
+
+  <g>
+    <rect x="470" y="30" width="80" height="60" fill="var(--high-bg)" stroke="var(--high-bd)" stroke-width="2" rx="4"/>
+    <text x="480" y="45" font-size="11" font-weight="bold" fill="var(--high-fg)">Defense</text>
+    <text x="480" y="60" font-size="11" font-weight="bold" fill="var(--high-fg)">Evasion</text>
+    <text x="480" y="80" font-size="9" fill="var(--high-fg)">5 findings</text>
+  </g>
+
+  <path d="M 555 60 L 575 60" stroke="var(--signal)" stroke-width="2" fill="none" marker-end="url(#arrow1)"/>
+
+  <g>
+    <rect x="580" y="30" width="70" height="60" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+    <text x="590" y="50" font-size="11" font-weight="bold" fill="var(--crit-fg)">Impact</text>
+    <text x="590" y="70" font-size="9" fill="var(--crit-fg)">6 findings</text>
+  </g>
+
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="var(--signal)"/>
+    </marker>
+  </defs>
+
+  <!-- Examples at bottom -->
+  <g>
+    <text x="10" y="125" font-size="10" font-weight="bold" fill="var(--ink)">Resources at each stage:</text>
+    <text x="20" y="145" font-size="9" fill="var(--ink-muted)">Initial: ServiceAccount with wildcard roles</text>
+    <text x="20" y="160" font-size="9" fill="var(--ink-muted)">Execution: Pods with docker.sock mounted</text>
+    <text x="380" y="145" font-size="9" fill="var(--ink-muted)">Escalation: Containers running as root</text>
+    <text x="380" y="160" font-size="9" fill="var(--ink-muted)">Impact: Persistent SSH keys in Secrets</text>
+  </g>
+</svg>
+<p style="font-size: 13px; margin: 8px 0;">9-stage chain: 4 of 8 Execution findings confirmed exploited.</p>
+</div>
+</details>
+
+<details class="acc">
+<summary>📅 Timeline &amp; MTTD/MTTR <span class="acc-count">finding lifetime metrics</span></summary>
+<div class="acc-body">
+<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 100%; background: var(--paper-alt); border-radius: 8px; padding: 12px; margin: 16px 0;">
+  <!-- Scan 1 -->
+  <text x="10" y="25" font-size="11" font-weight="bold" fill="var(--ink)">Scan 1 (Day 0)</text>
+  <rect x="10" y="35" width="150" height="30" fill="var(--crit-bg)" stroke="var(--crit-bd)" stroke-width="2" rx="4"/>
+  <text x="20" y="57" font-size="10" font-weight="bold" fill="var(--crit-fg)">Rule-K8S-001</text>
+
+  <!-- Timeline line -->
+  <line x1="10" y1="90" x2="650" y2="90" stroke="var(--signal)" stroke-width="2" stroke-dasharray="4"/>
+
+  <!-- Scan 2 (same finding) -->
+  <text x="200" y="75" font-size="11" font-weight="bold" fill="var(--ink)">Scan 2 (Day 7) — still open</text>
+  <rect x="200" y="35" width="150" height="30" fill="var(--high-bg)" stroke="var(--high-bd)" stroke-width="2" rx="4"/>
+  <text x="210" y="57" font-size="10" font-weight="bold" fill="var(--high-fg)">Rule-K8S-001 (7d old)</text>
+
+  <!-- Scan 3 (resolved) -->
+  <text x="400" y="75" font-size="11" font-weight="bold" fill="var(--ink)">Scan 3 (Day 14) — resolved</text>
+  <rect x="400" y="35" width="150" height="30" fill="var(--low-bg)" stroke="var(--low-bd)" stroke-width="2" rx="4"/>
+  <text x="410" y="57" font-size="10" font-weight="bold" fill="var(--low-fg)">Rule-K8S-001 (14d total)</text>
+
+  <!-- Metrics panel -->
+  <rect x="10" y="115" width="630" height="75" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="2" rx="4"/>
+  <text x="25" y="135" font-size="12" font-weight="bold" fill="var(--signal-text)">Timeline Summary</text>
+  <text x="25" y="155" font-size="10" fill="var(--ink)"><tspan font-weight="bold">Open findings:</tspan> 8 | <tspan font-weight="bold">Resolved:</tspan> 3 | <tspan font-weight="bold">Oldest open:</tspan> 28 days | <tspan font-weight="bold">Median age:</tspan> 12 days</text>
+  <text x="25" y="173" font-size="10" fill="var(--ink)"><tspan font-weight="bold">Critical oldest:</tspan> Rule-K8S-042 (38d) in ns/production | <tspan font-weight="bold">MTTR:</tspan> 14 days (avg resolved age)</text>
+</svg>
+<p style="font-size: 13px; margin: 8px 0;">358 findings tracked: 8 open (oldest: 38 days), 3 resolved (avg: 14 days).</p>
+</div>
+</details>
+
+</section>
+
 <section id="capabilities">
 <h2><span class="h2-title">Key Capabilities</span></h2>
 <div class="card-grid">
@@ -986,19 +1195,17 @@ is reachable from three different tactic queries.</li>
 
 <section id="decisions">
 <h2><span class="h2-title">Design Decisions &amp; Deliberate Deviations</span></h2>
-<p class="lede">Five choices shape everything else in the codebase, and four places where the
-implementation knowingly departs from the original architecture specification. Both lists are
-here so a reader never has to guess whether something is an oversight or a decision.</p>
+<p class="lede">5 load-bearing choices. 4 spec deviations. All intentional.</p>
 
 <h3>The five load-bearing decisions</h3>
 <div class="table-scroll"><table>
 <thead><tr><th>Decision</th><th>Why</th></tr></thead>
 <tbody>
-<tr><td><strong>Pure-stdlib core</strong></td><td>The engine, rules, CLI, scoring and reporting import nothing outside the standard library, so <code>python -m k8smatrixwarden scan --mock</code> works on a bare Python install with no <code>pip</code> step at all. <code>kubernetes</code>, <code>rich</code>, <code>mcp</code> and <code>fpdf2</code> are optional extras, imported lazily, each with a graceful fallback.</td></tr>
-<tr><td><strong>Rules as code, data as JSON</strong></td><td>Rules are <code>Rule</code> instances constructed in each shard — type-checked, fast, and free of a YAML parser dependency. Only taxonomy, config and fixtures are data files, and they are JSON.</td></tr>
-<tr><td><strong>camelCase evidence everywhere</strong></td><td>Live mode reads <em>raw</em> Kubernetes API JSON (camelCase), matching the mock fixtures exactly, so a rule's field access — <code>spec.securityContext.privileged</code> — is byte-identical in mock and live mode. The client's <code>to_dict()</code> would return snake_case and force every rule to branch per mode; that entire class of drift bug was designed out rather than tested for.</td></tr>
-<tr><td><strong>Mock mode is first-class</strong></td><td>Not a test fixture bolted on afterwards. It is the default when no kubeconfig is reachable, and the bundled cluster is deliberately built to trip a wide spread of rules so the whole pipeline is demonstrable end to end before anyone points it at production.</td></tr>
-<tr><td><strong>Tags authored once, on the rule</strong></td><td>Rules emit partial findings through <code>rule.finding(...)</code> and the engine attaches the owning rule's taxonomy automatically. A tag can never disagree with itself between a rule and its findings, because it is only ever written in one place.</td></tr>
+<tr><td><strong>Pure-stdlib core</strong></td><td>Run on bare Python, no <code>pip</code> needed. Optional extras (<code>kubernetes</code>, <code>mcp</code>, <code>fpdf2</code>) import lazily with graceful fallback.</td></tr>
+<tr><td><strong>Rules as code</strong></td><td>Type-checked <code>Rule</code> instances, no YAML parser. Data is JSON only (taxonomy, config, fixtures).</td></tr>
+<tr><td><strong>camelCase everywhere</strong></td><td>Mock and live modes use identical field access (<code>spec.securityContext.privileged</code>). No snake_case branching, no drift.</td></tr>
+<tr><td><strong>Mock first-class</strong></td><td>Default when kubeconfig unreachable. Full pipeline demonstrable end-to-end before production.</td></tr>
+<tr><td><strong>Tags once, on rule</strong></td><td>Engine auto-attaches taxonomy. No tag disagreement between rule and findings.</td></tr>
 </tbody>
 </table></div>
 
@@ -1006,22 +1213,19 @@ here so a reader never has to guess whether something is an oversight or a decis
 <div class="table-scroll"><table>
 <thead><tr><th>Deviation</th><th>Justification</th></tr></thead>
 <tbody>
-<tr><td><strong>Saturating cluster risk</strong> — <code>10·raw/(raw+K)</code> instead of the spec's literal <code>Σ/max_possible·10</code></td><td><code>max_possible</code> is undefined and unbounded for an arbitrary cluster — there is no ceiling on how many pods a cluster can have. Saturation is monotonic, deterministic, bounded to [0,10], and lets a handful of criticals dominate, which is what the specification's own rating bands describe. See <a href="#scoring-math">the scoring math</a>.</td></tr>
-<tr><td><strong>Rules authored in Python</strong> where the spec's examples show YAML</td><td>The target environment has no YAML parser, and Python rules are type-checked and dependency-free. The behaviour is identical to the spec's intent; only the authoring format differs.</td></tr>
-<tr><td><strong>Optional, not required, third-party packages</strong></td><td>Requiring <code>kubernetes</code>/<code>rich</code>/<code>mcp</code> would make the tool un-runnable out of the box. Every extra degrades gracefully when absent.</td></tr>
-<tr><td><strong>The Attack Surface shard analyses across shards rather than re-emitting their findings</strong></td><td>Re-emitting would double-count in every severity total and risk score. The value of a cross-cutting shard is the view no single shard has (e.g. ServiceAccount fan-out), not duplication.</td></tr>
+<tr><td><strong>Saturating cluster risk</strong></td><td>Formula: <code>10·raw/(raw+K)</code>. Bounded [0,10], deterministic, lets criticals dominate. See <a href="#scoring-math">scoring math</a>.</td></tr>
+<tr><td><strong>Python rules, not YAML</strong></td><td>Type-checked, dependency-free. Same behavior as spec intent.</td></tr>
+<tr><td><strong>Packages optional, not required</strong></td><td><code>kubernetes</code>, <code>mcp</code>, <code>fpdf2</code> optional. Graceful fallback when absent.</td></tr>
+<tr><td><strong>Attack Surface cross-shard</strong></td><td>Analyzes across shards, not re-emitting findings. Avoids double-count.</td></tr>
 </tbody>
 </table></div>
-<p>None of these alter the architecture. Each is an implementation-level choice made to keep the
-tool runnable and its numbers honest.</p>
 </section>
 
 <hr>
 
 <section id="scoring-math">
 <h2><span class="h2-title">The Risk Score, Exactly</span></h2>
-<p class="lede">Every number in a report traces back to four multiplications and one
-normalization. Nothing is weighted by a hidden model.</p>
+<p class="lede">Four multiplications. One normalization. No hidden weights.</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">core/scoring.py</span></div>
@@ -1039,13 +1243,9 @@ security_score = round((1 − cluster_risk / 10) × 100)  <span class="c-mut"># 
 <tr><td><strong>severity_weight</strong></td><td><code>CRITICAL 10</code> · <code>HIGH 7</code> · <code>MEDIUM 4</code> · <code>LOW 1</code> · <code>INFO 0</code></td></tr>
 <tr><td><strong>exploitability</strong></td><td><code>Remote 3</code> · <code>Adjacent 2</code> · <code>Local 1</code></td></tr>
 <tr><td><strong>blast_radius</strong></td><td><code>Cluster-wide 3</code> · <code>Namespace 2</code> · <code>Pod 1</code></td></tr>
-<tr><td><strong>path_multiplier</strong></td><td>1.0 for a single-tactic finding, 1.25 for two tactics, 1.5 for three — the attack-path bonus. A writable <code>hostPath</code> mount enables Persistence, Privilege Escalation <em>and</em> Lateral Movement, so it outscores three unrelated single-tactic findings.</td></tr>
+<tr><td><strong>path_multiplier</strong></td><td>1.0 (1 tactic) · 1.25 (2 tactics) · 1.5 (3+). Attack-path bonus for multi-tactic findings.</td></tr>
 </tbody>
 </table></div>
-
-<p><code>INFO</code> findings — including the engine-error findings produced when a rule throws —
-have weight 0 and cannot move the score. A rule crash therefore degrades coverage visibly
-without silently inflating or deflating the risk number.</p>
 
 <div class="table-scroll"><table>
 <thead><tr><th>cluster_risk</th><th>Rating</th></tr></thead>
@@ -1098,8 +1298,7 @@ rules.</p>
 
 <section id="coverage-model">
 <h2><span class="h2-title">How Coverage Is Counted</span></h2>
-<p class="lede">Every technique cell carries one of four states. The distinctions are
-deliberate &mdash; collapsing them would over- or under-state what the tool actually knows.</p>
+<p class="lede">Four cell states: hit, covered, runtime, gap.</p>
 
 <div class="table-scroll"><table>
 <thead><tr><th>State</th><th>Meaning</th></tr></thead>
@@ -1114,41 +1313,15 @@ scan</td></tr>
 </tbody>
 </table></div>
 
-<h3>Why <code>runtime</code> is not folded into <code>covered</code></h3>
-<p>The two answer different questions. A scan rule says <em>&ldquo;the configuration allows
-this&rdquo;</em>; a runtime detection says <em>&ldquo;this is happening right now&rdquo;</em>.
-Several Redguard techniques &mdash; a shell spawned inside a container, a crypto-miner starting
-&mdash; are structurally invisible to a configuration snapshot and can only ever be covered at
-runtime. Reporting them as flat gaps understated the platform&rsquo;s real coverage; merging them
-into <code>covered</code> would claim point-in-time coverage the scanner does not have. So
-<code>coverage_pct</code> (scan only) and <code>coverage_pct_with_runtime</code> are reported as
-separate numbers, and the Runtime Agent&rsquo;s catalog is loaded by default in
-<code>build_threat_matrix</code> so the CLI, reports, dashboard and MCP cannot disagree.</p>
-
-<h3>Cells resolve by name, then by ATT&amp;CK id</h3>
-<p>The Redguard matrix is <strong>finer-grained than ATT&amp;CK-for-Containers</strong>.
-<em>Access the K8s API server</em>, <em>Access Kubelet API</em> and <em>Access Kubernetes
-dashboard</em> are three distinct Discovery techniques that all carry the single id
-<code>T1613</code>. Matching by id first meant whichever cell held that id absorbed every
-Discovery-tagged rule, and the other two rendered as coverage gaps &mdash; even though rules
-detecting exactly those techniques were sitting in the registry. The same pattern hid hostPath,
-host-namespace, sidecar, SSH-in-container and service-account coverage behind the generic
-ATT&amp;CK name &ldquo;Deploy Container&rdquo; (<code>T1610</code>).</p>
-<p>Resolution is therefore <strong>name before id</strong>: naming a Redguard technique verbatim
-is how a rule opts into that exact cell, while a canonical ATT&amp;CK name (which never matches a
-Redguard cell name) still resolves by id exactly as before. <strong>If you add a rule and want it
-on a specific cell, name the technique exactly as the matrix names it.</strong></p>
+<p><strong>scan vs runtime:</strong> Configuration (scan) and behavior (runtime) are separate. Reported as <code>coverage_pct</code> and <code>coverage_pct_with_runtime</code>.</p>
+<p><strong>Resolution:</strong> Name before ATT&CK id — Redguard is finer-grained. Match technique name verbatim to land on a specific cell.</p>
 
 <div class="stat-row">
 <div class="stat"><div class="stat-n">77.8%</div><div class="stat-l">scan coverage</div></div>
 <div class="stat"><div class="stat-n">85.2%</div><div class="stat-l">including runtime</div></div>
-<div class="stat"><div class="stat-n">12</div><div class="stat-l">honest remaining gaps</div></div>
+<div class="stat"><div class="stat-n">12</div><div class="stat-l">honest gaps</div></div>
 </div>
-<p>The remaining gaps are real ones: CVE scanning (needs the Trivy adapter), backdoor-container
-provenance, cloud service-principal mounts, and a few techniques that would require adding a
-Lateral Movement tactic to existing Credential Access rules &mdash; deliberately not done, since
-extra tactics inflate the attack-path score multiplier and would silently move every historical
-score.</p>
+<p>12 real gaps: CVE scanning, backdoor provenance, cloud service-principals, edge tactics.</p>
 </section>
 
 <hr>
@@ -1162,8 +1335,6 @@ catalog.</p>
 <details class="acc" open>
 <summary>① Cluster &amp; Control Plane <span class="acc-count">9 rules</span></summary>
 <div class="acc-body">
-<p>API server, etcd, kubelet, and scheduler exposure — the checks that catch a cluster
-that never should have been reachable in the first place.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>OWASP</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>apiserver-anonymous-auth</code></td><td><span class="sev sev-critical">Critical</span></td><td>K09</td><td>Initial Access</td></tr>
 <tr><td><code>apiserver-insecure-port</code></td><td><span class="sev sev-critical">Critical</span></td><td>K06</td><td>Initial Access</td></tr>
@@ -1181,8 +1352,6 @@ that never should have been reachable in the first place.</p>
 <details class="acc">
 <summary>② Workload &amp; Pod Security <span class="acc-count">17 rules</span></summary>
 <div class="acc-body">
-<p>The largest shard — every <code>securityContext</code>, host-namespace, hostPath, and
-image-hygiene check on Pods, Deployments, DaemonSets, StatefulSets, ReplicaSets, and Jobs.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>workload-privileged-container</code></td><td><span class="sev sev-critical">Critical</span></td><td>Execution, Privilege Escalation</td></tr>
 <tr><td><code>workload-host-pid</code></td><td><span class="sev sev-critical">Critical</span></td><td>Privilege Escalation</td></tr>
@@ -1261,8 +1430,6 @@ image-hygiene check on Pods, Deployments, DaemonSets, StatefulSets, ReplicaSets,
 <details class="acc">
 <summary>⑦ CIS Benchmark &amp; Compliance <span class="acc-count">1 rule</span></summary>
 <div class="acc-body">
-<p>Owns framework tags rather than a large rule set of its own — see <a href="#cis">CIS
-Benchmark Engine</a> for the other 129 controls.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>compliance-psa-not-restricted</code></td><td><span class="sev sev-high">High</span></td><td>Persistence</td></tr>
 </tbody></table></div>
@@ -1272,20 +1439,15 @@ Benchmark Engine</a> for the other 129 controls.</p>
 <details class="acc">
 <summary>⑧ Attack Surface Mapper <span class="acc-count">1 rule</span></summary>
 <div class="acc-body">
-<p>Cross-cutting analyses that don't belong to any single other shard.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>as-sa-fanout</code></td><td><span class="sev sev-medium">Medium</span></td><td>Lateral Movement</td></tr>
 </tbody></table></div>
-<p>Detects a ServiceAccount reused across ≥3 workloads spanning &gt;1 namespace — a
-lateral-movement blast-radius signal no single-pod check can see.</p>
 </div>
 </details>
 
 <details class="acc">
 <summary>⑨ Admission Control <span class="acc-count">4 rules</span></summary>
 <div class="acc-body">
-<p>Closes the Persistence / Credential Access "malicious admission controller" and
-Execution "sidecar injection" gaps.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>OWASP</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>admission-malicious-webhook</code></td><td><span class="sev sev-critical">Critical</span></td><td>K04</td><td>Credential Access, Persistence</td></tr>
 <tr><td><code>admission-webhook-failurepolicy</code></td><td><span class="sev sev-high">High</span></td><td>K04</td><td>Defense Evasion</td></tr>
@@ -1298,15 +1460,11 @@ Execution "sidecar injection" gaps.</p>
 <details class="acc">
 <summary>⑩ Cloud IAM &amp; Workload Identity <span class="acc-count">3 rules</span></summary>
 <div class="acc-body">
-<p>Closes the highest-leverage gap in the original design — cloud credentials reachable
-from a pod, touching three tactics at once.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>OWASP</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>iam-overpermissive</code></td><td><span class="sev sev-high">High</span></td><td>K08</td><td>Lateral Movement, Privilege Escalation</td></tr>
 <tr><td><code>iam-node-role-broad</code></td><td><span class="sev sev-high">High</span></td><td>K08</td><td>Initial Access, Lateral Movement</td></tr>
 <tr><td><code>iam-managed-identity-reachable</code></td><td><span class="sev sev-medium">Medium</span></td><td>K08</td><td>Credential Access</td></tr>
 </tbody></table></div>
-<p><em>Reads the cloud provider's IAM API — outside the K8s API surface, requiring a
-scoped, read-only cloud credential declared in the plugin manifest.</em></p>
 </div>
 </details>
 </section>
@@ -1314,9 +1472,6 @@ scoped, read-only cloud credential declared in the plugin manifest.</em></p>
 <details class="acc">
 <summary>&#9323; Log Analysis &amp; Audit Trail <span class="acc-count">4 rules</span></summary>
 <div class="acc-body">
-<p>Answers the question the other ten shards do not: <strong>if an attacker got in, could
-you tell?</strong> The others ask whether a door is open; this one asks whether anyone is
-writing down who walked through it.</p>
 <div class="table-scroll"><table><thead><tr><th>Rule</th><th>Severity</th><th>OWASP</th><th>MITRE Tactic</th></tr></thead><tbody>
 <tr><td><code>log-audit-policy-missing</code></td><td><span class="sev sev-high">High</span></td><td>K10</td><td>Defense Evasion</td></tr>
 <tr><td><code>log-audit-retention-short</code></td><td><span class="sev sev-medium">Medium</span></td><td>K10</td><td>Defense Evasion</td></tr>
@@ -1380,10 +1535,6 @@ Scope=cluster-wide  Selector=tactic=Persistence
 
 <section id="mitre">
 <h2><span class="h2-title">MITRE ATT&amp;CK Coverage</span></h2>
-<p>The machine-readable mapping uses <strong>MITRE ATT&amp;CK for Containers</strong>
-technique IDs (<code>T16xx</code>) as the contract — validated in CI against a vendored,
-versioned taxonomy file. The Kubernetes Threat Matrix supplies human-readable display
-aliases only; it has no stable IDs, so it's never the source of truth.</p>
 
 <div class="table-scroll"><table>
 <thead><tr><th>Tactic</th><th>Rules</th><th>Coverage</th></tr></thead>
@@ -1399,14 +1550,10 @@ aliases only; it has no stable IDs, so it's never the source of truth.</p>
 <tr><td>Impact</td><td>1</td><td><div class="cov-bar"><div class="cov-fill" style="width:7%"></div></div></td></tr>
 </tbody>
 </table></div>
-<p><em>Nine tactics, not ten — the original Redguard/Microsoft Kubernetes Threat Matrix has
-no "Collection" column; that was a carry-over error from the general Enterprise ATT&amp;CK
-matrix, corrected here.</em></p>
 </section>
 
 <section id="owasp">
 <h2><span class="h2-title">OWASP Kubernetes Top 10 (2025)</span></h2>
-<p class="lede">Each ID links straight to its own page on owasp.org. The same direct links appear on every finding in the markdown, HTML and PDF reports and in the dashboard's threat-matrix drill-down &mdash; never a generic pointer at the project landing page.</p>
 <div class="table-scroll"><table>
 <thead><tr><th>ID</th><th>Risk</th><th>Primary shard(s)</th></tr></thead>
 <tbody>
@@ -1428,8 +1575,7 @@ matrix, corrected here.</em></p>
 
 <section id="cis">
 <h1>CIS Benchmark Engine</h1>
-<p class="lede">Every one of the <strong>130 controls</strong> in CIS Kubernetes Benchmark
-v1.8 gets a status — nothing is silently skipped, and nothing is ever guessed as PASS.</p>
+<p class="lede">130 controls evaluated. 65 from API, 31 via kube-bench, 34 manual. Nothing skipped.</p>
 
 <div class="stat-row">
 <div class="stat"><div class="stat-n">65</div><div class="stat-l">evaluated straight from the K8s API</div></div>
@@ -1463,13 +1609,7 @@ v1.8 gets a status — nothing is silently skipped, and nothing is ever guessed 
 
 <div class="callout safe">
 <span class="co-icon">✓</span>
-<div class="co-body"><p><strong>NEEDS_NODE shrank from 69 → 31.</strong> A naïve API-only
-scanner would mark all 69 non-policy control-plane/node controls un-checkable. Most are
-process flags, not file reads — and flags <em>are</em> recoverable from the K8s API. On a
-self-managed cluster, the live <code>ComponentConfig</code> collector parses
-<code>--flags</code> straight out of the API server/etcd/scheduler/controller-manager's
-own <code>kube-system</code> static Pod specs. Only the 31 true file-permission controls
-still need <code>kube-bench</code>.</p></div>
+<div class="co-body"><p><strong>NEEDS_NODE: 69 → 31.</strong> Process flags recovered from API (ComponentConfig). Only 31 true file-permission controls need kube-bench.</p></div>
 </div>
 
 <div class="code-card">
@@ -1784,15 +1924,7 @@ Proceed with this scan? [Y/n] <span class="c-mut">y</span>
 
 <section id="web">
 <h1>Web Dashboard</h1>
-<p class="lede">A zero-dependency Security Dashboard: a stdlib <code>http.server</code> back end
-serving a vanilla-JS single-page app — no framework, no build step, no CDN. The shell fetches
-<code>GET /api/dashboard</code> once and renders everything client-side across seven tabs.</p>
-
-<p>A <strong>report selector</strong> in the header switches the whole dashboard to any saved
-scan (<code>GET /api/dashboard?scan_id=…</code>), and <strong>every finding is click-through</strong>,
-opening straight to its card in the full report (<code>/report/&lt;scan_id&gt;#&lt;finding&gt;</code>).
-The interface uses a professional, low-emoji visual style, and <strong>all timestamps are shown
-in IST</strong> (e.g. <code>19 Jul 2026, 01:13 IST</code>).</p>
+<p class="lede">Stdlib <code>http.server</code> + vanilla JS SPA. 7 tabs, one API fetch, client-side rendering. Dark/light mode. No auth — loopback by default.</p>
 
 <div class="code-card">
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
@@ -1804,14 +1936,7 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 </div>
 
 <div class="callout">
-  <strong>One shared history across CLI, MCP, and web.</strong> By default all three surfaces
-  read/write the same store — <code>~/.k8smatrixwarden/reports</code> (override for all at once
-  with <code>$K8SMATRIXWARDEN_REPORTS_DIR</code>) — resolved independently of the working
-  directory, and <strong>every scan is persisted automatically</strong>. So a scan you run from
-  the CLI, or that an LLM runs through the <code>run_scan</code>/<code>intelligent_scan</code>
-  MCP tools, shows up in this dashboard's <em>Scan history</em> with no extra step. Name a scan
-  (CLI <code>--name</code>, MCP <code>scan_name</code>, or the dashboard's <em>Scan name</em>
-  field) and its report is titled <code>&lt;name&gt; + date + time</code>.
+  <strong>One shared store: CLI, MCP, web.</strong> Default: <code>~/.k8smatrixwarden/reports</code>. Override: <code>$K8SMATRIXWARDEN_REPORTS_DIR</code>. Every scan auto-saved.
 </div>
 
 <h3>The seven tabs</h3>
@@ -1829,42 +1954,16 @@ k8smatrixwarden web --reports-dir ./reports   <span class="c-mut"># override the
 </table></div>
 
 <h3>Coverage matrix vs. scan matrix</h3>
-<p>These answer two different questions, and the web UI reports different numbers for each.
-<code>/matrix</code> (the <em>Coverage Matrix</em> nav item, and <code>matrix --coverage</code>) has no
-scan overlaid, so every hit-derived number there is structurally zero &mdash; it used to render
-&ldquo;0/9 tactics implicated &middot; 0 findings mapped&rdquo;, which reads as a broken counter rather
-than an answer.</p>
 <div class="table-scroll"><table>
-<thead><tr><th>Page</th><th>Question</th><th>Headline stats</th></tr></thead>
+<thead><tr><th>Page</th><th>Answers</th></tr></thead>
 <tbody>
-<tr><td><code>/matrix</code></td><td>What can K8sMatrixWarden <em>detect</em>?</td>
-<td>techniques with a scan rule (e.g. <code>42/54</code>), matrix coverage&nbsp;%, tactics with
-coverage, how many more are covered at runtime only, and rules mapped to the matrix. Each column reads <code>5/6 with a rule</code>.</td></tr>
-<tr><td><code>/report/&lt;id&gt;/matrix</code></td><td>What did <em>this cluster</em> expose?</td>
-<td>tactics implicated, techniques triggered, matrix coverage&nbsp;%, findings mapped. Cells painted
-by worst finding severity.</td></tr>
+<tr><td><code>/matrix</code></td><td>What can the tool detect? Coverage %, techniques with rules, runtime-only tactics.</td></tr>
+<tr><td><code>/report/&lt;id&gt;/matrix</code></td><td>What did this cluster expose? Tactics hit, techniques triggered, findings mapped.</td></tr>
 </tbody>
 </table></div>
 
 <h3>Security: binding beyond localhost</h3>
-<p>The dashboard binds <code>127.0.0.1</code> by default and <strong>has no
-authentication</strong>. Two things change the moment it binds a routable address:</p>
-<ol>
-<li>anyone who can reach the port can read every saved report, and start scans unless
-    <code>--no-scan</code> is set;</li>
-<li><strong>a kubeconfig in the request body is arbitrary code</strong> &mdash; loading one
-    <em>executes its credential plugin</em> (<code>aws eks get-token</code>,
-    <code>gke-gcloud-auth-plugin</code>, <code>kubelogin</code>) as the user running the server.
-    That is how cloud auth works and the <code>kubernetes</code> client does the same; on
-    loopback the only caller is the operator, but on a routable bind it is remote code
-    execution.</li>
-</ol>
-<p>So on a non-loopback bind the server <strong>refuses a request-supplied kubeconfig</strong>
-&mdash; both <code>kubeconfig</code> (a path) and <code>kubeconfig_content</code> (an upload),
-since either names a config whose plugin would run here. <code>POST /api/scan</code> returns
-<code>403</code>, and the <em>Scan</em> tab shows the explanation instead of a control that would
-always fail. Mock scans and live scans against the <em>server&rsquo;s own</em> kubeconfig/context
-keep working, and startup prints a warning naming the active mode.</p>
+<p>Default: loopback, no auth. On routable bind: kubeconfig refused (credential plugin RCE). Use <code>--no-scan</code> for read-only, or <code>--allow-remote-kubeconfig</code> behind your own auth.</p>
 <div class="table-scroll"><table>
 <thead><tr><th>Command</th><th>Result</th></tr></thead>
 <tbody>
@@ -1878,49 +1977,25 @@ behind your own authentication.</td></tr>
 </tbody>
 </table></div>
 
-<h3>Light &amp; dark mode, full-width layout</h3>
-<p>Every page &mdash; the dashboard, the coverage matrix, and each per-scan HTML report &mdash;
-carries a <strong>theme button in the top bar</strong>. It flips between light and dark, and the
-choice is remembered in <code>localStorage</code> across pages and sessions; with nothing chosen
-the page follows the OS <code>prefers-color-scheme</code>. Every colour comes from a CSS variable,
-so one attribute flip re-themes the whole surface &mdash; heatmap, tables, charts &mdash; with no
-reload. The layout uses the <strong>full browser width</strong> (up to 1720px) instead of a narrow
-centred column, so the 9-column threat matrix, the findings table and the attack map get real
-room; narrow viewports still collapse cleanly.</p>
+<h3>Light & dark mode · full-width layout</h3>
+<p>Dark/light toggle + localStorage persistence. Full browser width (1720px max) for matrix/tables. Narrow viewports collapse cleanly.</p>
 
-<h3>Scan health &mdash; an unread cluster is never shown as a clean one</h3>
-<p>A scan that could not read the cluster produces zero findings <em>because nothing was
-inspected</em>, which would otherwise score as <code>Excellent</code>. The dashboard refuses to
-render that:</p>
-<ul>
-<li>the rating becomes <strong><code>Unknown</code></strong> and the risk / high+ KPIs show
-    <code>&mdash;</code>, not <code>0.0</code>;</li>
-<li>a red <strong>&ldquo;Scan incomplete &mdash; this cluster was not read&rdquo;</strong> banner sits
-    above the tabs (visible on every one) and lists each unreadable resource type;</li>
-<li>Overview, Findings, Threat Matrix, Attack Path and Attack Map each repeat a short
-    <em>&ldquo;Not a result&rdquo;</em> note, so no single view can be screenshotted out of context;</li>
-<li>the saved report says the same in <strong>every</strong> format (HTML, markdown, text, terminal,
-    PDF, JSON), and <code>POST /api/scan</code> returns <code>evidence_ok</code> +
-    <code>warnings[]</code>.</li>
-</ul>
-<p>A <em>partially</em> readable cluster keeps its real rating but gets an amber
-<strong>&ldquo;Partial coverage&rdquo;</strong> banner naming the missing types &mdash; those findings
-are real, just incomplete.</p>
+<h3>Scan health: unread clusters never score Excellent</h3>
+<p>Empty findings from an unreachable cluster gets rating <code>Unknown</code>, not <code>Excellent</code>. Red banner lists unreadable resources. Partial reads get amber "Partial coverage" badge.</p>
 
-<h3>HTTP API (for scripts &amp; other tools)</h3>
-<p>The same dashboard is a small read-mostly JSON API — everything the browser does, scriptable with <code>curl</code>:</p>
+<h3>HTTP API (for scripts & other tools)</h3>
 <div class="table-scroll"><table>
 <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
 <tbody>
-<tr><td><code>GET /api/dashboard</code></td><td>Everything the SPA renders in one call: scan meta, findings, threat matrix, attack path, runtime readiness, risk trend, and timeline. Timestamps are IST.</td></tr>
-<tr><td><code>GET /api/dashboard?scan_id=&lt;id&gt;</code></td><td>Render a specific saved scan instead of the latest (the report selector) — falls back to the latest on an unknown id; includes <code>selected_scan_id</code>.</td></tr>
-<tr><td><code>GET /api/reports</code></td><td>List of saved scans (id, <code>name</code>, <code>display_name</code>, time, rating, risk, findings, scope).</td></tr>
-<tr><td><code>GET /api/report/&lt;id&gt;?format=json|markdown|sarif|html|text</code></td><td>The report re-rendered in the requested format.</td></tr>
-<tr><td><code>GET /api/report/&lt;id&gt;/matrix</code></td><td>The scan's threat matrix as JSON.</td></tr>
-<tr><td><code>GET /api/timeline</code></td><td>Finding-age metrics — open/resolved counts, MTTD/MTTR, oldest critical.</td></tr>
-<tr><td><code>POST /api/scan</code></td><td>Run &amp; save a scan. Body: <code>{"scan_name?","scope_level","namespace?","selector?","mock","context?","kubeconfig?","kubeconfig_content?"}</code> (a live scan may pass the kubeconfig by path <code>kubeconfig</code> <em>or</em> by value <code>kubeconfig_content</code> — how the browser file-picker uploads it) → returns the new scan id, <code>name</code>/<code>display_name</code>, rating, report/matrix URLs, and a <code>warnings[]</code> list of any resource types skipped during live collection plus <code>evidence_ok</code> (false when the cluster could not be read at all). An unreachable live cluster &mdash; or one whose kubeconfig credential plugin cannot get a token &mdash; returns a clean <code>400 {"error":…}</code> carrying the plugin&rsquo;s real error, never a stack trace and never a saved empty scan.</td></tr>
-<tr><td><code>POST /api/runtime</code></td><td>Ingest Falco/audit events — a single falcosidekick event <em>or</em> a <code>{"events":[…]}</code> batch → <code>{correlation, drift}</code>. Read-only: never mutates the cluster.</td></tr>
-<tr><td><code>GET /health</code></td><td>Liveness + platform stats (rule/shard counts).</td></tr>
+<tr><td><code>GET /api/dashboard</code></td><td>Scan meta, findings, threat matrix, attack path, runtime, trend, timeline (all SPA data in one call).</td></tr>
+<tr><td><code>GET /api/dashboard?scan_id=&lt;id&gt;</code></td><td>Specific saved scan (falls back to latest on unknown id).</td></tr>
+<tr><td><code>GET /api/reports</code></td><td>List saved scans (id, name, time, rating, risk, findings count, scope).</td></tr>
+<tr><td><code>GET /api/report/&lt;id&gt;?format=json|markdown|sarif|html|text</code></td><td>Report in requested format.</td></tr>
+<tr><td><code>GET /api/report/&lt;id&gt;/matrix</code></td><td>Threat matrix as JSON.</td></tr>
+<tr><td><code>GET /api/timeline</code></td><td>Finding age metrics (open/resolved, MTTD/MTTR, oldest critical).</td></tr>
+<tr><td><code>POST /api/scan</code></td><td>Run & save scan. Returns: scan id, rating, report URL, warnings[], evidence_ok flag.</td></tr>
+<tr><td><code>POST /api/runtime</code></td><td>Ingest Falco events → {correlation, drift}. Read-only.</td></tr>
+<tr><td><code>GET /health</code></td><td>Liveness + rule/shard counts.</td></tr>
 </tbody>
 </table></div>
 
@@ -2294,64 +2369,28 @@ package), or install it once with <code>pip install -e .</code> and use the
 report.</p>
 
 <h3>"Selector matched no rules"</h3>
-<p>Working as intended — selector terms are validated rather than silently ignored, so a typo
-fails instead of quietly scanning nothing. Run <code>rules</code> or <code>coverage</code> to see
-valid values, or <code>scan --dry-run</code> to check resolution before committing to a scan.</p>
+<p>Typo in selector. Run <code>rules</code> or <code>coverage</code> to see valid values, or <code>scan --dry-run</code> to check.</p>
 
-<h3><code>--live</code> fails with an import error</h3>
+<h3><code>--live</code> fails with import error</h3>
 <p><code>pip install -e ".[live]"</code>.</p>
 
 <h3>"Cannot reach the Kubernetes API server"</h3>
-<p>The context is valid but the cluster is not answering — stopped, or a wrong endpoint. The tool
-preflights connectivity and fails fast with the <code>kubectl … cluster-info</code> command to
-verify, instead of a raw <code>urllib3</code> traceback. The web surface returns a clean
-<code>400 {"error": …}</code>, never a 500.</p>
+<p>Cluster stopped or wrong endpoint. Tool preflights with <code>kubectl cluster-info</code>; web returns <code>400 {error}</code>, never 500.</p>
 
-<h3>"Kubernetes API authentication failed" / "the AWS profile could not be found"</h3>
-<p>The kubeconfig authenticates through a <strong>credential plugin</strong> and that plugin could
-not produce a token — nearly always because the cloud profile it names is not configured on
-<em>this</em> machine. This is not AWS-specific: the tool re-runs whatever <code>exec</code> command
-the kubeconfig declares, so <code>aws eks get-token</code>, <code>gke-gcloud-auth-plugin</code> and
-<code>kubelogin</code> each surface their own real error, and the older <code>auth-provider</code>
-mechanism (<code>gcp</code>/<code>azure</code>/<code>oidc</code>) is handled too. Fix with
-<code>aws configure --profile &lt;name&gt;</code>, <code>gcloud auth login</code>, or
-<code>az login</code>.</p>
-<div class="callout danger">
-<span class="co-icon">⛔</span>
-<div class="co-body"><p><strong>Why this is fatal rather than a warning.</strong> The Python
-Kubernetes client only <em>logs</em> an exec-plugin failure and then continues with no credentials
-at all, so every request returns <code>401</code>. Treated as a per-resource problem, that made a
-cluster nobody had read report as <strong>0 findings / Excellent</strong> — the worst failure mode
-a security tool has. A <code>401</code> is now fatal at preflight and mid-scan, and such a scan is
-never saved.</p></div>
-</div>
+<h3>"Kubernetes API authentication failed"</h3>
+<p>Credential plugin failed (cloud profile misconfigured). Fix with <code>aws configure</code>, <code>gcloud auth login</code>, <code>az login</code>. Fatal at preflight to avoid 0-findings-Excellent scoring.</p>
 
-<h3>A live scan finished with 0 findings and rating <code>Unknown</code></h3>
-<p>The non-fatal form of the same safety net: the cluster answered, but <em>every</em> resource type
-was refused — typically a blanket <code>403</code> from an identity with no read RBAC. Rather than
-score an empty result as <code>Excellent</code>, the scan is marked <code>evidence_ok: false</code>,
-rated <code>Unknown</code>, and every surface carries a <em>"Scan incomplete"</em> banner listing
-what was unreadable. Fix the RBAC and re-scan. Zero findings is only a good result when
-<code>evidence_ok</code> is true.</p>
+<h3>0 findings + rating Unknown</h3>
+<p>Every resource forbidden (blanket 403). Check RBAC. Use <code>roles --bind</code> for minimal ServiceAccount. Partial coverage also gets amber "Partial coverage" banner.</p>
 
-<h3>Some <code>Forbidden</code>/403 errors during a live scan</h3>
-<p>This does not abort the scan. Each inaccessible resource type — RBAC-forbidden, or an API group
-absent on that cluster — is skipped and recorded as a warning, and the scan completes with
-everything else. The skipped types travel with the saved result (<code>warnings[]</code>), so a
-re-rendered report still shows the partial-coverage banner. For full coverage, apply the tool's own
-least-privilege manifest (<code>roles --bind</code>) and scan as that ServiceAccount.</p>
+<h3>Some 403 errors during live scan</h3>
+<p>Inaccessible resource types skipped + recorded as warnings. Scan completes with everything else. Re-rendered report shows partial-coverage banner.</p>
 
-<h3>The CIS report shows many <code>NEEDS_NODE</code> controls</h3>
-<p>Expected on a fresh run — those controls need on-node file reads the Kubernetes API cannot
-provide. Run kube-bench and pass <code>--kube-bench-json</code>. On a managed cluster also pass
-<code>--profile eks|gke|aks</code> so the provider-owned control plane is correctly marked
-<code>NA</code> rather than graded.</p>
+<h3>CIS report shows many NEEDS_NODE controls</h3>
+<p>Expected—need on-node file reads. Run kube-bench, pass <code>--kube-bench-json</code>. On managed cluster: <code>--profile eks|gke|aks</code>.</p>
 
-<h3>How do I confirm the tool itself is not over-privileged?</h3>
-<p><code>k8smatrixwarden roles</code> prints the exact minimal ClusterRole generated per shard —
-only the verbs each shard's rules declared needing, every one of them
-<code>get</code>/<code>list</code>/<code>watch</code>. <code>roles --bind</code> shows the complete
-manifest, ServiceAccount bindings included, before you apply anything.</p>
+<h3>Is the tool over-privileged?</h3>
+<p><code>k8smatrixwarden roles</code> prints minimal ClusterRole (get/list/watch only per shard). <code>roles --bind</code> shows full manifest before apply.</p>
 
 <h3>MCP tools do not appear in the client</h3>
 <ul>

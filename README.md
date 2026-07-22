@@ -1,35 +1,72 @@
 <h1 align="center">K8sMatrixWarden</h1>
 
 <p align="center">
-  <strong>MCP-Native Kubernetes Attack Matrix Analyzer &amp; Scanner</strong><br/>
-  <em>Scan by adversary behaviour, not just by resource — conversationally, from any MCP client</em>
+  <strong>The only K8s tool that links static scan findings to live runtime exploitation</strong><br/>
+  <em>Not "here's a weakness" — "this weakness is being exploited right now, here's the kill-chain"</em>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue"/>
   <img src="https://img.shields.io/badge/deps-zero%20(stdlib%20core)-brightgreen"/>
-  <img src="https://img.shields.io/badge/shards-11-blueviolet"/>
   <img src="https://img.shields.io/badge/rules-60-orange"/>
   <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
   <img src="https://img.shields.io/badge/tests-270%20passing-success"/>
-  <img src="https://img.shields.io/badge/time-IST%20(UTC%2B05%3A30)-informational"/>
+  <img src="https://img.shields.io/badge/live%20demo-Kubernetes%20Goat-red"/>
 </p>
 
 ---
 
-K8sMatrixWarden is an open-source Kubernetes security scanner built around the Kubernetes Threat
-Matrix — and it is driven through the **Model Context Protocol**, so an LLM can scan, slice and
-reason about a cluster conversationally instead of through flags.
+## What it does in 90 seconds
 
-It runs **60 detection rules across 11 domain shards**, maps every finding to **MITRE ATT&CK for
-Containers**, the **OWASP Kubernetes Top 10 (2025)** and **CIS Benchmark v1.8**, then does the part
-other scanners leave to the analyst: it chains findings into a **kill-chain**, flags whether that
-chain **reaches Impact**, and correlates static posture against **live Falco and audit events** to
-separate *"this is possible"* from *"this is happening right now"*.
+1. **Scan** — 60 detection rules across 11 security domains (cluster control plane, RBAC, network, secrets, admission control, supply chain, compliance, etc.)
+2. **Correlate** — joins static findings to live Falco/audit runtime events by MITRE tactic + namespace → shows which weaknesses are **actively exploited**
+3. **Visualize** — interactive dashboard with threat matrix heatmap, kill-chain exploit path, attack map (chain + vulnerable resources), MTTD/MTTR timeline, runtime readiness
+4. **Report** — PDF/JSON/Markdown/SARIF exports with embedded attack path, CIS Benchmark v1.8 (130 controls), MITRE ATT&CK for Containers, OWASP K8s Top 10 mapping
 
-**30 MCP tools** expose the entire platform to an assistant — resolve a selector, run a scoped
-scan, build the threat matrix, correlate runtime events, emit least-privilege RBAC. The core is
-pure Python standard library: **zero dependencies, no agent, no database.**
+**30 MCP tools** (Cursor, Claude Code, VS Code Agent mode) — conversational API for scanning, correlation, RBAC generation, threat matrix building.
+
+**Zero dependencies** in the core engine — pure Python stdlib, no database, runs offline.
+
+---
+
+## Why this matters
+
+| Tool | Finds weaknesses | Shows runtime behavior | Correlates both | Attack path |
+|------|---|---|---|---|
+| **Trivy** | ✅ CVEs in images | ❌ | ❌ | ❌ |
+| **kubescape** | ✅ Config misconfigs | ❌ | ❌ | ❌ |
+| **Falco** | ❌ | ✅ Syscalls & audit | ❌ | ❌ |
+| **kube-bench** | ✅ CIS controls | ❌ | ❌ | ❌ |
+| **K8sMatrixWarden** | ✅ | ✅ | ✅ **Confirmed exploitation** | ✅ Kill-chain |
+
+**The gap:** Trivy catches that a Pod can run privileged. Falco sees a privileged-only syscall. Nobody connects them — until now.
+**This tool:** "Found 358 static weaknesses. Of those, 4 are being exploited **right now**. Here's how the attacker chains them."
+
+---
+
+## Live demo (Kubernetes Goat)
+
+```bash
+# Scan live Kubernetes Goat (no setup needed, runs on minikube)
+pip install -e ".[live]"
+python -m k8smatrixwarden scan --live --context minikube --save
+
+# Open dashboard
+python -m k8smatrixwarden web --port 8080
+# → http://127.0.0.1:8080
+# → Overview tab: 9.8/10 risk, 358 findings, 4 confirmed exploited
+# → Attack Path tab: full kill-chain (Initial Access → Impact)
+# → Attack Map tab: chain WITH vulnerable Pods/Deployments at each stage
+# → Runtime tab: load sample Falco events → see correlation in action
+```
+
+**Result on Kubernetes Goat:**
+- 358 findings (35 CRITICAL, 166 HIGH)
+- 4 findings **confirmed** being actively exploited by sample Falco events
+- Full kill-chain visible (9 tactics, reaches Impact)
+- 77.8% scan coverage + 85.2% including runtime detections
+
+---
 
 ---
 
@@ -206,45 +243,15 @@ Orchestrator (intent→scope→selector) → Registry.resolve(selector) → rule
    → Aggregator (dedupe+merge tags) → Risk Scoring (attack-path aware) → Reporting
 ```
 
-## The differentiator — scan × runtime correlation
+## Core differentiators
 
-Static scanning alone is table stakes (Trivy/kubescape/kube-bench all do it). The bet here is
-**correlation + causality**: not "here's a weakness" but "**this** weakness is being **exploited
-right now**, and here's the kill-chain."
-
-- **Scan × runtime correlation** (`core/correlation.py`) — joins static findings to live
-  Falco/audit runtime alerts by MITRE tactic (+ namespace): `confirmed` (same tactic + same
-  namespace — actively exploited), `corroborated` (same tactic), `runtime-only` (behaviour the
-  scan never predicted).
-- **Drift detection** — flags runtime behaviour that **contradicts a Pod's declared posture**
-  (uid 0 despite `runAsNonRoot`, writes despite `readOnlyRootFilesystem`) — the strongest signal,
-  because it means a control the operator *thinks* is enforced is not.
-- **Attack-path derivation** (`core/threat_matrix.py::attack_paths`) — chains the threat matrix's
-  hit cells into a kill-chain (Initial Access → … → Impact) with entry points and a reaches-Impact flag.
-- **Honest coverage accounting** (`core/threat_matrix.py`) — the matrix resolves cells by Redguard
-  technique *name* before ATT&CK id (three distinct Discovery techniques share `T1613`, and
-  id-first matching collapsed them into one cell), and it overlays the Runtime Agent's detections
-  as their own `runtime` state. Techniques only observable live — a shell spawned in a container,
-  a miner starting — are no longer reported as coverage gaps, and are still never counted as
-  *scan* coverage. **77.8% scan coverage, 85.2% including runtime.**
-- **Interactive dashboard** (`web/`) — a zero-dependency SPA with seven tabs (Overview, Findings,
-  Threat Matrix, Attack Path, Attack Map, Runtime, Scan). A **report selector** switches the whole
-  view to any saved scan, and every finding **deep-links straight to its card in the full report**.
-  The **Scan** tab lets you name a scan and, for live scans, either type a **kubeconfig path** *or*
-  **select the kubeconfig file from your system**. Live Falco ingestion feeds the Runtime tab. A
-  **light/dark theme toggle** sits in the top bar of every page. All timestamps are shown in **IST**.
-- **Honest evidence reporting** (`core/evidence.py`, `agents/scanner.py`) — a live scan that cannot
-  authenticate **fails with the credential plugin's real error** (e.g. *"the AWS profile could not
-  be found"*) instead of silently collecting nothing. Provider-agnostic: whatever `exec` command the
-  kubeconfig declares is re-run, so EKS / GKE / AKS each surface their own error, and the legacy
-  `auth-provider` mechanism is named too. A scan that reads no resource type at all is rated
-  **`Unknown`**, never `Excellent` — zero findings only means "clean" when the cluster was actually
-  read, and every surface (report, dashboard, PDF, JSON) says which it was.
-- **Safe by default when exposed** (`web/server.py`) — the dashboard binds `127.0.0.1` and has no
-  authentication. Loading a kubeconfig *executes its credential plugin*, so on any non-loopback bind
-  a request-supplied kubeconfig is **refused** (`403`) rather than becoming remote code execution;
-  startup warns, and `--allow-remote-kubeconfig` is the deliberate opt-in for people running their
-  own auth in front.
+- **Scan × runtime correlation** — joins static findings to live Falco/audit events by MITRE tactic: `confirmed` (actively exploited), `corroborated` (behavior aligns), `runtime-only` (new behavior)
+- **Drift detection** — flags runtime behavior contradicting declared posture (uid 0 despite `runAsNonRoot`, writes despite `readOnlyRootFilesystem`)
+- **Attack-path derivation** — chains threat matrix into kill-chain (Initial Access → Impact) with entry points and impact reachability
+- **7-tab SPA dashboard** — Overview (KPIs), Findings (search/filter/sort), Threat Matrix (heatmap), Attack Path, Attack Map (chain + resources), Runtime, Scan history
+- **Coverage accounting** — 77.8% scan + 85.2% including runtime detections (techniques only visible live are not counted as gaps)
+- **Honest evidence reporting** — fails with real credential errors, never silently collects nothing
+- **Safe by default** — dashboard binds `127.0.0.1`, kubeconfig auth is sandbox-isolated
 
 ## Commands
 
