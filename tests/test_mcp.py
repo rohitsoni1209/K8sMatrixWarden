@@ -15,10 +15,12 @@ ALL_TOOLS = {
     "mitre_coverage", "list_shards", "list_namespaces", "detect_cluster_provider",
     "validate_platform",
     "preview_scan", "run_scan", "interpret_query", "intelligent_scan",
-    "run_cis_benchmark", "evaluate_runtime_events", "correlate_runtime",
+    "run_cis_benchmark", "run_compliance_audit", "evaluate_runtime_events",
+    "correlate_runtime",
     "detect_drift", "deploy_falco", "list_runtime_detections",
     "build_threat_matrix", "build_attack_path",
-    "list_reports", "download_report", "generate_rbac_manifest",
+    "list_reports", "download_report", "federation_blast_radius",
+    "generate_rbac_manifest",
 }
 
 
@@ -69,6 +71,16 @@ def test_no_remediation_or_apply_tool_is_exposed():
     offenders = [name for name in tools
                  if any(m in name.lower() for m in forbidden_markers)]
     assert offenders == [], f"unexpected write-capable MCP tool(s): {offenders}"
+
+
+def test_deploy_falco_is_read_only_by_default():
+    # The one tool that CAN write to a cluster must not do so unless explicitly opted in —
+    # the read-only / offline guarantee holds for every normal invocation.
+    tools = build_tools()
+    out = tools["deploy_falco"](webhook_url="http://x/api/runtime")
+    assert out["status"] == "dry-run"
+    assert out["commands"] and "commands were" not in out  # returns commands, does not run
+    assert "K8SMATRIXWARDEN_ALLOW_CLUSTER_WRITE" in out["note"]
 
 
 def test_run_scan_mock_full_cluster_returns_findings():

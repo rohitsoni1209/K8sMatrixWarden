@@ -71,15 +71,36 @@ def _finding(tactic, ns="production", name="payment-api"):
         mitre=[MitreTag(tactic, "T1610", "Deploy Container")])
 
 
-def test_confirmed_when_tactic_and_namespace_match():
-    findings = [_finding(Tactic.PRIVILEGE_ESCALATION, ns="production")]
-    # audit event in the SAME namespace, PrivEsc tactic (new clusterrolebinding)
+def test_confirmed_only_when_event_pod_matches_the_finding_resource():
+    # the runtime event NAMES the pod the finding is on (payment-api) — resource-level link.
+    findings = [_finding(Tactic.PRIVILEGE_ESCALATION, ns="production", name="payment-api")]
+    alerts = RuntimeAgent().evaluate_stream([
+        {"source": "audit", "verb": "create", "resource": "clusterrolebindings",
+         "namespace": "production", "pod": "payment-api"}])
+    out = correlate(findings, alerts)
+    assert out["confirmed_exploitation"] == 1
+    assert out["correlations"][0]["confidence"] == "confirmed"
+
+
+def test_confirmed_matches_workload_owned_pod_name():
+    # pods are <workload>-<rs>-<hash>; a finding on the workload still counts as the resource.
+    findings = [_finding(Tactic.PRIVILEGE_ESCALATION, ns="production", name="payment-api")]
+    alerts = RuntimeAgent().evaluate_stream([
+        {"source": "audit", "verb": "create", "resource": "clusterrolebindings",
+         "namespace": "production", "pod": "payment-api-5f8b94447d-blxwg"}])
+    assert correlate(findings, alerts)["confirmed_exploitation"] == 1
+
+
+def test_namespace_match_without_pod_is_corroborated_not_confirmed():
+    # same tactic + namespace but the event names no matching pod — NOT proof of exploitation.
+    findings = [_finding(Tactic.PRIVILEGE_ESCALATION, ns="production", name="payment-api")]
     alerts = RuntimeAgent().evaluate_stream([
         {"source": "audit", "verb": "create", "resource": "clusterrolebindings",
          "namespace": "production"}])
     out = correlate(findings, alerts)
-    assert out["confirmed_exploitation"] == 1
-    assert out["correlations"][0]["confidence"] == "confirmed"
+    assert out["confirmed_exploitation"] == 0
+    assert out["correlated"] == 1
+    assert out["correlations"][0]["confidence"] == "corroborated"
 
 
 def test_corroborated_when_tactic_matches_but_namespace_differs():
@@ -133,7 +154,9 @@ def test_unattributable_event_skipped():
 
 
 if __name__ == "__main__":
-    for fn in (test_confirmed_when_tactic_and_namespace_match,
+    for fn in (test_confirmed_only_when_event_pod_matches_the_finding_resource,
+               test_confirmed_matches_workload_owned_pod_name,
+               test_namespace_match_without_pod_is_corroborated_not_confirmed,
                test_corroborated_when_tactic_matches_but_namespace_differs,
                test_runtime_only_when_no_static_finding_shares_the_tactic,
                test_drift_root_despite_runasnonroot,

@@ -137,6 +137,11 @@ class EvidenceCollector:
     def _fetch(self, kind: str, bucket: str) -> list[dict]:  # pragma: no cover - overridden
         raise NotImplementedError
 
+    def cluster_label(self) -> str:
+        """Stable identifier for the cluster this collector reads — the key the federation
+        view groups saved scans by. Overridden per backend."""
+        return "target-cluster"
+
 
 class MockEvidenceCollector(EvidenceCollector):
     """Loads all resources from a single JSON fixture (default backend)."""
@@ -146,6 +151,9 @@ class MockEvidenceCollector(EvidenceCollector):
         with open(fixture_path, "r", encoding="utf-8") as fh:
             self._data = json.load(fh)
         self.fetched_ok = True
+
+    def cluster_label(self) -> str:
+        return "mock-cluster"
 
     def _fetch(self, kind: str, bucket: str) -> list[dict]:
         items = self._data.get(bucket, [])
@@ -362,6 +370,15 @@ class LiveEvidenceCollector(EvidenceCollector):
         self._api = client.ApiClient()
         self._context = context
         self._kubeconfig = kubeconfig
+        # Resolve the active context name once, so a scan run without an explicit --context
+        # still records WHICH cluster it hit (the federation view groups by this).
+        self._active_context = context
+        if not self._active_context:
+            try:
+                _all, active = config.list_kube_config_contexts(config_file=kubeconfig)
+                self._active_context = (active or {}).get("name")
+            except Exception:
+                self._active_context = None
         #: The real reason authentication is broken, when we could recover it.
         self._auth_detail: Optional[str] = None
         if not _has_credentials(client):
@@ -372,6 +389,9 @@ class LiveEvidenceCollector(EvidenceCollector):
             if self._auth_detail:
                 raise self._auth_failed(self._auth_detail)
         self._preflight()
+
+    def cluster_label(self) -> str:
+        return self._active_context or "live-cluster"
 
     def _credential_error(self) -> Optional[str]:
         """The exec credential plugin's real failure, resolved at most once. Also covers
@@ -436,25 +456,54 @@ class LiveEvidenceCollector(EvidenceCollector):
                 raise self._auth_failed(
                     self._credential_error() or _short_api_error(exc)) from exc
 
+    #: Objects per page, and a hard page cap. On a large cluster a single unpaginated LIST
+    #: can time out or blow memory; paging in bounded chunks (each with its OWN per-request
+    #: timeout) makes a big cluster degrade — read what we can, warn about the rest — instead
+    #: of aborting the whole scan. 500 × 200 = 100k objects before the cap trips.
+    _PAGE_LIMIT = 500
+    _MAX_PAGES = 200
+
     def _get_json(self, path: str) -> list[dict]:
-        """Call the REST path and parse the raw JSON body ourselves (camelCase preserved).
+        """Call the REST path (paginated) and parse the raw JSON ourselves (camelCase kept).
 
         `_preload_content=False` returns the underlying HTTP response without the client
         trying to deserialize it into a typed model, so this stays compatible across
         kubernetes-client versions — the older `response_type=` kwarg was removed in v33+
         (renamed to `response_types_map`), which otherwise breaks live scanning on a
         modern client even though pyproject only requires `kubernetes>=28`.
+
+        Follows the Kubernetes `metadata.continue` chunk token so a cluster with more objects
+        than one page still returns fully; each page carries its own `_request_timeout`, so a
+        slow/huge list degrades page-by-page rather than as one all-or-nothing call.
         """
-        resp = self._api.call_api(
-            path, "GET", auth_settings=["BearerToken"],
-            _preload_content=False, _request_timeout=self._REQUEST_TIMEOUT,
-        )
-        raw = resp[0] if isinstance(resp, tuple) else resp
-        body = getattr(raw, "data", raw)
-        if isinstance(body, (bytes, bytearray)):
-            body = body.decode("utf-8")
-        data = json.loads(body) if body else {}
-        return data.get("items", []) if isinstance(data, dict) else []
+        items: list[dict] = []
+        cont = ""
+        for page in range(self._MAX_PAGES):
+            sep = "&" if "?" in path else "?"
+            p = f"{path}{sep}limit={self._PAGE_LIMIT}"
+            if cont:
+                p += f"&continue={cont}"
+            resp = self._api.call_api(
+                p, "GET", auth_settings=["BearerToken"],
+                _preload_content=False, _request_timeout=self._REQUEST_TIMEOUT,
+            )
+            raw = resp[0] if isinstance(resp, tuple) else resp
+            body = getattr(raw, "data", raw)
+            if isinstance(body, (bytes, bytearray)):
+                body = body.decode("utf-8")
+            data = json.loads(body) if body else {}
+            if not isinstance(data, dict):
+                break
+            items.extend(data.get("items", []) or [])
+            cont = (data.get("metadata") or {}).get("continue") or ""
+            if not cont:
+                return items
+        # Hit the page cap with a continue token still outstanding — partial, and we say so
+        # rather than silently under-reporting a very large cluster.
+        self.warnings.append(
+            f"{path}: read first {len(items)} objects then stopped at the pagination cap "
+            f"({self._MAX_PAGES} pages) — results for this type are partial")
+        return items
 
     _PATHS = {
         "pods": "/api/v1/pods",

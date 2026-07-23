@@ -37,4 +37,4 @@ k8smatrixwarden = "k8smatrixwarden.cli.main:main"
 include = ["k8smatrixwarden*"]
 
 [tool.setuptools.package-data]
-k8smatrixwarden = ["data/fixtures/*.json", "taxonomy/*.json", "config/*.json"]
+k8smatrixwarden = ["data/fixtures/*.json", "taxonomy/*.json", "config/*.json", "web/vendor/*.js"]

@@ -270,6 +270,91 @@ def cmd_cis(a) -> int:
     return 0
 
 
+def cmd_compliance(a) -> int:
+    """Map cluster posture onto governance frameworks (PCI DSS / SOC 2 / ISO 27001 /
+    NIST 800-53) and emit an auditor-facing report."""
+    from ..bootstrap import build_platform
+    from ..frameworks.compliance import run_audit, framework_keys
+    from ..frameworks import compliance_report as cr
+
+    frameworks = None
+    if a.frameworks:
+        frameworks = [f for f in a.frameworks.split(",") if f]
+        bad = [f for f in frameworks if f not in set(framework_keys())]
+        if bad:
+            print(f"error: unknown framework(s): {bad}. Valid: {framework_keys()}",
+                  file=sys.stderr)
+            return 2
+
+    mode_label = "mock" if (a.mock or not a.live) else "live"
+    _warn_ignored_live_flags(a)
+    try:
+        report = run_audit(build_platform(a.config), mock=(mode_label == "mock"),
+                           fixture=a.fixture, kubeconfig=a.kubeconfig, context=a.context,
+                           profile=a.profile, frameworks=frameworks,
+                           kube_bench_json=a.kube_bench_json)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    fmt = (a.output or "markdown").lower()
+    binary = fmt == "pdf"
+    if fmt == "json":
+        import json as _json
+        out = _json.dumps(report.as_dict(), indent=2)
+    elif fmt == "html":
+        out = cr.to_html(report)
+    elif fmt == "pdf":
+        try:
+            out = cr.to_pdf(report)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    else:
+        out = cr.to_markdown(report)
+
+    if a.output_file:
+        with open(a.output_file, "wb" if binary else "w",
+                  **({} if binary else {"encoding": "utf-8"})) as fh:
+            fh.write(out)
+        print(f"[written] {a.output_file}", file=sys.stderr)
+    elif binary:
+        print("error: pdf output requires --output-file", file=sys.stderr)
+        return 2
+    else:
+        print(out)
+
+    total_fail = sum(f.counts["FAIL"] for f in report.frameworks)
+    if a.fail_on_fail and total_fail > 0:
+        return 1
+    return 0
+
+
+def cmd_federation(a) -> int:
+    """Cross-cluster blast radius from the newest saved scan of each cluster in the store."""
+    from ..core.federation import build_federation, latest_per_cluster
+    from ..core import federation_report as fr
+    from ..core.report_store import ReportStore
+
+    store = ReportStore(a.reports_dir) if a.reports_dir else ReportStore()
+    rep = build_federation(latest_per_cluster(store))
+    fmt = (a.output or "markdown").lower()
+    if fmt == "json":
+        import json as _json
+        out = _json.dumps(rep.as_dict(), indent=2)
+    elif fmt == "html":
+        out = fr.to_html(rep)
+    else:
+        out = fr.to_markdown(rep)
+    if a.output_file:
+        with open(a.output_file, "w", encoding="utf-8") as fh:
+            fh.write(out)
+        print(f"[written] {a.output_file}", file=sys.stderr)
+    else:
+        print(out)
+    return 0
+
+
 def cmd_report(a) -> int:
     """List and download stored scan reports (§16.4)."""
     from ..core.report_store import ReportStore
@@ -494,6 +579,36 @@ def build_parser() -> argparse.ArgumentParser:
     ci.add_argument("--fail-on-fail", action="store_true",
                     help="exit 1 if any control FAILs (CI mode)")
     ci.set_defaults(func=cmd_cis)
+
+    co = sub.add_parser("compliance",
+                        help="audit against PCI DSS / SOC 2 / ISO 27001 / NIST 800-53")
+    co.add_argument("--mock", action="store_true")
+    co.add_argument("--live", action="store_true")
+    co.add_argument("--fixture")
+    co.add_argument("--kubeconfig")
+    co.add_argument("--context", help="kubeconfig context to use")
+    co.add_argument("--kube-bench-json", help="kube-bench --json output to resolve "
+                    "node file-permission controls")
+    co.add_argument("--profile", default="auto",
+                    choices=["auto", "self-managed", "eks", "gke", "aks"],
+                    help="CIS profile driving the underlying benchmark (auto-detects)")
+    co.add_argument("--frameworks", help="comma-separated subset, e.g. "
+                    "'PCI-DSS-4.0,SOC2,ISO-27001-2022,NIST-800-53-r5' (default: all)")
+    co.add_argument("--output", "-o", default="markdown",
+                    choices=["markdown", "json", "html", "pdf"])
+    co.add_argument("--output-file", help="write here (required for pdf)")
+    co.add_argument("--fail-on-fail", action="store_true",
+                    help="exit 1 if any requirement FAILs (CI mode)")
+    co.set_defaults(func=cmd_compliance)
+
+    fed = sub.add_parser("federation",
+                         help="cross-cluster blast radius from saved per-cluster scans")
+    fed.add_argument("--reports-dir", default=_DEFAULT_REPORTS_DIR,
+                     help=f"report store to correlate (default: {_DEFAULT_REPORTS_DIR})")
+    fed.add_argument("--output", "-o", default="markdown",
+                     choices=["markdown", "json", "html"])
+    fed.add_argument("--output-file")
+    fed.set_defaults(func=cmd_federation)
 
     fmts = ["terminal", "text", "markdown", "json", "sarif", "html", "pdf"]
     rp = sub.add_parser("report", help="list / download stored scan reports")

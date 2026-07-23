@@ -21,12 +21,13 @@ from urllib.parse import parse_qs
 from ..core.models import (ScanMode, ScanRequest, Scope, ScopeLevel, Selector, Severity)
 from ..core.report_store import DEFAULT_DIR, ReportStore
 from ..core.finding_context import _owasp_taxonomy
-from ..core.reporting import scan_warning_lines
+from ..core.reporting import scan_warning_lines, _esc
 from ..core.results import ScanResult
 from ..core.threat_matrix import build_threat_matrix
 from . import pages
 
 _VALID_FORMATS = {"json", "markdown", "md", "sarif", "html", "text", "terminal"}
+_VENDOR_ASSETS = {"cytoscape.min.js"}  # allow-list — no arbitrary file reads via /vendor/<name>
 
 
 @dataclass
@@ -93,6 +94,16 @@ class WebApp:
                               "shards": len(self.p.registry.shard_names())})
             if method == "GET" and path == "/matrix":
                 return self._coverage_matrix()
+            if method == "GET" and path == "/compliance":
+                return self._compliance(q)
+            if method == "GET" and path == "/api/compliance":
+                return self._api_compliance(q)
+            if method == "GET" and path == "/federation":
+                return self._federation()
+            if method == "GET" and path == "/api/federation":
+                return self._api_federation()
+            if method == "GET" and parts[:1] == ["vendor"] and len(parts) == 2:
+                return self._vendor_asset(parts[1])
             if method == "GET" and path == "/api/reports":
                 return self._api_reports(q)
             if method == "GET" and path == "/api/dashboard":
@@ -132,6 +143,15 @@ class WebApp:
         # just serves the shell. All rendering (KPIs, findings table, matrix heatmap,
         # attack path, runtime) happens in the browser from that one JSON payload.
         return _html(pages.dashboard_page(has_scan=bool(self.store.list())))
+
+    def _vendor_asset(self, name: str) -> Response:
+        # Third-party browser JS the dashboard needs (e.g. the Attack Path graph),
+        # vendored and served locally — no CDN, so the dashboard stays self-contained.
+        if name not in _VENDOR_ASSETS or "/" in name or "\\" in name:
+            raise _NotFound(f"no such asset: {name}")
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor", name)
+        with open(path, "rb") as fh:
+            return Response(200, "application/javascript; charset=utf-8", fh.read())
 
     def _dashboard_data(self, scan_id: Optional[str] = None) -> dict:
         """Everything the dashboard needs, in one payload: the selected (or latest) scan +
@@ -272,6 +292,80 @@ class WebApp:
     def _api_report_matrix(self, scan_id: str) -> Response:
         result = self._load(scan_id)
         return _json(build_threat_matrix(result, self.p.registry.rules).as_dict())
+
+    # ------------------------------------------------------------------ #
+    # Compliance audit — a standalone page like /matrix. Audits the mock target by
+    # default; a live audit needs a kubeconfig context, so it runs from the CLI/MCP where
+    # the target is explicit (the web live-scan path is separately kubeconfig-gated).
+    # ------------------------------------------------------------------ #
+    # Compliance audit tied to the scan the user is actually viewing. A saved scan carries
+    # findings but not a CIS run, so this is a FINDINGS-DERIVED audit: a requirement fails
+    # when a finding tagged with one of its CIS controls exists. It cannot show CIS PASS
+    # states (nothing affirmatively ran the benchmark), so those requirements read
+    # NOT_ASSESSED and the page says to run `k8smatrixwarden compliance` for the full audit.
+    # Only when the store is empty do we fall back to a live/mock run for the demo.
+    # ------------------------------------------------------------------ #
+    def _run_compliance(self, q: dict):
+        from ..frameworks.compliance import ComplianceEngine, run_audit, framework_keys
+        fw = q.get("frameworks")
+        frameworks = [f for f in fw.split(",") if f] if fw else None
+        if frameworks:
+            bad = [f for f in frameworks if f not in set(framework_keys())]
+            if bad:
+                raise _NotFound(f"unknown framework(s): {bad}")
+
+        store = self.store
+        if not store.list():
+            # empty store — nothing scanned yet; run a mock audit so the page is not blank.
+            return run_audit(self.p, mock=True, profile="auto", frameworks=frameworks), True
+        result = self._load(q.get("scan_id"))       # selected scan, else latest
+        rep = ComplianceEngine().evaluate(
+            cis_results=[], findings=result.findings, frameworks=frameworks,
+            scan_id=result.scan_id, cluster=result.cluster_name,
+            generated_at=result.generated_at, profile=result.mode)
+        return rep, False
+
+    _CIS_NOTE = ("<div class='cf-note' style='border-left-color:var(--high)'>Derived from "
+                 "the findings of scan <b>{sid}</b> — a requirement fails when a finding maps "
+                 "to one of its CIS controls. CIS <b>pass</b> states are not shown here "
+                 "(nothing re-ran the 130-control benchmark against this saved scan); run "
+                 "<code>k8smatrixwarden compliance</code> for the full CIS-backed audit.</div>")
+
+    def _compliance(self, q: dict) -> Response:
+        from ..frameworks import compliance_report as cr
+        report, is_mock = self._run_compliance(q)
+        fmt = (q.get("format") or "html").lower()
+        if fmt == "json":
+            return _json(report.as_dict())
+        if fmt == "pdf":
+            try:
+                return Response(200, "application/pdf", cr.to_pdf(report))
+            except RuntimeError as exc:
+                return _json({"error": str(exc)}, 400)
+        note = "" if is_mock else self._CIS_NOTE.format(sid=_esc(report.scan_id or "—"))
+        body = (pages._topbar("compliance")
+                + cr.to_html(report, standalone=False).replace("</h1>", "</h1>" + note, 1))
+        return _html(pages.layout("K8sMatrixWarden · Compliance Audit", body))
+
+    def _api_compliance(self, q: dict) -> Response:
+        return _json(self._run_compliance(q)[0].as_dict())
+
+    # ------------------------------------------------------------------ #
+    # Federation blast radius — correlates the newest saved scan of each cluster in the
+    # store. Populate it by scanning each cluster (its own context) via /api/scan.
+    # ------------------------------------------------------------------ #
+    def _build_federation(self):
+        from ..core.federation import build_federation, latest_per_cluster
+        return build_federation(latest_per_cluster(self.store))
+
+    def _federation(self) -> Response:
+        from ..core import federation_report as fr
+        body = pages._topbar("federation") + fr.to_html(self._build_federation(),
+                                                         standalone=False)
+        return _html(pages.layout("K8sMatrixWarden · Federation Blast Radius", body))
+
+    def _api_federation(self) -> Response:
+        return _json(self._build_federation().as_dict())
 
     def _api_scan(self, body: bytes) -> Response:
         if not self.allow_scan:

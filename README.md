@@ -9,8 +9,8 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-blue"/>
   <img src="https://img.shields.io/badge/deps-zero%20(stdlib%20core)-brightgreen"/>
   <img src="https://img.shields.io/badge/rules-60-orange"/>
-  <img src="https://img.shields.io/badge/MCP%20tools-30-blueviolet"/>
-  <img src="https://img.shields.io/badge/tests-270%20passing-success"/>
+  <img src="https://img.shields.io/badge/MCP%20tools-32-blueviolet"/>
+  <img src="https://img.shields.io/badge/tests-316%20passing-success"/>
   <img src="https://img.shields.io/badge/live%20demo-Kubernetes%20Goat-red"/>
 </p>
 
@@ -19,11 +19,13 @@
 ## What it does in 90 seconds
 
 1. **Scan** — 60 detection rules across 11 security domains (cluster control plane, RBAC, network, secrets, admission control, supply chain, compliance, etc.)
-2. **Correlate** — joins static findings to live Falco/audit runtime events by MITRE tactic + namespace → shows which weaknesses are **actively exploited**
+2. **Correlate** — joins static findings to live Falco/audit runtime events → **confirmed** (the event names the exact resource a finding is on — actively exploited), **corroborated** (same tactic/namespace, no resource link), or **runtime-only** (novel behavior)
 3. **Visualize** — interactive dashboard with threat matrix heatmap, kill-chain exploit path, attack map (chain + vulnerable resources), MTTD/MTTR timeline, runtime readiness
 4. **Report** — PDF/JSON/Markdown/SARIF exports with embedded attack path, CIS Benchmark v1.8 (130 controls), MITRE ATT&CK for Containers, OWASP K8s Top 10 mapping
+5. **Attest** — governance compliance audit: maps posture onto **PCI DSS v4.0, SOC 2, ISO 27001:2022, NIST 800-53 rev5** with per-requirement pass/fail/evidence and "N findings block PCI-DSS attestation" — auditor-facing PDF/HTML, not a finding dump
+6. **Federate** — multi-cluster blast radius: correlates saved scans across clusters and flags **shared non-default identities** (same custom ClusterRole / ServiceAccount / cloud IAM role in >1 cluster; built-in defaults excluded) as **candidate** cross-cluster lateral-movement paths to verify — "if prod is compromised, staging may fall too — here's the shared role to check"
 
-**30 MCP tools** (Cursor, Claude Code, VS Code Agent mode) — conversational API for scanning, correlation, RBAC generation, threat matrix building.
+**32 MCP tools** (Cursor, Claude Code, VS Code Agent mode) — conversational API for scanning, correlation, RBAC generation, threat matrix building.
 
 **Zero dependencies** in the core engine — pure Python stdlib, no database, runs offline.
 
@@ -76,7 +78,7 @@ python -m k8smatrixwarden web --port 8080
 there is no dependency that can lag a new Python release. The 3.10 floor comes from the optional
 extras (`mcp`, `kubernetes` and `fpdf2` each require 3.10+), not from the engine.
 
-Verified on 3.11 and 3.14 (270/270 tests on both). **3.11 or 3.12 is the safest choice** for a
+Verified on 3.11 and 3.14 (316/316 tests on both). **3.11 or 3.12 is the safest choice** for a
 real deployment — every extra has shipped wheels for them for years.
 
 If you have more than one Python installed, note that MCP clients launch whichever one `python`
@@ -112,7 +114,7 @@ discovery, so there is nothing to write and no path to fill in.
 2. **Open the folder** in your MCP client — Cursor, Claude Code, or VS Code.
 3. **Enable the server and confirm the tools load.**
    - *Cursor* — **Settings → Tools & MCP**; `k8smatrixwarden` should be listed, toggled on, with
-     30 tools under it.
+     32 tools under it.
    - *Claude Code* — run `/mcp`, approve the project-scoped server the first time it prompts.
    - *VS Code* — open Copilot Chat, switch the mode dropdown to **Agent**, then check the tools (🛠)
      picker. MCP tools only appear in Agent mode.
@@ -174,12 +176,12 @@ Restart the client after editing.
 > **Why not one file for all clients?** MCP standardizes the *protocol*, not *config discovery* —
 > each client picked its own filename, directory and JSON shape (VS Code nests under `servers`
 > with `"type": "stdio"`; everyone else uses `mcpServers`). The **server** never forks: all five
-> clients run the identical `k8smatrixwarden mcp` process and see the identical 30 tools.
+> clients run the identical `k8smatrixwarden mcp` process and see the identical 32 tools.
 
 Verify the server independently at any time:
 
 ```bash
-python -m k8smatrixwarden mcp --list-tools     # prints all 30, without starting the server
+python -m k8smatrixwarden mcp --list-tools     # prints all 32, without starting the server
 ```
 
 ### 2. From the command line
@@ -257,7 +259,7 @@ Orchestrator (intent→scope→selector) → Registry.resolve(selector) → rule
 
 | Command | What it does |
 |---|---|
-| `k8smatrixwarden mcp [--list-tools]` | **Run the MCP server**, or list its 30 tools |
+| `k8smatrixwarden mcp [--list-tools]` | **Run the MCP server**, or list its 32 tools |
 | `k8smatrixwarden chat` | **Interactive conversational assistant** (plain-English, confirm-then-run) |
 | `k8smatrixwarden scan ...` | Run a scan by scope × selector, or a one-shot natural-language query |
 | `k8smatrixwarden web [--port 8080]` | **Security Dashboard** web UI — browse scans, open reports, view the per-scan threat matrix, run a scan. Binds `127.0.0.1` |
@@ -324,7 +326,7 @@ CIS-designated manual reviews (surfaced, never auto-passed).
 | Plugin model | `k8smatrixwarden/core/plugin.py` |
 | 11 Domain Shards | `k8smatrixwarden/shards/*` |
 | Orchestrator / Scanner / Runtime agents | `k8smatrixwarden/agents/*` |
-| MCP Server | `k8smatrixwarden/mcp/` — **30 tools**: knowledge (14), scan/audit/runtime/analysis (12), reports (2), platform (2). Every parameter carries a schema description. Read-only: no remediation/apply tool is exposed. |
+| MCP Server | `k8smatrixwarden/mcp/` — **32 tools**: knowledge (14), scan/audit/runtime/analysis (13), reports (3), platform (2). Every parameter carries a schema description. Read-only: no remediation/apply tool is exposed. |
 | Scan × Runtime correlation | `k8smatrixwarden/core/correlation.py` |
 | Interactive Dashboard | `k8smatrixwarden/web/` — zero-dependency SPA, `/api/dashboard` · `/api/timeline` · `/api/runtime` |
 | IST timestamps | `k8smatrixwarden/core/timeutil.py` |
@@ -379,7 +381,7 @@ kubectl apply -f k8smatrixwarden-rbac.json
 self-contained, searchable page (dark/light aware) covering everything: architecture and design
 decisions, the risk-scoring math, all 11 shards' rule catalogs, MITRE / OWASP / CIS coverage, the
 complete CLI flag reference, configuration, live-cluster setup, the runtime-correlation layer, the
-full 30-tool MCP reference with per-client setup, known limitations, and troubleshooting.
+full 32-tool MCP reference with per-client setup, known limitations, and troubleshooting.
 
 ## License
 

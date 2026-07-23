@@ -15,10 +15,36 @@ import glob
 import json
 import os
 import re
+import threading
 from dataclasses import dataclass
 from typing import Optional
 
 from .results import ScanResult
+
+# Guards the timeline read-modify-write: the web server is threaded, so two concurrent
+# saves could otherwise interleave and lose an update. ponytail: in-process lock; a second
+# PROCESS scanning the same store concurrently is out of scope (rare — note the ceiling).
+_TIMELINE_LOCK = threading.Lock()
+
+
+def _atomic_write_json(path: str, obj) -> None:
+    """Write JSON durably: serialise to a temp file in the same dir, then os.replace() —
+    an atomic rename on POSIX/Windows — so a crash mid-write can never leave a half-written
+    (unparseable) report or timeline index behind."""
+    tmp = f"{path}.{os.getpid()}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(obj, fh, indent=2, default=str)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        # serialise failed mid-write — drop the partial temp so no stray file is left.
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 def default_reports_dir() -> str:
     """The shared report store every surface (CLI, MCP, web) reads/writes by default.
@@ -64,6 +90,7 @@ class StoredReport:
     scope: str
     name: str = ""
     display_name: str = ""
+    cluster: str = "target-cluster"
 
 
 class ReportStore:
@@ -74,8 +101,7 @@ class ReportStore:
     def save(self, result: ScanResult) -> str:
         os.makedirs(self.dir, exist_ok=True)
         path = os.path.join(self.dir, f"{result.scan_id}.json")
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(result.as_dict(), fh, indent=2, default=str)
+        _atomic_write_json(path, result.as_dict())
         self._update_timeline(result)
         return path
 
@@ -99,28 +125,30 @@ class ReportStore:
             return {}
 
     def _update_timeline(self, result: ScanResult) -> None:
-        tl = self._load_timeline()
-        ts = result.generated_at
-        current = {}
-        for f in result.findings:
-            if f.severity.weight == 0:      # skip INFO/engine-error
-                continue
-            r = f.resource
-            current[self._fkey(f.rule_id, r.kind, r.name, r.namespace)] = f
-        for k, f in current.items():
-            e = tl.get(k)
-            if e is None:
-                tl[k] = {"rule_id": f.rule_id, "title": f.title,
-                         "severity": f.severity.label, "resource": str(f.resource),
-                         "first_seen": ts, "last_seen": ts, "resolved_at": None}
-            else:
-                e.update(last_seen=ts, resolved_at=None,
-                         severity=f.severity.label)   # reappeared / refresh
-        for k, e in tl.items():
-            if k not in current and not e.get("resolved_at"):
-                e["resolved_at"] = ts               # gone this scan == fixed
-        with open(self._timeline_path(), "w", encoding="utf-8") as fh:
-            json.dump(tl, fh, indent=2)
+        # Serialised: load → diff → write must be one critical section, or two concurrent
+        # saves (threaded web server) race and one update is lost.
+        with _TIMELINE_LOCK:
+            tl = self._load_timeline()
+            ts = result.generated_at
+            current = {}
+            for f in result.findings:
+                if f.severity.weight == 0:      # skip INFO/engine-error
+                    continue
+                r = f.resource
+                current[self._fkey(f.rule_id, r.kind, r.name, r.namespace)] = f
+            for k, f in current.items():
+                e = tl.get(k)
+                if e is None:
+                    tl[k] = {"rule_id": f.rule_id, "title": f.title,
+                             "severity": f.severity.label, "resource": str(f.resource),
+                             "first_seen": ts, "last_seen": ts, "resolved_at": None}
+                else:
+                    e.update(last_seen=ts, resolved_at=None,
+                             severity=f.severity.label)   # reappeared / refresh
+            for k, e in tl.items():
+                if k not in current and not e.get("resolved_at"):
+                    e["resolved_at"] = ts               # gone this scan == fixed
+            _atomic_write_json(self._timeline_path(), tl)
 
     def timeline(self) -> dict:
         """Open/resolved finding ages against the latest scan. `age_days` is a
@@ -171,7 +199,8 @@ class ReportStore:
                 name=d.get("name", ""),
                 display_name=d.get("display_name")
                 or _fallback_display_name(d.get("name", ""), scan_id,
-                                          d.get("generated_at", ""))))
+                                          d.get("generated_at", "")),
+                cluster=d.get("cluster", "target-cluster")))
         out.sort(key=lambda r: r.generated_at, reverse=True)
         return out[:limit] if limit else out
 

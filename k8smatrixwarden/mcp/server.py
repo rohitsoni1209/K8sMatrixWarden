@@ -27,6 +27,7 @@ directly) — kept accurate and complete for exactly that reason.
 from __future__ import annotations
 
 import json
+import os
 from typing import Annotated, Any, Optional
 
 from ..bootstrap import build_platform
@@ -612,6 +613,60 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                                                         profile=profile)
         return report.as_dict()
 
+    def run_compliance_audit(
+            mock: _Mock = True, fixture: _Fixture = None,
+            kubeconfig: _Kubeconfig = None, context: _Context = None,
+            profile: Annotated[str, _F(description=(
+                "CIS profile driving the underlying benchmark: 'auto' (default), "
+                "'self-managed', 'eks', 'gke', or 'aks'."))] = "auto",
+            frameworks: Annotated[Optional[list[str]], _F(description=(
+                "Which governance frameworks to assess. Any of 'PCI-DSS-4.0', 'SOC2', "
+                "'ISO-27001-2022', 'NIST-800-53-r5'. Omit for all four."))] = None,
+            output_format: Annotated[str, _F(description=(
+                "'json' (default, structured), 'markdown', 'html', or 'pdf' "
+                "(base64-encoded auditor document)."))] = "json",
+            kube_bench_json: Annotated[Optional[str], _F(description=(
+                "Optional path to `kube-bench --json` output to resolve node "
+                "file-permission CIS controls."))] = None) -> Any:
+        """Produce a governance compliance audit — maps this cluster's posture onto PCI DSS
+        v4.0, SOC 2, ISO 27001:2022 and NIST 800-53 rev5, with per-requirement
+        pass/fail/partial/manual/not-assessed status, the evidence behind each verdict, and
+        the exact findings blocking attestation (e.g. 'N findings block PCI DSS
+        attestation'). Runs a read-only scan + the CIS benchmark once and crosswalks both;
+        it invents no new checks. Assesses the Kubernetes-relevant subset of each framework
+        and never marks an unverified requirement as passing. output_format: json (default)
+        | markdown | html | pdf."""
+        from ..frameworks.compliance import run_audit, framework_keys
+        from ..frameworks import compliance_report as cr
+
+        valid = set(framework_keys())
+        if frameworks:
+            bad = [f for f in frameworks if f not in valid]
+            if bad:
+                return {"error": f"unknown framework(s): {bad}. Valid: {sorted(valid)}"}
+        try:
+            report = run_audit(platform, mock=mock, fixture=fixture, kubeconfig=kubeconfig,
+                               context=context, profile=profile, frameworks=frameworks,
+                               kube_bench_json=kube_bench_json)
+        except RuntimeError as exc:
+            return {"error": str(exc)}
+        except Exception as exc:
+            return {"error": f"compliance audit failed: {exc}"}
+
+        fmt = (output_format or "json").lower()
+        if fmt == "json":
+            return report.as_dict()
+        if fmt == "markdown" or fmt == "md":
+            return _encode_report(cr.to_markdown(report))
+        if fmt == "html":
+            return _encode_report(cr.to_html(report))
+        if fmt == "pdf":
+            try:
+                return _encode_report(cr.to_pdf(report))
+            except RuntimeError as exc:
+                return {"error": str(exc)}
+        return {"error": f"unknown output_format: {output_format}"}
+
     def evaluate_runtime_events(events: _Events) -> list[dict]:
         """Evaluate a batch of runtime events (Falco-style syscall events or Kubernetes
         audit events) against the Runtime Agent's rule catalog (§8) and return any
@@ -715,16 +770,35 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
                 "'http://host.minikube.internal:8080/api/runtime'."))],
             namespace: Annotated[str, _F(description=(
                 "Namespace to install Falco into (created if missing). Default 'falco'."))]
-            = "falco",
-            mock: Annotated[bool, _F(description=(
-                "Reserved for symmetry with the other tools; the helm install itself is "
-                "unaffected. Default True."))] = True) -> dict:
-        """One-click Falco + falcosidekick deploy. Runs helm install to set up Falco with
-        a webhook pointing at your K8sMatrixWarden runtime endpoint
-        (e.g. http://host.minikube.internal:8080/api/runtime). On success, returns install
-        log and next steps. Requires helm to be installed on the system."""
+            = "falco") -> dict:
+        """Falco + falcosidekick install helper for wiring up the runtime feed. K8sMatrixWarden
+        is READ-ONLY by default, so this does NOT touch your cluster unless you opt in: it
+        returns the exact `helm` commands (with the webhook pre-filled) for you to run
+        yourself. Only when the env var K8SMATRIXWARDEN_ALLOW_CLUSTER_WRITE=1 is set will it
+        execute them — that is the single write path in the tool and it is off by default, so
+        the read-only / offline guarantee holds for every normal invocation. Requires helm."""
+        vals = (f"falcosidekick.enabled=true,"
+                f"falcosidekick.config.webhook.address={webhook_url}")
+        commands = [
+            "helm repo add falcosecurity https://falcosecurity.github.io/charts",
+            "helm repo update",
+            f"helm install falco falcosecurity/falco -n {namespace} --create-namespace "
+            f"--set {vals}",
+        ]
+        next_steps = [
+            f"Check pod status: kubectl get pods -n {namespace}",
+            f"Tail logs: kubectl logs -n {namespace} -l app=falco -f",
+            "Send runtime events to /api/runtime to see correlations"]
+
+        if os.environ.get("K8SMATRIXWARDEN_ALLOW_CLUSTER_WRITE") != "1":
+            return {"status": "dry-run", "webhook": webhook_url, "commands": commands,
+                    "next_steps": next_steps,
+                    "note": ("K8sMatrixWarden is read-only by default — these commands were "
+                             "NOT run. Execute them yourself, or set "
+                             "K8SMATRIXWARDEN_ALLOW_CLUSTER_WRITE=1 to let this tool run them.")}
+
         import subprocess
-        out = {"status": "ok", "steps": []}
+        out = {"status": "ok", "steps": [], "commands": commands}
         try:
             subprocess.run(["helm", "repo", "add", "falcosecurity",
                            "https://falcosecurity.github.io/charts"],
@@ -733,18 +807,13 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             subprocess.run(["helm", "repo", "update"], check=True,
                           capture_output=True, timeout=30)
             out["steps"].append("✓ Updated Helm repos")
-            vals = (f"falcosidekick.enabled=true,"
-                   f"falcosidekick.config.webhook.address={webhook_url}")
             subprocess.run(
                 ["helm", "install", "falco", "falcosecurity/falco",
                  "-n", namespace, "--create-namespace", "--set", vals],
                 check=True, capture_output=True, timeout=60)
             out["steps"].append(f"✓ Installed Falco in ns/{namespace}")
             out["webhook"] = webhook_url
-            out["next_steps"] = [
-                f"Check pod status: kubectl get pods -n {namespace}",
-                f"Tail logs: kubectl logs -n {namespace} -l app=falco -f",
-                "Send runtime events to /api/runtime to see correlations"]
+            out["next_steps"] = next_steps
         except FileNotFoundError:
             return {"error": "helm not found — install helm first (https://helm.sh)"}
         except subprocess.CalledProcessError as e:
@@ -940,6 +1009,39 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
             return {"error": str(exc)}
         return {"scan_id": result.scan_id, "format": fmt, **_encode_report(content)}
 
+    def federation_blast_radius(
+            reports_dir: _ReportsDir = _DEFAULT_REPORTS_DIR,
+            output_format: Annotated[str, _F(description=(
+                "'json' (default), 'markdown', or 'html'."))] = "json") -> Any:
+        """Cross-cluster blast radius: 'if one cluster is compromised, what does the
+        attacker reach in the others?' Correlates the newest saved scan of EACH distinct
+        cluster in the report store and finds shared identities — the same ClusterRole,
+        ServiceAccount, cloud IAM role, Secret or ConfigMap (by kind+name) present in two
+        or more clusters (built-in defaults like cluster-admin/system:*/default SA are
+        excluded). Each shared identity is a CANDIDATE cross-cluster lateral-movement path to
+        verify — a same-name collision to confirm is the same trust principal, not proof on
+        its own (no candidate ⇒ reported as independent). Also returns a federated
+        tactic-exposure view across all clusters. To populate the store, run_scan(save=True)
+        against each cluster with its own context. output_format: json | markdown | html."""
+        from ..core.federation import build_federation, latest_per_cluster
+        from ..core.federation_report import to_markdown, to_html
+        from ..core.report_store import ReportStore
+
+        store = ReportStore(reports_dir)
+        try:
+            results = latest_per_cluster(store)
+        except Exception as exc:
+            return {"error": f"could not load saved scans: {exc}"}
+        rep = build_federation(results)
+        fmt = (output_format or "json").lower()
+        if fmt == "json":
+            return rep.as_dict()
+        if fmt in ("markdown", "md"):
+            return _encode_report(to_markdown(rep))
+        if fmt == "html":
+            return _encode_report(to_html(rep))
+        return {"error": f"unknown output_format: {output_format}"}
+
     # ================================================================== #
     # LAYER 4 — Platform: least-privilege RBAC generation
     # ================================================================== #
@@ -991,6 +1093,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         "interpret_query": interpret_query,
         "intelligent_scan": intelligent_scan,
         "run_cis_benchmark": run_cis_benchmark,
+        "run_compliance_audit": run_compliance_audit,
         "evaluate_runtime_events": evaluate_runtime_events,
         "correlate_runtime": correlate_runtime,
         "detect_drift": detect_drift,
@@ -1001,6 +1104,7 @@ def build_tools(config_path: Optional[str] = None) -> dict[str, Any]:
         # 3. reports
         "list_reports": list_reports,
         "download_report": download_report,
+        "federation_blast_radius": federation_blast_radius,
         # 4. platform
         "generate_rbac_manifest": generate_rbac_manifest,
     }

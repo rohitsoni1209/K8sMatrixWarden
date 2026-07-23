@@ -550,7 +550,7 @@ footer.site-footer {
     <input id="search" type="text" placeholder="Filter the docs…" autocomplete="off" spellcheck="false">
   </div>
   <div class="topbar-right">
-    <span class="badge-version">v1.0 · 60 rules · 30 MCP tools · IST</span>
+    <span class="badge-version">v1.0 · 60 rules · 32 MCP tools · IST</span>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">◐</button>
   </div>
 </div>
@@ -728,7 +728,7 @@ footer.site-footer {
             </div>
             <div class="prob-card">
               <div class="pc-gap">Native to AI agents</div>
-              <div class="pc-fix">A <b>30-tool MCP server</b> exposes scanning, the CIS
+              <div class="pc-fix">A <b>32-tool MCP server</b> exposes scanning, the CIS
                 benchmark, the threat matrix, kill-chain attack paths, scan×runtime
                 correlation, and report export directly to Claude, Cursor, or
                 any MCP client — no bespoke integration.</div>
@@ -743,7 +743,7 @@ footer.site-footer {
             <div class="stat"><div class="stat-n">60</div><div class="stat-l">rules across 11 shards</div></div>
             <div class="stat"><div class="stat-n">9</div><div class="stat-l">MITRE ATT&amp;CK tactics</div></div>
             <div class="stat"><div class="stat-n">130</div><div class="stat-l">CIS controls, every one graded</div></div>
-            <div class="stat"><div class="stat-n">30</div><div class="stat-l">MCP tools for AI agents</div></div>
+            <div class="stat"><div class="stat-n">32</div><div class="stat-l">MCP tools for AI agents</div></div>
             <div class="stat"><div class="stat-n">270</div><div class="stat-l">tests, 0 required deps</div></div>
           </div>
         </div>
@@ -755,7 +755,7 @@ footer.site-footer {
 <h1>Overview</h1>
 <p class="lede">K8sMatrixWarden is an <strong>MCP-native</strong> Kubernetes security platform.
 Its whole surface — scanning, the CIS benchmark, the threat matrix, kill-chain attack paths,
-and scan×runtime correlation — is exposed as <strong>30 MCP tools</strong>, so an AI agent
+and scan×runtime correlation — is exposed as <strong>32 MCP tools</strong>, so an AI agent
 (Claude, Cursor, VS&nbsp;Code, Windsurf) drives it conversationally. The <a href="#cli">CLI</a>
 and <a href="#web">web dashboard</a> run the same engine for anyone not on an MCP client. It is
 <em>detect-and-report only</em> — read-only on every surface, no apply/remediate path.</p>
@@ -998,7 +998,9 @@ changes which rules get selected, never the code path that runs them.</p>
   <div class="info-card"><span class="ic-icon">🧩</span><h4>Domain-Sharded Execution</h4><p>11 shards own the evidence fetch and RBAC for their domain; tactics and frameworks are cross-cutting tags on top, never the execution boundary.</p></div>
   <div class="info-card"><span class="ic-icon">🔗</span><h4>Deep-Linked Reports</h4><p>Every finding in the dashboard — in the Findings table, the Threat Matrix drill-downs, and the Attack Path / Attack Map stages — links straight to its card in the full report.</p></div>
   <div class="info-card"><span class="ic-icon">📋</span><h4>Full CIS Benchmark</h4><p>All 130 CIS Kubernetes Benchmark v1.8 controls evaluated — 65 straight from the API, 31 via kube-bench, 34 flagged manual, 0 silently skipped.</p></div>
-  <div class="info-card"><span class="ic-icon">🔌</span><h4>30-Tool MCP Server</h4><p>Scan, audit, build the threat matrix and kill-chain, correlate a live runtime feed against static findings, and export reports — all reachable from Claude, Cursor, or any MCP client. Read-only: no apply/remediate tool.</p></div>
+  <div class="info-card"><span class="ic-icon">⚖️</span><h4>Compliance Audit</h4><p>Maps posture onto <strong>PCI DSS v4.0, SOC 2, ISO 27001:2022 &amp; NIST 800-53 rev5</strong> — per-requirement pass/fail/partial/manual, the evidence behind each verdict, and the exact findings blocking attestation. Auditor-facing HTML/PDF. Never marks an unverified requirement as passing.</p></div>
+  <div class="info-card"><span class="ic-icon">🌐</span><h4>Multi-Cluster Blast Radius</h4><p>Correlates saved scans across clusters and flags <strong>shared non-default identities</strong> — the same custom ClusterRole, ServiceAccount or cloud IAM role in more than one cluster (built-in defaults excluded) — as <strong>candidate</strong> cross-cluster lateral-movement paths to verify. A same-name collision is a lead to confirm, never assumed to be the same principal.</p></div>
+  <div class="info-card"><span class="ic-icon">🔌</span><h4>32-Tool MCP Server</h4><p>Scan, audit, build the threat matrix and kill-chain, correlate a live runtime feed against static findings, and export reports — all reachable from Claude, Cursor, or any MCP client. Read-only: no apply/remediate tool.</p></div>
   <div class="info-card"><span class="ic-icon">🗺️</span><h4>Kubernetes Threat Matrix</h4><p>Every scan projects its findings onto the 9-tactic Kubernetes Threat Matrix — a heatmap of covered, hit, and gap techniques, in reports, the web dashboard, and MCP.</p></div>
   <div class="info-card"><span class="ic-icon">🔴</span><h4>Scan × Runtime Correlation</h4><p>Joins static findings to live Falco/audit events by MITRE tactic — <em>confirmed / corroborated / runtime-only</em> — plus drift detection and a derived kill-chain: not "here's a weakness" but "this one is being exploited right now."</p></div>
   <div class="info-card"><span class="ic-icon">🖥️</span><h4>Interactive Dashboard</h4><p>A zero-dependency single-page app — seven tabs (Overview, Findings, Threat Matrix, Attack Path, Attack Map, Runtime, Scan) with search/filter/sort, a report selector to switch between saved scans, finding deep-links, and live Falco ingestion. Timestamps in IST.</p></div>
@@ -1734,7 +1736,7 @@ same engine. Pick whichever fits the moment.</p>
 <tr><td><code>roles</code></td><td>Print per-shard least-privilege RBAC</td></tr>
 <tr><td><code>report list / download</code></td><td>List saved scans; re-render any of them in any format</td></tr>
 <tr><td><code>doctor</code></td><td>Validate the whole platform's wiring</td></tr>
-<tr><td><code>mcp</code></td><td>Run the MCP server, or list its 30 tools</td></tr>
+<tr><td><code>mcp</code></td><td>Run the MCP server, or list its 32 tools</td></tr>
 </tbody>
 </table></div>
 
@@ -2014,7 +2016,7 @@ path-traversal-guarded, and <code>--no-scan</code> serves existing reports fully
 
 <section id="mcp-connect">
 <h1>MCP Server</h1>
-<p class="lede">This is the intended way to run K8sMatrixWarden. 30 tools across four layers
+<p class="lede">This is the intended way to run K8sMatrixWarden. 32 tools across four layers
 let any MCP-compatible AI agent — Claude, Cursor, VS&nbsp;Code, Windsurf — do everything the CLI
 can: scan, audit, project the threat matrix and kill-chain, correlate a live runtime feed against
 static findings, and export reports. Every tool's docstring and all 150 parameters carry their own
@@ -2040,7 +2042,7 @@ setup — there is nothing to write and no path to fill in.</p>
   <div class="flow-arrow">→</div>
   <div class="flow-step"><div class="fs-n">02</div><div class="fs-t">Open the folder</div><div class="fs-d">Open the repo root in Cursor, Claude Code, or VS&nbsp;Code. The config is found automatically.</div></div>
   <div class="flow-arrow">→</div>
-  <div class="flow-step"><div class="fs-n">03</div><div class="fs-t">Enable the server</div><div class="fs-d">Approve <code>k8smatrixwarden</code> when the client prompts, and confirm all 30 tools load.</div></div>
+  <div class="flow-step"><div class="fs-n">03</div><div class="fs-t">Enable the server</div><div class="fs-d">Approve <code>k8smatrixwarden</code> when the client prompts, and confirm all 32 tools load.</div></div>
   <div class="flow-arrow">→</div>
   <div class="flow-step"><div class="fs-n">04</div><div class="fs-t">Ask in plain English</div><div class="fs-d">Open the agent chat and describe the scan you want — no flags.</div></div>
 </div>
@@ -2048,7 +2050,7 @@ setup — there is nothing to write and no path to fill in.</p>
 <p>Per-client where to check that step 3 worked:</p>
 <ul>
 <li><strong>Cursor</strong> — <em>Settings → Tools &amp; MCP</em>. <code>k8smatrixwarden</code> should
-be listed and toggled on, with 30 tools underneath it.</li>
+be listed and toggled on, with 32 tools underneath it.</li>
 <li><strong>Claude Code</strong> — run <code>/mcp</code>. A project-scoped
 <code>.mcp.json</code> asks for approval the first time you open the folder; approve it, then the
 server shows as <em>connected</em>.</li>
@@ -2116,13 +2118,13 @@ explicit <code>"type": "stdio"</code>, while everyone else uses <code>mcpServers
 clients converge on a shared path, three small files is the floor for zero-config support, and the
 two global-config clients need the one-time paste above. The upside: the <em>server</em> never
 forks — all five clients run the identical <code>k8smatrixwarden mcp</code> process and see the
-identical 30 tools.</p></div>
+identical 32 tools.</p></div>
 </div>
 
 <h3>Verify, then talk to it</h3>
 <div class="code-card">
   <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn" data-copy>Copy</button></div>
-  <pre><code><span class="c-mut"># lists all 30 tools without starting the server — the fastest wiring check</span>
+  <pre><code><span class="c-mut"># lists all 32 tools without starting the server — the fastest wiring check</span>
 python -m k8smatrixwarden mcp --list-tools
 
 <span class="c-mut"># start it over stdio yourself (this is what the client runs for you)</span>
@@ -2465,7 +2467,7 @@ not enough to re-spawn the server.</li>
 <tr><td><strong>Evidence Collector</strong></td><td>Shared, scope-aware fetch/cache — each resource kind fetched once per scan. Live mode preflights <em>connectivity and authentication</em>: an unreachable cluster or a <code>401</code> fails fast with one clear message (for a kubeconfig exec plugin it re-runs the plugin itself and quotes its real error &mdash; provider-agnostic, so EKS/GKE/AKS each surface their own, and the legacy <code>auth-provider</code> mechanism is named too), while a resource type it merely can't read (RBAC <code>403</code> / absent API group) is skipped-with-warning rather than aborting the scan. If <em>nothing</em> could be read, the result is flagged <code>evidence_ok:false</code> and rated <code>Unknown</code> &mdash; never <code>Excellent</code>.</td></tr>
 <tr><td><strong>Attack-Path Bonus</strong></td><td>A risk-score multiplier for a finding that enables multiple tactics along a chain.</td></tr>
 <tr><td><strong>Finding anchor</strong></td><td>A stable, URL-safe slug for a finding; the report gives each card that <code>id</code> so any surface can deep-link to <code>/report/&lt;scan_id&gt;#&lt;anchor&gt;</code>.</td></tr>
-<tr><td><strong>MCP</strong></td><td>Model Context Protocol — the open standard this tool's 30-tool server implements.</td></tr>
+<tr><td><strong>MCP</strong></td><td>Model Context Protocol — the open standard this tool's 32-tool server implements.</td></tr>
 <tr><td><strong>Detection surface</strong></td><td><code>scan</code> (point-in-time config analysis, Scanner Agent) vs <code>runtime</code> (live event/behaviour observation, Runtime Agent) — every detection is tagged one or the other.</td></tr>
 <tr><td><strong>Threat Matrix</strong></td><td>The 9-tactic Kubernetes Threat Matrix; a scan's findings project onto it as a covered/hit/gap heatmap.</td></tr>
 </tbody>

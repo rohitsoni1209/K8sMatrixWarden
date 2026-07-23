@@ -100,3 +100,21 @@ def test_timeline_tracks_open_and_resolved():
         assert tl2["resolved"] > 0, "dropped findings should be marked resolved"
         assert tl2["open"] < tl1["open"]
         assert tl2["oldest_open_days"] >= 10   # survivors are 10 days old
+
+
+def test_save_is_atomic_no_partial_file_on_crash():
+    # A failed serialise must not leave a half-written report; os.replace is all-or-nothing.
+    import json, os, tempfile
+    from k8smatrixwarden.core.report_store import _atomic_write_json
+    d = tempfile.mkdtemp()
+    p = os.path.join(d, "x.json")
+    circular = {}
+    circular["self"] = circular            # json.dump raises ValueError, even with default=str
+    try:
+        _atomic_write_json(p, circular)
+    except ValueError:
+        pass
+    assert not os.path.exists(p)                  # no partial file committed
+    assert not [f for f in os.listdir(d) if f.endswith(".tmp")]  # temp cleaned up
+    _atomic_write_json(p, {"a": 1})
+    assert json.load(open(p)) == {"a": 1}

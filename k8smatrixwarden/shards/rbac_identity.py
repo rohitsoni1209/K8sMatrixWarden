@@ -9,6 +9,33 @@ from .base import DomainShard, ref
 NAME = "rbac_identity"
 
 
+# Default RBAC that Kubernetes ships on every cluster (cluster-admin, admin, edit, view,
+# and the whole system:* set) is wildcard/broad BY DESIGN. Flagging it fires CRITICALs on
+# every cluster's first run and — because the same kind+name recurs everywhere — manufactures
+# false cross-cluster "shared identity" edges in the federation view. Skip these built-ins
+# in the role-DEFINITION scanners; a suspicious BINDING of them is still caught separately.
+_DEFAULT_CLUSTERROLES = {"cluster-admin", "admin", "edit", "view"}
+
+
+def _is_builtin_role(obj) -> bool:
+    meta = obj.get("metadata", {}) or {}
+    if (meta.get("labels", {}) or {}).get("kubernetes.io/bootstrapping") == "rbac-defaults":
+        return True
+    name = meta.get("name", "") or ""
+    return name.startswith("system:") or name in _DEFAULT_CLUSTERROLES
+
+
+def _blast(obj):
+    # A namespaced Role is a namespace blast radius; only a ClusterRole is cluster-wide.
+    return BR.CLUSTER if (obj.get("kind") == "ClusterRole") else BR.NAMESPACE
+
+
+def _roles(ev):
+    """ClusterRoles + namespaced Roles, minus the built-in defaults."""
+    return [o for o in ev.get("ClusterRole", all_scopes=True) + ev.get("Role")
+            if not _is_builtin_role(o)]
+
+
 def _rule_grants(rules_list, verbs=None, resources=None):
     for r in rules_list or []:
         rv = set(r.get("verbs", []) or [])
@@ -21,21 +48,21 @@ def _rule_grants(rules_list, verbs=None, resources=None):
 
 
 def _wildcard_verbs(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+    for cr in _roles(ev):
         for r in cr.get("rules", []) or []:
             if "*" in (r.get("verbs", []) or []):
                 yield rule.finding(ref(cr), f"role grants wildcard verbs (verbs: ['*'])",
-                                   blast_radius=BR.CLUSTER, evidence={"rule": r})
+                                   blast_radius=_blast(cr), evidence={"rule": r})
                 break
 
 
 def _wildcard_resources(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+    for cr in _roles(ev):
         for r in cr.get("rules", []) or []:
             if "*" in (r.get("resources", []) or []):
                 yield rule.finding(ref(cr), "role grants wildcard resources "
                                    "(resources: ['*'])",
-                                   blast_radius=BR.CLUSTER, evidence={"rule": r})
+                                   blast_radius=_blast(cr), evidence={"rule": r})
                 break
 
 
@@ -54,19 +81,21 @@ def _cluster_admin_default_sa(rule, ev, scope):
 
 
 def _bind_escalate(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+    for cr in _roles(ev):
         for r in cr.get("rules", []) or []:
             verbs = set(r.get("verbs", []) or [])
             if verbs & {"bind", "escalate", "impersonate"}:
                 yield rule.finding(
                     ref(cr), f"role can {', '.join(sorted(verbs & {'bind','escalate','impersonate'}))} "
                     f"— privilege-escalation primitive",
-                    blast_radius=BR.CLUSTER, evidence={"verbs": sorted(verbs)})
+                    blast_radius=_blast(cr), evidence={"verbs": sorted(verbs)})
                 break
 
 
 def _secret_read_broad(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True):
+    for cr in _roles(ev):
+        if cr.get("kind") != "ClusterRole":
+            continue                       # cluster-wide secret read is the ClusterRole case
         for r in _rule_grants(cr.get("rules", []), verbs=["get", "list"],
                                resources=["secrets"]):
             yield rule.finding(ref(cr), "ClusterRole can read secrets cluster-wide "
@@ -76,20 +105,21 @@ def _secret_read_broad(rule, ev, scope):
 
 
 def _can_delete_events(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+    for cr in _roles(ev):
         for r in _rule_grants(cr.get("rules", []), verbs=["delete"], resources=["events"]):
             yield rule.finding(ref(cr), "role can delete events (defense evasion / "
-                               "covering tracks)", evidence={"rule": r})
+                               "covering tracks)", blast_radius=_blast(cr),
+                               evidence={"rule": r})
             break
 
 
 def _coredns_write(rule, ev, scope):
-    for cr in ev.get("ClusterRole", all_scopes=True) + ev.get("Role"):
+    for cr in _roles(ev):
         for r in _rule_grants(cr.get("rules", []), verbs=["update", "patch"],
                               resources=["configmaps"]):
             yield rule.finding(ref(cr), "role can modify ConfigMaps (potential CoreDNS "
                                "poisoning if kube-system CoreDNS CM is writable)",
-                               blast_radius=BR.CLUSTER, evidence={"rule": r})
+                               blast_radius=_blast(cr), evidence={"rule": r})
             break
 
 

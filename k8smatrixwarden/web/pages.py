@@ -131,23 +131,17 @@ table.ft tr:hover td{background:rgba(0,0,0,0.02)}
 .step .cnt{font-size:.72rem;color:var(--muted);margin-top:.4rem;font-weight:600}
 .arrow{display:flex;align-items:center;color:var(--muted);font-size:1.3rem;padding:0 .3rem}
 .reach{font-weight:700}.reach.y{color:var(--crit)}.reach.n{color:var(--low)}
-/* attack map stages (accordion) */
-.stage{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin:.7rem 0;overflow:hidden;
- border-left:4px solid var(--muted)}
-.stage .shead{display:flex;align-items:center;gap:.7rem;padding:.9rem 1rem;cursor:pointer;
- transition:background .18s var(--ease-out)}
-.stage .shead:hover{background:rgba(0,0,0,0.03)}
-.stage .snum{font-size:.75rem;font-weight:700;color:#fff;background:var(--muted);border-radius:50%;
- width:1.7em;height:1.7em;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
-.stage .st{font-weight:700;font-size:.95rem;flex:1}
-.stage .smeta{font-size:.76rem;color:var(--muted);font-weight:600}
-.stage .scaret{color:var(--muted);transition:transform .2s var(--ease-out)}
-.stage.open .scaret{transform:rotate(90deg)}
-.stage .sbody{padding:0 1rem;max-height:0;overflow:hidden;transition:max-height .3s var(--ease-out),padding .3s var(--ease-out)}
-.stage.open .sbody{padding:.2rem 1rem 1rem;max-height:none}
 .tchip{display:inline-block;font-size:.72rem;padding:.2rem .55rem;margin:.15rem .3rem .15rem 0;border-radius:20px;
  border:1px solid var(--bd);background:var(--bg);color:var(--muted)}
 .clk{cursor:pointer}
+/* attack path — force graph (cytoscape) */
+#atk-graph{height:520px;border:1px solid var(--bd);border-radius:10px;margin-top:1rem;background:var(--card);position:relative}
+.atk-tip{position:absolute;display:none;pointer-events:none;background:var(--fg);color:var(--bg);
+ font-size:.72rem;font-weight:600;padding:.3rem .55rem;border-radius:6px;white-space:nowrap;z-index:5;
+ box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.graphhint{font-size:.76rem;color:var(--muted);margin-top:.4rem}
+.impact{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:.8rem .9rem;margin-top:.7rem;font-size:.83rem}
+.impact>div{margin-bottom:.5rem}
 /* risk bars */
 .bar{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem}
 .barl{width:160px;font-size:.8rem;flex:0 0 auto;font-weight:500}
@@ -225,6 +219,8 @@ def _topbar(active: str = "") -> str:
             "<h1><span class='mark'>K8</span>K8sMatrixWarden</h1><span class='grow'></span>"
             + nav("/", "Dashboard", "home")
             + nav("/matrix", "Coverage Matrix", "matrix")
+            + nav("/compliance", "Compliance", "compliance")
+            + nav("/federation", "Federation", "federation")
             + nav("/api/reports", "API", "api")
             + THEME_BUTTON
             + "</div>")
@@ -234,7 +230,9 @@ def dashboard_page(has_scan: bool = False) -> str:
     """Client-side dashboard shell. All data comes from GET /api/dashboard."""
     shell = (_topbar("home")
              + "<div id='app'><div class='empty'>Loading…</div></div>")
-    return layout("K8sMatrixWarden · Dashboard", shell + _APP_JS, extra_css=_APP_CSS)
+    # Vendored (no CDN) — loaded before _APP_JS so `cytoscape` exists when boot() runs.
+    cyto = "<script src='/vendor/cytoscape.min.js'></script>"
+    return layout("K8sMatrixWarden · Dashboard", shell + cyto + _APP_JS, extra_css=_APP_CSS)
 
 
 def matrix_page(tm: ThreatMatrix, *, result: ScanResult = None,
@@ -361,21 +359,16 @@ function render(){
     ${hero()}
     <div class='tabs'>
       ${tab('overview','Overview')}${tab('findings','Findings ('+D.scan.total+')')}
-      ${tab('matrix','Threat Matrix')}${tab('attack','Attack Path')}${tab('attackmap','Attack Map')}
+      ${tab('matrix','Threat Matrix')}${tab('attack','Attack Path')}
       ${tab('runtime','Runtime')}${tab('scan','Scan')}
     </div>
     <div id='v-overview' class='view'>${overview()}</div>
     <div id='v-findings' class='view'>${findingsView()}</div>
     <div id='v-matrix' class='view'>${matrixView()}</div>
     <div id='v-attack' class='view'>${attackView()}</div>
-    <div id='v-attackmap' class='view'>${attackMapView()}</div>
     <div id='v-runtime' class='view'>${runtimeView()}</div>
     <div id='v-scan' class='view'>${scanView()}</div>`;
   renderFindings(); wireScan(); initAttack(); showTab(activeTab);
-}
-function initAttack(){
-  const a=D.attack_path;
-  if(a && a.steps && a.steps.length) selectAttackStage(a.steps[0].tactic);
 }
 function reportBar(){
   const cur=D.selected_scan_id||D.scan.scan_id;
@@ -394,6 +387,7 @@ function showTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   const v=$('#v-'+id), t=$('#t-'+id);
   if(v)v.classList.add('on'); if(t)t.classList.add('on');
+  if(id==='attack') ensureAttackGraph();     // needs a visible, sized container
 }
 function hero(){
   const s=D.scan, t=D.trend||[], d=t.length>1?(t[t.length-1][1]-t[t.length-2][1]):null;
@@ -467,7 +461,7 @@ function surfaceStrip(){
 }
 function gotoAttack(tactic){
   showTab('attack');
-  selectAttackStage(tactic);
+  focusStage(tactic);
   const el=document.getElementById('atk-'+slug(tactic));
   if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
 }
@@ -564,64 +558,182 @@ function cellFindings(ruleIds,tech,tid){
     <div style='font-weight:700;margin-bottom:.4rem'>${esc(tech)}${tid?` <code>${esc(tid)}</code>`:''} — ${fs.length} finding(s)</div>
     ${cards||"<div class='fm'>No findings.</div>"}</div>`;
 }
-/* ---- attack path ---- */
+/* ---- attack path (force graph, cytoscape) ---------------------------
+   Nodes = findings; an edge links two findings that share a resource
+   across consecutive kill-chain stages (the same Pod hit at Initial
+   Access, then again at Impact). Click a node to light up its connected
+   component and see (a) every other stage that resource is still
+   exposed at — remediating this finding alone won't clear those — and
+   (b) sibling findings that reach the SAME stage via a different
+   resource/technique, i.e. what remediation still leaves open. */
+let cy=null;
 function attackView(){
   const a=D.attack_path;
   if(!a.steps||!a.steps.length) return `<div class='panel'>${healthNote()}<div class='fm'>${
     scanOk()?'No attack path — no findings mapped to tactics.'
             :'No attack path can be derived: the cluster was never read.'}</div></div>`;
   const steps=a.steps.map((s,i)=>`${i?`<div class='arrow'>&rarr;</div>`:''}
-    <div class='step' id='atk-${slug(s.tactic)}' onclick='selectAttackStage("${esc(s.tactic)}")'
+    <div class='step' id='atk-${slug(s.tactic)}' onclick='focusStage("${esc(s.tactic)}")'
         style='border-left-color:var(--${(s.worst_severity||'CRITICAL').toLowerCase()})'>
       <div class='t'><span>${esc(s.tactic)}</span><span class='num'>${i+1}</span></div>
       <div class='k'>${s.techniques.slice(0,3).map(t=>esc(t.technique_name)).join('<br>')}</div>
-      <div class='cnt'>${tacticFindings(s.tactic).length} finding(s) &middot; click to list</div>
+      <div class='cnt'>${tacticFindings(s.tactic).length} finding(s)</div>
     </div>`).join('');
   const rc=a.reaches_impact?"<span class='reach y'>reaches Impact — full kill-chain</span>":"<span class='reach n'>stops before Impact</span>";
   return `<div class='panel'><h2>Kill-chain exploit path</h2>${healthNote()}
-    <div class='fm'>${a.tactic_count} tactics chained · ${rc}. Select any stage to list every finding an attacker could use there.</div>
+    <div class='fm'>${a.tactic_count} tactics chained · ${rc}. Click a stage to focus it below, or click any node in the graph to see what remediating it actually closes — and what the attacker can still reach.</div>
     <div class='flow'>${steps}</div>
     <div class='fm' style='margin-top:.6rem'>Entry points: ${(a.entry_points||[]).map(e=>esc(e.technique_name)).join(', ')||'—'}</div>
-    <div id='atk-detail' style='margin-top:1rem'></div></div>`;
+    <div id='atk-graph'></div>
+    <div class='graphhint'>Each coloured row is one kill-chain tactic, top to bottom in real order — node colour + size = severity ·
+      an edge means the same resource is exploited at both ends · hover to read, click to inspect · drag to pan, scroll to zoom.
+      <span id='atk-isolated'></span></div>
+    <div id='atk-impact'></div></div>`;
 }
-function selectAttackStage(tactic){
+function initAttack(){ cy=null; }               // old graph's container is gone after render()
+function ensureAttackGraph(){ cy ? cy.resize() : buildAttackGraph(); }
+function findingTactic(f,order){
+  return f.mitre.map(m=>m.tactic).filter(t=>order.includes(t)).sort((a,b)=>order.indexOf(a)-order.indexOf(b))[0];
+}
+function buildAttackGraph(){
+  const el=$('#atk-graph'); if(!el||typeof cytoscape==='undefined') return;
+  const fg=getComputedStyle(document.documentElement).getPropertyValue('--fg').trim()||'#222';
+  const order=(D.attack_path.steps||[]).map(s=>s.tactic);
+  const rKey=r=>`${r.kind}|${r.name}|${r.namespace||''}`;
+  const nodes=D.findings.map((f,i)=>({f,i,tactic:findingTactic(f,order)})).filter(n=>n.tactic);
+  const byRes={};
+  nodes.forEach(n=>{const k=rKey(n.f.resource);(byRes[k]=byRes[k]||[]).push(n)});
+  const edges=[];
+  Object.values(byRes).forEach(group=>{
+    if(group.length<2) return;
+    group.sort((a,b)=>order.indexOf(a.tactic)-order.indexOf(b.tactic));
+    for(let j=0;j<group.length-1;j++) edges.push({data:{id:'e'+group[j].i+'_'+group[j+1].i,source:''+group[j].i,target:''+group[j+1].i}});
+  });
+  // Only findings that chain across ≥2 stages via a shared resource answer "what's still
+  // open" — a lone node is already fully described by the text panel ("only finding tied
+  // to this resource"). Drop it from the canvas rather than let it pad out as dead weight.
+  const inChain=new Set(); edges.forEach(e=>{inChain.add(e.data.source);inChain.add(e.data.target)});
+  const shown=nodes.filter(n=>inChain.has(''+n.i));
+  const note=$('#atk-isolated');
+  if(note) note.textContent=shown.length<nodes.length
+    ?` · ${shown.length} chained across stages, ${nodes.length-shown.length} single-stage finding(s) not shown (see Findings tab).`:'';
+  // Row = the finding's OWN tactic (its position in the fixed 9-stage order), not BFS
+  // depth from a root — depth is relative to each resource's own chain length, so two
+  // nodes at the same depth can be different tactics. Pinning y to the real tactic index
+  // is what makes "this row is Privilege Escalation" an honest claim.
+  const rows=order.filter(t=>shown.some(n=>n.tactic===t));
+  const rowW=110, rowH=90;
+  const byRow={}; shown.forEach(n=>(byRow[n.tactic]=byRow[n.tactic]||[]).push(n));
+  const maxCount=Math.max(...Object.values(byRow).map(g=>g.length),1);
+  const bandW=maxCount*rowW;
+  const positions={};
+  rows.forEach((t,ri)=>{
+    const group=byRow[t];
+    group.forEach((n,ci)=>{positions[n.i]={x:(ci-(group.length-1)/2)*rowW,y:ri*rowH};});
+  });
+  const strips=rows.map((t,ri)=>({data:{id:'bg-'+ri,label:t,tactic:t},
+    position:{x:0,y:ri*rowH},classes:'stripbg',
+    locked:true,grabbable:false,selectable:false}));
+  cy=cytoscape({
+    container:el,
+    elements:[...strips,
+      ...shown.map(n=>({data:{id:''+n.i,label:n.f.title,res:res(n.f),sev:n.f.severity,tactic:n.tactic},
+        position:positions[n.i],classes:'fnode'})),
+      ...edges],
+    style:[
+      {selector:'.stripbg',style:{'shape':'rectangle','width':bandW+140,'height':rowH-6,
+        'background-color':n=>TACTIC_TINT[order.indexOf(n.data('tactic'))%TACTIC_TINT.length],
+        'background-opacity':.22,'border-width':0,'label':'data(label)','font-size':11,'font-weight':700,
+        'color':fg,'text-halign':'left','text-valign':'top','text-margin-x':-(bandW/2)+6,'text-margin-y':4,
+        'z-index':0,'events':'no'}},
+      {selector:'.fnode',style:{'background-color':n=>SEVCOLOR[n.data('sev')]||'#6c757d',
+        'label':'data(label)','font-size':9,'color':fg,'text-wrap':'ellipsis','text-max-width':'80px',
+        'width':n=>SEVSIZE[n.data('sev')]||16,'height':n=>SEVSIZE[n.data('sev')]||16,
+        'text-valign':'bottom','text-margin-y':5,'border-width':0,'z-index':10}},
+      {selector:'edge',style:{'width':1.4,'line-color':'#9a9a9a99','curve-style':'bezier',
+        'target-arrow-color':'#9a9a9a99','target-arrow-shape':'triangle','arrow-scale':.8,'z-index':5}},
+      {selector:'.dim',style:{'opacity':.12}},
+      {selector:'.lit',style:{'opacity':1}},
+      {selector:'node.lit',style:{'border-width':2,'border-color':'#2969ff'}},
+      {selector:'node.stagehl',style:{'border-width':3,'border-color':'#2969ff'}},
+    ],
+    // Preset, not force-directed or breadthfirst — every node's row is its own tactic,
+    // fixed to the real kill-chain order, so the coloured strips are a true legend.
+    layout:{name:'preset',padding:24},
+    wheelSensitivity:.25,
+    minZoom:.2,maxZoom:3,
+    boxSelectionEnabled:false,
+    autoungrabify:false,
+  });
+  cy.on('tap','node',e=>{if(!e.target.hasClass('stripbg')) selectAttackNode(+e.target.id());});
+  attachAttackTip(el);
+  // The container was mid-reflow (its parent .view had just left display:none) when
+  // cytoscape measured it, so the initial fit can be wrong — resize+fit once more now
+  // that a layout pass has definitely completed.
+  requestAnimationFrame(()=>{cy.resize();cy.fit(undefined,24);});
+}
+const SEVCOLOR={CRITICAL:'#d1242f',HIGH:'#bc4c00',MEDIUM:'#9a6700',LOW:'#1a7f37',INFO:'#6c757d'};
+const SEVSIZE={CRITICAL:32,HIGH:26,MEDIUM:20,LOW:16,INFO:14};
+const TACTIC_TINT=['#4C6EF5','#20C997','#94D82D','#F59F00','#F76707',
+  '#E64980','#7048E8','#1098AD','#495057'];
+function attachAttackTip(el){
+  let tip=el.querySelector('.atk-tip');
+  if(!tip){tip=document.createElement('div');tip.className='atk-tip';el.appendChild(tip);}
+  cy.on('mouseover','node',e=>{
+    const n=e.target, p=n.renderedPosition();
+    tip.textContent=`${n.data('label')} — ${n.data('res')}`;
+    tip.style.left=(p.x+14)+'px'; tip.style.top=(p.y-8)+'px'; tip.style.display='block';
+  });
+  cy.on('mouseout','node',()=>{tip.style.display='none'});
+  cy.on('pan zoom drag',()=>{tip.style.display='none'});
+}
+function focusStage(tactic){
   document.querySelectorAll('#v-attack .step').forEach(s=>s.classList.toggle('sel',s.id==='atk-'+slug(tactic)));
-  const box=$('#atk-detail'); if(!box) return;
-  const step=(D.attack_path.steps||[]).find(s=>s.tactic===tactic);
-  const fs=tacticFindings(tactic);
-  const techs=step?step.techniques.map(t=>`<span class='tchip'>${esc(t.technique_name)}${t.technique_id?` (${esc(t.technique_id)})`:''}</span>`).join(''):'';
-  box.innerHTML=`<div style='border-top:1px solid var(--bd);padding-top:.8rem'>
-    <div style='font-weight:700;margin-bottom:.35rem'>${esc(tactic)} — ${fs.length} finding(s)</div>
-    ${techs?`<div style='margin-bottom:.5rem'>${techs}</div>`:''}
-    ${fs.map(findLink).join('')||"<div class='fm'>No findings mapped to this stage.</div>"}</div>`;
+  if(!cy) return;
+  cy.nodes().removeClass('stagehl');
+  const sel=cy.nodes('.fnode').filter(n=>n.data('tactic')===tactic);
+  sel.addClass('stagehl');
+  const strip=cy.nodes('.stripbg').filter(n=>n.data('tactic')===tactic);
+  const fitTo=strip.union(sel);
+  if(fitTo.length) cy.animate({fit:{eles:fitTo,padding:50}},{duration:280});
 }
-/* ---- attack map (kill-chain with vulnerable resources) ---- */
-function attackMapView(){
-  const a=D.attack_path;
-  if(!a.steps||!a.steps.length) return `<div class='panel'>${healthNote()}<div class='fm'>${
-    scanOk()?'No attack path.':'No attack map can be derived: the cluster was never read.'}</div></div>`;
-  const stages=a.steps.map((s,i)=>{
-    const fs=tacticFindings(s.tactic);
-    const resources={};fs.forEach(f=>{const k=f.resource.kind;if(!resources[k])resources[k]=new Set();
-      resources[k].add((f.resource.name||'(unnamed)')+(f.resource.namespace?` (${f.resource.namespace})`:''))});
-    const rRows=Object.entries(resources).map(([k,ns])=>`<div class='fm' style='margin:.3rem 0'>
-      <b>${esc(k)}</b> · ${[...ns].slice(0,4).map(n=>esc(n)).join(', ')}${ns.size>4?` +${ns.size-4}`:''}</div>`).join('');
-    return `<div class='stage' id='map-${slug(s.tactic)}' style='border-left-color:var(--${(s.worst_severity||'CRITICAL').toLowerCase()})'>
-      <div class='shead' onclick='toggleStage("${slug(s.tactic)}")'>
-        <span class='snum'>${i+1}</span><span class='st'>${esc(s.tactic)}</span>
-        <span class='smeta'>${fs.length} finding(s) · ${Object.keys(resources).length} resource type(s)</span>
-        <span class='scaret'>&rsaquo;</span></div>
-      <div class='sbody'>
-        <div class='fm' style='margin:.3rem 0'>${s.techniques.map(t=>`<span class='tchip'>${esc(t.technique_name)}</span>`).join('')}</div>
-        <div style='margin:.4rem 0 .6rem'><b class='fm'>Exposed resources</b>${rRows||"<div class='fm'>none</div>"}</div>
-        <div><b class='fm'>Findings at this stage</b>${fs.map(findLink).join('')||"<div class='fm'>none</div>"}</div>
-      </div></div>`}).join('');
-  return `<div class='panel'><h2>Attack Map — kill-chain with vulnerable resources</h2>${healthNote()}
-    <div class='fm'>Which Kubernetes resources are exposed at each stage of the attack path. Select a stage to expand its resources and findings — each finding links to its card in the report.</div>
-    ${stages}</div>`;
-}
-function toggleStage(id){
-  const el=document.getElementById('map-'+id); if(el) el.classList.toggle('open');
+function selectAttackNode(idx){
+  const f=D.findings[idx]; if(!f) return;
+  const order=(D.attack_path.steps||[]).map(s=>s.tactic);
+  const tactic=findingTactic(f,order);
+  if(cy){
+    cy.elements().removeClass('lit dim stagehl');
+    const node=cy.$id(''+idx);
+    let visited=cy.collection().union(node), frontier=node;
+    while(frontier.length){const next=frontier.closedNeighborhood().nodes().difference(visited);visited=visited.union(next);frontier=next;}
+    const comp=visited.union(visited.connectedEdges());
+    cy.elements('.fnode, edge').difference(comp).addClass('dim');  // strips stay visible for row context
+    comp.addClass('lit');
+    cy.animate({fit:{eles:comp,padding:60}},{duration:280});
+  }
+  const rKey=r=>`${r.kind}|${r.name}|${r.namespace||''}`;
+  const myKey=rKey(f.resource);
+  const chain=[...new Map(D.findings.filter(o=>o!==f&&rKey(o.resource)===myKey)
+    .flatMap(o=>o.mitre.filter(m=>order.includes(m.tactic)).map(m=>[m.tactic,o]))).entries()]
+    .sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+  const siblings=tacticFindings(tactic).filter(o=>o!==f);
+  const chainRows=chain.map(([tac,o])=>`<a class='findlink' href='${reportUrl(o)}' target='_blank' rel='noopener'>
+    <span class='sev ${o.severity}'>${o.severity}</span><span class='fl-t'>${esc(tac)}: ${esc(o.title)}</span>
+    <span class='fl-go'>&rsaquo;</span></a>`).join('');
+  const sibRows=siblings.slice(0,8).map(o=>`<a class='findlink' href='${reportUrl(o)}' target='_blank' rel='noopener'>
+    <span class='sev ${o.severity}'>${o.severity}</span><span class='fl-t'>${esc(o.title)}</span>
+    <span class='fl-r'><code>${esc(res(o))}</code></span><span class='fl-go'>&rsaquo;</span></a>`).join('');
+  $('#atk-impact').innerHTML=`<div class='impact'>
+    <div><b>${esc(f.title)}</b> on <code>${esc(res(f))}</code></div>
+    <div>${chain.length?
+      `This resource is also exposed at <b>${chain.length}</b> other stage(s) — remediating this finding alone does <b>not</b> clear it from the kill-chain:`
+      :`This is the only kill-chain finding tied to this resource — remediating it removes the resource from the chain entirely.`}
+      ${chainRows}</div>
+    <div>${siblings.length?
+      `<b>${siblings.length}</b> other finding(s) still reach <b>${esc(tactic)}</b> via a different resource/technique — remediating this one does not block them:`
+      :`No other finding reaches ${esc(tactic)} — remediating this closes the stage.`}
+      ${sibRows}${siblings.length>8?`<div class='fm'>&hellip; ${siblings.length-8} more</div>`:''}</div>
+  </div>`;
 }
 /* ---- runtime ---- */
 function runtimeView(){

@@ -253,3 +253,40 @@ def test_dashboard_payload_tells_the_form_whether_kubeconfigs_are_accepted():
         "allow_client_kubeconfig"] is False
     assert _json.loads(_app().route("GET", "/api/dashboard").text)[
         "allow_client_kubeconfig"] is True
+
+
+def test_compliance_html_page_renders():
+    r = _app().route("GET", "/compliance")
+    assert r.status == 200 and "text/html" in r.content_type
+    assert b"Compliance Audit" in r.body
+
+
+def test_compliance_api_json_and_framework_filter():
+    r = _app().route("GET", "/api/compliance", "frameworks=SOC2")
+    assert r.status == 200
+    d = json.loads(r.text)
+    assert [f["short"] for f in d["frameworks"]] == ["SOC 2"]
+
+
+def test_compliance_unknown_framework_is_404():
+    assert _app().route("GET", "/api/compliance", "frameworks=NOPE").status == 404
+
+
+def test_compliance_pdf_is_binary_or_clean_error():
+    r = _app().route("GET", "/compliance", "format=pdf")
+    # fpdf2 is optional: either a real PDF, or a clean 400 telling you to install it.
+    if r.status == 200:
+        assert r.content_type == "application/pdf" and r.body[:5] == b"%PDF-"
+    else:
+        assert r.status == 400 and b"fpdf2" in r.body
+
+
+def test_federation_html_and_api_routes():
+    app = _app()
+    _scan(app, {"mock": True})               # one saved scan -> one cluster
+    rh = app.route("GET", "/federation")
+    assert rh.status == 200 and b"Federation Blast Radius" in rh.body
+    rj = app.route("GET", "/api/federation")
+    assert rj.status == 200
+    d = json.loads(rj.text)
+    assert "clusters" in d and "shared_identities" in d and "summary" in d

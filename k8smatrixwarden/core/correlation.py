@@ -9,10 +9,20 @@ is an attacker acting on?*
 
 Join key is the MITRE tactic both sides already carry (the mapping contract, §6.2): a
 runtime alert tagged Privilege Escalation lines up with the scan findings tagged Privilege
-Escalation. When the runtime event also names a namespace, we narrow to findings on that
-namespace — a same-namespace match is strong enough to call "confirmed exploitation"; a
-tactic-only match is "corroborated"; a runtime alert with NO matching static finding is
-"runtime-only" (novel behaviour the scan never predicted — often the most interesting).
+Escalation. Confidence is tiered by how tightly the two sides actually match — because
+"confirmed exploitation" is a strong claim it is reserved for a RESOURCE-level match:
+
+  confirmed    — the runtime event names a pod that IS (or belongs to) the exact resource a
+                 static finding is on, same namespace. This is the only tier that says
+                 "this specific weakness is being acted on".
+  corroborated — same tactic (and often same namespace) but no resource-level link. The
+                 behaviour aligns with a known weakness class here, but we cannot prove it
+                 is THIS finding — do not report it as exploited.
+  runtime-only — a runtime alert with NO matching static finding (novel behaviour the scan
+                 never predicted — often the most interesting).
+
+A tactic+namespace coincidence is NOT proof of exploitation, so it is corroborated, never
+confirmed.
 
 Pure function of (findings, alerts): no cluster access, no scan re-run. Reuses the tactics
 already on each Finding and RuntimeAlert.
@@ -27,6 +37,26 @@ def _event_ns(event: dict) -> str:
     """Namespace the runtime event happened in, if it carries one. Falco enriches with
     k8s.ns.name; audit events carry `namespace` directly. Empty when unknown."""
     return str(event.get("namespace") or event.get("k8s.ns.name") or "").strip()
+
+
+def _event_pod(event: dict) -> str:
+    return str(event.get("pod") or event.get("k8s.pod.name") or "").strip()
+
+
+def _resource_matched(pod: str, ns: str, statics: list) -> list:
+    """Static findings whose resource IS the pod the runtime event names, or the workload
+    that pod belongs to (pods are <workload>-<rs>-<hash>). Same-namespace required. This is
+    the resource-level link that alone justifies 'confirmed exploitation'."""
+    if not pod:
+        return []
+    out = []
+    for f in statics:
+        if ns and f.resource.namespace and f.resource.namespace != ns:
+            continue
+        rn = f.resource.name or ""
+        if rn and (pod == rn or pod.startswith(rn + "-")):
+            out.append(f)
+    return out
 
 
 def _alert_view(a) -> dict:
@@ -50,17 +80,20 @@ def correlate(findings: list[Finding], alerts: list) -> dict:
     correlations = []
     for a in alerts:
         statics = by_tactic.get(a.tactic, [])
-        ns = _event_ns(a.event)
-        scoped = [f for f in statics if ns and f.resource.namespace == ns]
+        ns, pod = _event_ns(a.event), _event_pod(a.event)
+        resource_hit = _resource_matched(pod, ns, statics)
+        ns_scoped = [f for f in statics if ns and f.resource.namespace == ns]
         if not statics:
             conf, verdict, matched = ("runtime-only",
                 "unexpected runtime behaviour — no matching static weakness", [])
-        elif scoped:
+        elif resource_hit:
             conf, verdict, matched = ("confirmed",
-                "static weakness is being actively exploited", scoped)
+                "static weakness on this resource is being actively exploited", resource_hit)
         else:
+            # same tactic (± namespace) but no resource-level link — aligns, not proven.
             conf, verdict, matched = ("corroborated",
-                "runtime behaviour aligns with a known static weakness", statics)
+                "runtime behaviour aligns with a known static weakness (no resource-level "
+                "link — not proof this finding is exploited)", ns_scoped or statics)
         sev = max([a.severity] + [f.severity for f in matched],
                   key=lambda s: s.order)
         correlations.append({
@@ -116,10 +149,6 @@ def _declared_posture(pod: dict) -> dict:
     return {"non_root": bool(non_root),
             "read_only_fs": _all("readOnlyRootFilesystem"),
             "non_privileged": non_privileged}
-
-
-def _event_pod(event: dict) -> str:
-    return str(event.get("pod") or event.get("k8s.pod.name") or "").strip()
 
 
 def detect_drift(pods: list[dict], events: list[dict]) -> dict:

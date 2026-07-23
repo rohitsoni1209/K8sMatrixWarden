@@ -41,6 +41,14 @@ class ScannerAgent:
             risk = RiskResult(cluster_risk=0.0, security_score=0, rating="Unknown",
                               rating_emoji="⚠️", raw=0.0)
 
+        # Record WHICH cluster this scan hit, so a saved report can be grouped by cluster
+        # in the federation/blast-radius view. Falls back to the model default.
+        cluster = "target-cluster"
+        try:
+            cluster = collector.cluster_label() or cluster
+        except Exception:
+            pass
+
         return ScanResult(
             request=request,
             findings=findings,
@@ -52,5 +60,6 @@ class ScannerAgent:
             by_tactic=self.p.aggregator.by_tactic(findings),
             by_shard=self.p.aggregator.by_shard(findings),
             name=name,
+            cluster_name=cluster,
             mode=mode_label,
         )
