@@ -31,7 +31,17 @@ if [ ! -f "$PROJECT_ROOT/pyproject.toml" ]; then
 fi
 
 # Extract requires-python from pyproject.toml (e.g., ">=3.10")
-PYTHON_REQ=$(grep -oP 'requires-python = "\K[^"]+' "$PROJECT_ROOT/pyproject.toml" 2>/dev/null || echo ">=3.10")
+# Portable parse: no grep -P / \K (unsupported on BSD/macOS grep).
+PYTHON_REQ=$(grep -E '^[[:space:]]*requires-python' "$PROJECT_ROOT/pyproject.toml" 2>/dev/null \
+    | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+[ -z "$PYTHON_REQ" ] && PYTHON_REQ=">=3.10"
+
+# Derive the minimum major/minor actually required (drives the comparison below).
+REQ_VERSION=$(echo "$PYTHON_REQ" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+REQ_MAJOR="${REQ_VERSION%%.*}"
+REQ_MINOR="${REQ_VERSION#*.}"
+[[ "$REQ_MAJOR" =~ ^[0-9]+$ ]] || REQ_MAJOR=3
+[[ "$REQ_MINOR" =~ ^[0-9]+$ ]] || REQ_MINOR=10
 
 echo -e "${GREEN}✓ Project requires: Python ${PYTHON_REQ}${NC}\n"
 
@@ -44,7 +54,7 @@ echo -e "${YELLOW}[2/5] Scanning for available Python versions...${NC}"
 find_python_versions() {
     local pythons=()
 
-    # Common locations to search
+    # Common locations to search (globs are expanded below via nullglob)
     local search_paths=(
         "/usr/bin"
         "/usr/local/bin"
@@ -54,24 +64,38 @@ find_python_versions() {
         "/usr/local/opt/python*/bin"
     )
 
-    for dir in "${search_paths[@]}"; do
-        if [ -d "$dir" ]; then
+    # Expand glob patterns; a pattern that matches nothing disappears.
+    shopt -s nullglob
+    local pattern dir python_exe base
+    for pattern in "${search_paths[@]}"; do
+        for dir in $pattern; do
+            [ -d "$dir" ] || continue
             while IFS= read -r python_exe; do
-                if [[ -x "$python_exe" ]] && [[ "$python_exe" =~ python[0-9] ]]; then
+                base=$(basename "$python_exe")
+                # Only real interpreters: pythonX / pythonX.Y.
+                # Rejects python3-config, python3.12-gdb, etc.
+                if [[ -x "$python_exe" ]] && [[ "$base" =~ ^python[0-9]+(\.[0-9]+)?$ ]]; then
                     pythons+=("$python_exe")
                 fi
             done < <(find "$dir" -maxdepth 1 -name "python*" 2>/dev/null)
-        fi
+        done
     done
+    shopt -u nullglob
 
-    # Also check which command
+    # Also check via which/command for well-known versioned names
+    local v
     for v in 3.14 3.13 3.12 3.11 3.10 3.9 3.8; do
         if command -v "python${v}" &>/dev/null; then
             pythons+=("$(command -v "python${v}")")
         fi
     done
 
-    # Remove duplicates and sort
+    # Nothing found: return empty (do not emit a stray blank line)
+    if [ ${#pythons[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    # Remove duplicates
     printf '%s\n' "${pythons[@]}" | sort -u
 }
 
@@ -87,29 +111,51 @@ echo -e "${GREEN}Found the following Python installations:${NC}"
 declare -a PYTHON_ARRAY
 declare -a SUITABLE_PYTHONS
 
+# Track the highest-version suitable interpreter (by version, not path order).
+BEST_KEY=""
+BEST_IDX=""
+
 index=0
 while IFS= read -r python_exe; do
     if [ -x "$python_exe" ]; then
         version=$("$python_exe" --version 2>&1 | awk '{print $2}')
-        PYTHON_ARRAY[$index]="$python_exe"
 
-        # Check if version >= 3.10 (suitable for this project)
+        # Parse version components
         major=$(echo "$version" | cut -d. -f1)
         minor=$(echo "$version" | cut -d. -f2)
+        patch=$(echo "$version" | cut -d. -f3 | grep -oE '^[0-9]+' || true)
+        [ -z "$patch" ] && patch=0
 
-        if [ "$major" -eq 3 ] && [ "$minor" -ge 10 ]; then
+        # Skip anything whose version we could not parse as integers
+        # (guards the numeric comparisons below from crashing under set -e).
+        if ! [[ "$major" =~ ^[0-9]+$ ]] || ! [[ "$minor" =~ ^[0-9]+$ ]]; then
+            continue
+        fi
+
+        PYTHON_ARRAY[$index]="$python_exe"
+
+        # Suitable if it meets the requirement parsed from pyproject.toml.
+        if [ "$major" -gt "$REQ_MAJOR" ] || \
+           { [ "$major" -eq "$REQ_MAJOR" ] && [ "$minor" -ge "$REQ_MINOR" ]; }; then
             echo -e "  ${GREEN}✓${NC} $index) $python_exe (Python $version) ${GREEN}[SUITABLE]${NC}"
             SUITABLE_PYTHONS+=("$index")
+
+            # Zero-padded key so lexical compare == numeric version compare.
+            key=$(printf '%03d%03d%03d' "$major" "$minor" "$patch")
+            if [[ -z "$BEST_KEY" || "$key" > "$BEST_KEY" ]]; then
+                BEST_KEY="$key"
+                BEST_IDX="$index"
+            fi
         else
-            echo -e "  ${RED}✗${NC} $index) $python_exe (Python $version) - TOO OLD (need >=3.10)"
+            echo -e "  ${RED}✗${NC} $index) $python_exe (Python $version) - TOO OLD (need ${PYTHON_REQ})"
         fi
-        ((index++))
+        index=$((index + 1))
     fi
 done <<< "$FOUND_PYTHONS"
 
 if [ ${#SUITABLE_PYTHONS[@]} -eq 0 ]; then
-    echo -e "${RED}ERROR: No Python version >= 3.10 found${NC}"
-    echo "Please install Python 3.10 or higher"
+    echo -e "${RED}ERROR: No Python version matching ${PYTHON_REQ} found${NC}"
+    echo "Please install Python ${REQ_MAJOR}.${REQ_MINOR} or higher"
     exit 1
 fi
 
@@ -121,7 +167,7 @@ echo ""
 
 echo -e "${YELLOW}[3/5] Selecting suitable Python version...${NC}"
 
-SELECTED_PYTHON_IDX=${SUITABLE_PYTHONS[-1]}  # Last (newest) suitable version
+SELECTED_PYTHON_IDX="$BEST_IDX"  # Highest suitable version (by version number)
 SELECTED_PYTHON="${PYTHON_ARRAY[$SELECTED_PYTHON_IDX]}"
 SELECTED_VERSION=$("$SELECTED_PYTHON" --version 2>&1 | awk '{print $2}')
 
@@ -188,8 +234,8 @@ echo -e "  - .vscode/mcp.json"
 echo -e "  - .cursor/mcp.json (if exists)"
 echo ""
 
-echo -e "Files to Clean Up:"
-echo -e "  - .venv_check/ (will be added to .gitignore)"
+echo -e "Git Ignore Updates:"
+echo -e "  - *.backup (config backups this script creates)"
 echo ""
 
 # Ask for confirmation
@@ -209,13 +255,40 @@ echo ""
 
 echo -e "${YELLOW}Installing required packages...${NC}"
 
+# pip install that survives PEP 668 "externally-managed-environment" setups
+# by falling back to --user and then --break-system-packages.
+pip_install() {
+    local py=$1 pkg=$2
+    if "$py" -m pip install "$pkg"; then
+        return 0
+    fi
+    echo -e "  ${YELLOW}⚠${NC}  Default install failed, retrying with --user..."
+    if "$py" -m pip install --user "$pkg"; then
+        return 0
+    fi
+    echo -e "  ${YELLOW}⚠${NC}  Retrying with --break-system-packages..."
+    "$py" -m pip install --break-system-packages "$pkg"
+}
+
 if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
-    "$SELECTED_PYTHON" -m pip install --upgrade pip
+    # Best-effort pip upgrade; never fatal.
+    "$SELECTED_PYTHON" -m pip install --upgrade pip || \
+        echo -e "  ${YELLOW}⚠${NC}  Could not upgrade pip, continuing..."
+
+    install_failed=0
     for pkg in "${MISSING_PACKAGES[@]}"; do
         echo -e "  Installing ${YELLOW}$pkg${NC}..."
-        "$SELECTED_PYTHON" -m pip install "$pkg"
+        if ! pip_install "$SELECTED_PYTHON" "$pkg"; then
+            echo -e "  ${RED}✗${NC} Failed to install $pkg"
+            install_failed=1
+        fi
     done
-    echo -e "${GREEN}✓ Packages installed${NC}\n"
+
+    if [ "$install_failed" -eq 0 ]; then
+        echo -e "${GREEN}✓ Packages installed${NC}\n"
+    else
+        echo -e "${YELLOW}⚠ Some packages failed to install; see messages above${NC}\n"
+    fi
 else
     echo -e "${GREEN}✓ All packages already installed${NC}\n"
 fi
@@ -233,18 +306,38 @@ update_mcp_config() {
         # Create backup
         cp "$config_file" "${config_file}.backup"
 
-        # Update the command with explicit Python path
-        # Use sed to replace the "command" line
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            sed -i '' 's|"command": "[^"]*python[^"]*"|"command": "'$SELECTED_PYTHON'"|g' "$config_file"
+        # Rewrite the "command" to the explicit interpreter path using Python.
+        # Proper JSON handling avoids sed/shell escaping pitfalls with paths
+        # that contain spaces or special characters, and it keeps the file
+        # valid JSON. Handles both the VSCode ("servers") and Cursor
+        # ("mcpServers") schemas.
+        if "$SELECTED_PYTHON" - "$config_file" "$SELECTED_PYTHON" <<'PYEOF'
+import json, sys
+path, newcmd = sys.argv[1], sys.argv[2]
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, ValueError) as e:
+    sys.stderr.write("could not read/parse %s: %s\n" % (path, e))
+    sys.exit(1)
+for key in ("servers", "mcpServers"):
+    section = data.get(key)
+    if isinstance(section, dict):
+        for srv in section.values():
+            if isinstance(srv, dict) and "command" in srv:
+                srv["command"] = newcmd
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+PYEOF
+        then
+            echo -e "  ${GREEN}✓${NC} Updated $config_file"
+            echo -e "     Backup saved: ${config_file}.backup"
         else
-            # Linux
-            sed -i 's|"command": "[^"]*python[^"]*"|"command": "'$SELECTED_PYTHON'"|g' "$config_file"
+            # Restore original on failure so we never leave a broken config
+            cp "${config_file}.backup" "$config_file"
+            echo -e "  ${RED}✗${NC} Failed to update $config_file (restored from backup)"
         fi
-
-        echo -e "  ${GREEN}✓${NC} Updated $config_file"
-        echo -e "     Backup saved: ${config_file}.backup"
     fi
 }
 
@@ -262,13 +355,18 @@ echo ""
 
 echo -e "${YELLOW}Updating .gitignore...${NC}"
 
-if ! grep -q ".venv_check/" "$PROJECT_ROOT/.gitignore"; then
-    echo "" >> "$PROJECT_ROOT/.gitignore"
-    echo "# Virtual environments (auto-generated by setup-env.sh)" >> "$PROJECT_ROOT/.gitignore"
-    echo ".venv_check/" >> "$PROJECT_ROOT/.gitignore"
-    echo -e "  ${GREEN}✓${NC} Added .venv_check/ to .gitignore"
+GITIGNORE="$PROJECT_ROOT/.gitignore"
+[ -f "$GITIGNORE" ] || touch "$GITIGNORE"
+
+# Ignore the config backups this script creates (*.backup).
+# -F: fixed string, so the '.' and '*' are matched literally.
+if ! grep -qF "*.backup" "$GITIGNORE"; then
+    echo "" >> "$GITIGNORE"
+    echo "# MCP config backups (auto-generated by setup-env.sh)" >> "$GITIGNORE"
+    echo "*.backup" >> "$GITIGNORE"
+    echo -e "  ${GREEN}✓${NC} Added *.backup to .gitignore"
 else
-    echo -e "  ${GREEN}✓${NC} .venv_check/ already in .gitignore"
+    echo -e "  ${GREEN}✓${NC} *.backup already in .gitignore"
 fi
 
 echo ""
@@ -279,11 +377,13 @@ echo ""
 
 echo -e "${YELLOW}Verifying setup...${NC}"
 
-# Test MCP import
-if "$SELECTED_PYTHON" -c "import mcp; print(f'MCP version: {mcp.__version__}')" 2>/dev/null; then
+# Test MCP import (tolerate a package that exposes no __version__)
+if "$SELECTED_PYTHON" -c "import mcp; print('MCP version:', getattr(mcp, '__version__', 'unknown'))" 2>/dev/null; then
     echo -e "  ${GREEN}✓${NC} MCP is working correctly"
+    MCP_OK=1
 else
     echo -e "  ${YELLOW}⚠${NC}  MCP import test failed"
+    MCP_OK=0
 fi
 
 echo ""
@@ -298,15 +398,20 @@ echo -e "${GREEN}================================${NC}\n"
 
 echo -e "Your environment is ready:"
 echo -e "  Python: ${GREEN}$SELECTED_PYTHON${NC} (v$SELECTED_VERSION)"
-echo -e "  MCP: ${GREEN}installed${NC}"
+if [ "${MCP_OK:-0}" -eq 1 ]; then
+    echo -e "  MCP: ${GREEN}installed${NC}"
+else
+    echo -e "  MCP: ${YELLOW}not verified (see warning above)${NC}"
+fi
 echo -e "  Config: ${GREEN}updated${NC}"
 echo ""
 
 echo "Next steps:"
 echo "  1. Restart your editor (VSCode/Cursor)"
-echo "  2. Run: claude code --config"
-echo "  3. Test MCP connection"
+echo "  2. Smoke-test the MCP server:"
+echo "       $SELECTED_PYTHON -m k8smatrixwarden mcp"
+echo "  3. Confirm the editor's MCP panel lists 'k8smatrixwarden'"
 echo ""
 
-echo -e "${YELLOW}Optional: Run cleanup${NC}"
-echo "  rm -rf .venv_check/  # Remove old venv (safe now that .gitignore is updated)"
+echo -e "${YELLOW}Optional: Remove config backups${NC}"
+echo "  rm -f .vscode/mcp.json.backup .cursor/mcp.json.backup"
